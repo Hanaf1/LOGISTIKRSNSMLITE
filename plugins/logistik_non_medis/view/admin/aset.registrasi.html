@@ -20,7 +20,47 @@
     <div class="col-md-12">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <h3 class="panel-title">
+                <style>
+                    .custom-breadcrumb {
+                        display: inline-flex;
+                        align-items: center;
+                        background: #f8f9fa;
+                        border: 1px solid #e1e4e8;
+                        border-radius: 6px;
+                        padding: 6px 15px;
+                        font-size: 13px;
+                        margin-bottom: 15px;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                    }
+                    .custom-breadcrumb a {
+                        color: #4a4a4a;
+                        text-decoration: none;
+                        display: inline-flex;
+                        align-items: center;
+                        font-weight: 500;
+                    }
+                    .custom-breadcrumb a:hover {
+                        color: #337ab7;
+                    }
+                    .custom-breadcrumb .separator {
+                        margin: 0 10px;
+                        color: #a0a0a0;
+                        font-size: 11px;
+                    }
+                    .custom-breadcrumb .active {
+                        color: #337ab7;
+                        font-weight: 600;
+                    }
+                </style>
+                <div class="custom-breadcrumb">
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Aset</a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <span class="active">Registrasi</span>
+                </div>
+
+                <h3 class="panel-title" style="margin-top: 5px;">
                     <i class="fa fa-cubes"></i> Registrasi & Manajemen Aset Non-Medis
                     <small class="pull-right">Total Data: <span id="total-aset-count" class="badge">0</span></small>
                 </h3>
@@ -78,6 +118,8 @@
                         <button type="button" class="btn btn-primary" id="btn-tambah-aset">
                             <i class="fa fa-plus-circle"></i> Registrasikan Aset Baru
                         </button>
+                        <a href="{?=url([ADMIN, 'logistik_non_medis', 'exportaset'])?}" class="btn btn-success"><i class="fa fa-download"></i> Export CSV</a>
+                        <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#modal-import-aset"><i class="fa fa-upload"></i> Import</button>
                         <button type="button" class="btn btn-default" onclick="loadAset()" title="Segarkan Data">
                             <i class="fa fa-refresh"></i> Refresh
                         </button>
@@ -142,6 +184,38 @@
     </div>
 </div>
 
+
+<!-- Modal Import Aset -->
+<div class="modal fade" id="modal-import-aset" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel">Import Data Aset</h4>
+            </div>
+            <div class="modal-body">
+                <p>Silakan download template CSV untuk import data Aset melalui tombol di bawah ini:</p>
+                <a href="{?=url([ADMIN, 'logistik_non_medis', 'downloadtemplateaset'])?}" class="btn btn-info btn-sm"><i class="fa fa-download"></i> Download Template</a>
+                <hr>
+                <form id="form-import-aset" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label>Pilih File CSV</label>
+                        <input type="file" name="file_import" id="file_import_aset" class="form-control" required accept=".csv">
+                        <p class="help-block">Pastikan format kolom sesuai dengan template.</p>
+                    </div>
+                </form>
+                <div id="import-aset-loading" style="display:none;" class="text-center">
+                    <i class="fa fa-spinner fa-spin fa-2x"></i>
+                    <p>Sedang memproses import, harap tunggu...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" id="btn-proses-import-aset">Proses Import</button>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
     $(document).ready(function() {
         loadAset(1);
@@ -270,6 +344,49 @@
                         alert('Terjadi kesalahan jaringan saat menghapus aset.');
                     }
                 });
+            }
+        });
+    });
+
+    // Import Aset Handler
+    $('#btn-proses-import-aset').on('click', function(e) {
+        e.preventDefault();
+        var fileInput = $('#file_import_aset')[0];
+        if (fileInput.files.length === 0) {
+            alert("Silakan pilih file CSV terlebih dahulu!");
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('file_import', fileInput.files[0]);
+
+        $('#import-aset-loading').show();
+        $(this).prop('disabled', true);
+        
+        $.ajax({
+            type: "POST",
+            enctype: 'multipart/form-data',
+            url: '{?=url([ADMIN, "logistik_non_medis", "importaset"])?}',
+            data: formData,
+            processData: false,
+            contentType: false,
+            cache: false,
+            dataType: 'json',
+            success: function (data) {
+                $('#import-aset-loading').hide();
+                $('#btn-proses-import-aset').prop('disabled', false);
+                var detail = data.errors && data.errors.length ? '\n\n' + data.errors.join('\n') : '';
+                alert((data.message || 'Import selesai.') + detail);
+                if (data.status === 'success') {
+                    $('#modal-import-aset').modal('hide');
+                    $('#form-import-aset')[0].reset();
+                    loadAset(1);
+                }
+            },
+            error: function (xhr) {
+                $('#import-aset-loading').hide();
+                $('#btn-proses-import-aset').prop('disabled', false);
+                alert((xhr.responseJSON && xhr.responseJSON.message) || "Import gagal diproses oleh server.");
             }
         });
     });

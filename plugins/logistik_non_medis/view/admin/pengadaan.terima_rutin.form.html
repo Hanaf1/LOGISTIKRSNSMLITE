@@ -1,0 +1,248 @@
+<!-- Select2 CSS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js"></script>
+
+<div class="modal fade" id="modalFormTerima" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document" style="width: 90%;">
+        <div class="modal-content">
+            <form id="form-terima-rutin">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Form Penerimaan Barang Rutin</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>No. Penerimaan</label>
+                                <input type="text" name="no_terima" class="form-control" value="{$no_terima_auto}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Tanggal Terima</label>
+                                <input type="text" name="tanggal_terima" class="form-control datepicker" value="{?=date('Y-m-d')?}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>No. Faktur / Surat Jalan</label>
+                                <input type="text" name="no_faktur" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Vendor / Supplier</label>
+                                <select name="kode_vendor" class="form-control select2-vendor">
+                                    <option value="">-- Pilih Vendor --</option>
+                                    {loop: $list_vendor as $v}
+                                    <option value="{$v.kode_rekanan}">{$v.nama_rekanan}</option>
+                                    {/loop}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Berdasarkan Rencana Pembelian Rutin (Opsional)</label>
+                                <select name="no_rencana" id="no_rencana" class="form-control select2-rencana">
+                                    <option value="">-- Penerimaan Langsung (Tanpa Rencana) --</option>
+                                    {loop: $list_rencana as $r}
+                                    <option value="{$r.no_rencana}">{$r.no_rencana} (Bulan {$r.bulan}/{$r.tahun})</option>
+                                    {/loop}
+                                </select>
+                                <small class="text-muted">Jika dipilih, qty dan harga akan otomatis diisi dari sisa rencana yang belum direalisasikan.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Keterangan Penerimaan</label>
+                                <input type="text" name="keterangan" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h4>Daftar Barang yang Diterima</h4>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="tbl-items-terima">
+                            <thead>
+                                <tr>
+                                    <th width="35%">Barang</th>
+                                    <th width="15%">Harga Beli (Rp)</th>
+                                    <th width="15%">Qty Terima</th>
+                                    <th width="15%">Sisa Rencana</th>
+                                    <th width="15%">Total (Rp)</th>
+                                    <th width="5%" class="text-center">
+                                        <button type="button" class="btn btn-xs btn-success" onclick="addItemRowTerima()"><i class="fa fa-plus"></i></button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-items-terima">
+                                <tr>
+                                    <td>
+                                        <select name="items[0][kode_item]" class="form-control select2-barang" required style="width:100%;"></select>
+                                    </td>
+                                    <td><input type="number" name="items[0][harga_beli]" class="form-control input-harga" value="0" required oninput="calcSubtotalTerima(this)"></td>
+                                    <td><input type="number" name="items[0][qty_terima]" class="form-control input-qty" value="1" required oninput="calcSubtotalTerima(this)"></td>
+                                    <td><span class="sisa-rencana text-muted">-</span></td>
+                                    <td><input type="text" class="form-control input-subtotal" value="0" readonly></td>
+                                    <td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="removeItemRowTerima(this)"><i class="fa fa-trash"></i></button></td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="4" class="text-right">GRAND TOTAL</th>
+                                    <th><input type="text" id="grand_total_terima" class="form-control" value="0" readonly style="font-weight:bold;"></th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan Penerimaan &amp; Tambah Stok</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+var rowIdxTerima = 1;
+var listBarangTerima = {?=json_encode($list_barang)?};
+
+function buildBarangOptionsTerima(selectedKode) {
+    var opts = '<option value=""></option>';
+    for (var i = 0; i < listBarangTerima.length; i++) {
+        var b = listBarangTerima[i];
+        var sel = (b.kode_item === selectedKode) ? ' selected' : '';
+        opts += '<option value="' + b.kode_item + '"' + sel + '>' + b.kode_item + ' - ' + b.nama_barang + '</option>';
+    }
+    return opts;
+}
+
+// Accepts jQuery object, DOM element, or string selector
+function initSelect2BarangTerima(el) {
+    $(el).each(function() {
+        var $this = $(this);
+        var currentVal = $this.val();
+        // Only populate options if empty (not already filled)
+        if ($this.find('option').length <= 1) {
+            $this.html(buildBarangOptionsTerima(currentVal));
+        }
+        $this.select2({
+            placeholder: 'Pilih barang...',
+            dropdownParent: $('#modalFormTerima'),
+            width: '100%'
+        });
+    });
+}
+
+function addItemRowTerima() {
+    var tr = '<tr>' +
+        '<td><select name="items[' + rowIdxTerima + '][kode_item]" class="form-control select2-barang" required style="width:100%;"></select></td>' +
+        '<td><input type="number" name="items[' + rowIdxTerima + '][harga_beli]" class="form-control input-harga" value="0" required oninput="calcSubtotalTerima(this)"></td>' +
+        '<td><input type="number" name="items[' + rowIdxTerima + '][qty_terima]" class="form-control input-qty" value="1" required oninput="calcSubtotalTerima(this)"></td>' +
+        '<td><span class="sisa-rencana text-muted">-</span></td>' +
+        '<td><input type="text" class="form-control input-subtotal" value="0" readonly></td>' +
+        '<td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="removeItemRowTerima(this)"><i class="fa fa-trash"></i></button></td>' +
+        '</tr>';
+    $('#tbody-items-terima').append(tr);
+    initSelect2BarangTerima($('#tbody-items-terima tr:last .select2-barang'));
+    rowIdxTerima++;
+}
+
+function removeItemRowTerima(btn) {
+    $(btn).closest('tr').remove();
+    calcGrandTotal();
+}
+
+function calcSubtotalTerima(el) {
+    var tr = $(el).closest('tr');
+    var harga = parseFloat(tr.find('.input-harga').val()) || 0;
+    var qty = parseFloat(tr.find('.input-qty').val()) || 0;
+    var sub = harga * qty;
+    tr.find('.input-subtotal').val(sub.toLocaleString('id-ID'));
+    calcGrandTotal();
+}
+
+function calcGrandTotal() {
+    var grand = 0;
+    $('.input-subtotal').each(function() {
+        var val = $(this).val().replace(/\./g, '').replace(/,/g, '');
+        grand += parseFloat(val) || 0;
+    });
+    $('#grand_total_terima').val(grand.toLocaleString('id-ID'));
+}
+
+$(document).ready(function() {
+    // Init Select2 untuk row default
+    initSelect2BarangTerima($('.select2-barang'));
+    $('.select2-vendor, .select2-rencana').select2({dropdownParent: $('#modalFormTerima')});
+    $('.datepicker').datepicker({format: 'yyyy-mm-dd', autoclose: true});
+    
+    // Auto Load dari Rencana
+    $('#no_rencana').change(function() {
+        var no = $(this).val();
+        if(no) {
+            $.post(baseURL + '/ajaxgetrencanarutin?t=' + mlite.token, {no_rencana: no}, function(res) {
+                var items = JSON.parse(res);
+                $('#tbody-items-terima').empty();
+                rowIdxTerima = 0;
+                
+                if(items.length === 0) {
+                    alert('Semua barang pada rencana ini sudah direalisasikan/diterima sepenuhnya.');
+                    addItemRowTerima();
+                    return;
+                }
+                
+                items.forEach(function(item) {
+                    var sisa = parseFloat(item.qty_rencana) - parseFloat(item.qty_realisasi);
+                    if(sisa > 0) {
+                        // Build options with this item pre-selected
+                        var allOpts = buildBarangOptionsTerima(item.kode_item);
+                        var tr = '<tr>' +
+                            '<td><select name="items[' + rowIdxTerima + '][kode_item]" class="form-control select2-barang" required style="width:100%;">' + allOpts + '</select></td>' +
+                            '<td><input type="number" name="items[' + rowIdxTerima + '][harga_beli]" class="form-control input-harga" value="' + item.estimasi_harga + '" required oninput="calcSubtotalTerima(this)"></td>' +
+                            '<td><input type="number" name="items[' + rowIdxTerima + '][qty_terima]" class="form-control input-qty" value="' + sisa + '" required oninput="calcSubtotalTerima(this)"></td>' +
+                            '<td><span class="sisa-rencana text-muted">' + sisa + ' ' + item.satuan + '</span></td>' +
+                            '<td><input type="text" class="form-control input-subtotal" value="' + (item.estimasi_harga * sisa).toLocaleString('id-ID') + '" readonly></td>' +
+                            '<td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="removeItemRowTerima(this)"><i class="fa fa-trash"></i></button></td>' +
+                            '</tr>';
+                        $('#tbody-items-terima').append(tr);
+                        // Options sudah diisi, cukup init Select2
+                        $('#tbody-items-terima tr:last .select2-barang').select2({
+                            placeholder: 'Pilih barang...',
+                            dropdownParent: $('#modalFormTerima'),
+                            width: '100%'
+                        });
+                        rowIdxTerima++;
+                    }
+                });
+                calcGrandTotal();
+            });
+        } else {
+            $('#tbody-items-terima').empty();
+            addItemRowTerima();
+            calcGrandTotal();
+        }
+    });
+    
+    $('#form-terima-rutin').submit(function(e) {
+        e.preventDefault();
+        $.post(baseURL + '/saveterimarutin?t=' + mlite.token, $(this).serialize(), function(res) {
+            var r = JSON.parse(res);
+            if(r.status == 'success') {
+                $('#modalFormTerima').modal('hide');
+                window.location.reload();
+            } else {
+                alert(r.message);
+            }
+        });
+    });
+});
+</script>

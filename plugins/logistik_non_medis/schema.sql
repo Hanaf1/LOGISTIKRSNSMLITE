@@ -61,7 +61,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_aset` (
   `kib_tgl_mulai` date DEFAULT NULL,
   `kib_tgl_rencana_selesai` date DEFAULT NULL,
   `kib_progress_persen` double DEFAULT '0',
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   UNIQUE KEY `kode_aset` (`kode_aset`),
   KEY `kode_item` (`kode_item`),
   KEY `kode_unit` (`kode_unit`)
@@ -92,7 +92,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_aset_mutasi` (
   `user_mutasi` varchar(100) DEFAULT NULL,
   `tgl_input` datetime DEFAULT NULL,
   `tgl_update` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   UNIQUE KEY `no_mutasi` (`no_mutasi`),
   KEY `kode_aset` (`kode_aset`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -124,7 +124,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_aset_pemeliharaan` (
   `status` enum('Jadwal','Menunggu','Diproses','Selesai','Dibatalkan') DEFAULT 'Jadwal',
   `user_input` varchar(50) NOT NULL,
   `tgl_input` datetime NOT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   UNIQUE KEY `kode_pemeliharaan` (`kode_pemeliharaan`),
   KEY `kode_aset` (`kode_aset`),
   KEY `status` (`status`),
@@ -161,7 +161,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_aset_penghapusan` (
   `user_input` varchar(100) NOT NULL,
   `tgl_input` datetime NOT NULL,
   `tgl_update` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   UNIQUE KEY `no_pengajuan` (`no_pengajuan`),
   KEY `kode_aset` (`kode_aset`),
   KEY `status` (`status`)
@@ -183,7 +183,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_aset_penyusutan` (
   `nilai_buku` double NOT NULL DEFAULT '0',
   `no_jurnal` varchar(100) DEFAULT NULL,
   `user_proses` varchar(100) NOT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   UNIQUE KEY `aset_periode` (`kode_aset`,`periode`),
   KEY `periode` (`periode`),
   KEY `no_jurnal` (`no_jurnal`)
@@ -223,7 +223,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_aset_sensus` (
   `status_sertifikasi` enum('Belum Sertifikasi','Disetujui Ka Unit','Sertifikasi Selesai') NOT NULL DEFAULT 'Belum Sertifikasi',
   `tgl_input` datetime DEFAULT NULL,
   `user_input` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   KEY `kode_aset` (`kode_aset`),
   KEY `nama_sensus` (`nama_sensus`),
   KEY `status_sensus_item` (`status_sensus_item`),
@@ -272,7 +272,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_batch` (
   `qty` double NOT NULL DEFAULT '0',
   `harga` double NOT NULL DEFAULT '0',
   `status` enum('Aktif','Expired','Blokir') NOT NULL DEFAULT 'Aktif',
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   KEY `kode_item` (`kode_item`),
   KEY `kode_lokasi` (`kode_lokasi`),
   KEY `no_batch` (`no_batch`)
@@ -296,7 +296,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_ekatalog` (
   `status` varchar(50) DEFAULT 'Master',
   `link_produk` text DEFAULT NULL,
   `last_sync` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   KEY `no_po` (`no_po`),
   KEY `kode_produk_lkpp` (`kode_produk_lkpp`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -318,7 +318,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_kartu_stok` (
   `stok_akhir` double NOT NULL DEFAULT '0',
   `harga` double NOT NULL DEFAULT '0',
   `user_input` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`kode_kategori`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- -----------------------------------------------------------------------------
@@ -326,10 +326,11 @@ CREATE TABLE `rsns_custom_logistik_non_medis_kartu_stok` (
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_kategori`;
 CREATE TABLE `rsns_custom_logistik_non_medis_kategori` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL AUTO_INCREMENT UNIQUE,
+  `kode_kategori` varchar(50) NOT NULL,
   `nama_kategori` varchar(200) NOT NULL,
   `deskripsi` text DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`kode_kategori`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- -----------------------------------------------------------------------------
@@ -352,7 +353,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_kuota` (
   `tgl_input` datetime DEFAULT NULL,
   `user_approve` varchar(100) DEFAULT NULL,
   `tgl_approve` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   KEY `kode_unit` (`kode_unit`),
   KEY `kode_item` (`kode_item`),
   KEY `periode` (`tahun`,`bulan`,`triwulan`)
@@ -390,7 +391,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_lokasi_gudang` (
   `denah_digital` varchar(255) DEFAULT NULL,
   `is_fragile` tinyint(1) NOT NULL DEFAULT '0',
   `status` enum('Aktif','Tidak Aktif') NOT NULL DEFAULT 'Aktif',
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   UNIQUE KEY `kode_lokasi` (`kode_lokasi`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -404,7 +405,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_master_barang` (
   `nama_barang` varchar(200) NOT NULL,
   `deskripsi` text DEFAULT NULL,
   `spesifikasi` text DEFAULT NULL,
-  `kategori` varchar(100) DEFAULT NULL,
+  `kode_kategori` varchar(50) DEFAULT NULL,
   `sub_kategori` varchar(100) DEFAULT NULL,
   `satuan_dasar` varchar(50) NOT NULL,
   `satuan_konversi` varchar(50) DEFAULT NULL,
@@ -426,8 +427,8 @@ DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_mutasi`;
 CREATE TABLE `rsns_custom_logistik_non_medis_mutasi` (
   `no_mutasi` varchar(50) NOT NULL,
   `tgl_mutasi` date NOT NULL,
-  `kode_lokasi_asal` varchar(50) NOT NULL,
-  `kode_lokasi_tujuan` varchar(50) NOT NULL,
+  `kode_lokasi_asal` varchar(50) DEFAULT NULL,
+  `kode_lokasi_tujuan` varchar(50) DEFAULT NULL,
   `keterangan` text DEFAULT NULL,
   `status` enum('Draft','Dikirim','Diterima','Batal') NOT NULL DEFAULT 'Draft',
   `user_input` varchar(100) DEFAULT NULL,
@@ -444,16 +445,18 @@ CREATE TABLE `rsns_custom_logistik_non_medis_mutasi` (
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_mutasi_detail`;
 CREATE TABLE `rsns_custom_logistik_non_medis_mutasi_detail` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `no_mutasi` varchar(50) NOT NULL,
-  `kode_item` varchar(50) NOT NULL,
-  `batch_no` varchar(100) DEFAULT '-',
-  `qty` double NOT NULL DEFAULT '0',
-  `satuan` varchar(50) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `no_mutasi` (`no_mutasi`),
-  KEY `kode_item` (`kode_item`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `no_mutasi` varchar(50) NOT NULL,
+    `kode_item` varchar(50) NOT NULL,
+    `jenis_mutasi` enum('Masuk','Keluar','Penyesuaian') NOT NULL DEFAULT 'Penyesuaian',
+    `batch_no` varchar(100) DEFAULT '-',
+    `qty` double NOT NULL DEFAULT '0',
+    `satuan` varchar(50) DEFAULT NULL,
+    `keterangan` text DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `no_mutasi` (`no_mutasi`),
+    KEY `kode_item` (`kode_item`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- -----------------------------------------------------------------------------
 -- 18. Table structure for `rsns_custom_logistik_non_medis_opname`
@@ -472,7 +475,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_opname` (
   `keterangan` text DEFAULT NULL,
   `status` enum('Jadwal','Draft','Selesai') NOT NULL DEFAULT 'Jadwal',
   `user_input` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   KEY `no_opname` (`no_opname`),
   KEY `kode_lokasi` (`kode_lokasi`),
   KEY `kode_item` (`kode_item`)
@@ -494,7 +497,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_packing` (
   `koli_ke` int(11) DEFAULT '1',
   `total_berat_koli` double DEFAULT '0',
   `keterangan` text DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   KEY `no_packing` (`no_packing`),
   KEY `no_sppb` (`no_sppb`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -523,7 +526,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_penerimaan` (
   `kode_lokasi` varchar(50) DEFAULT NULL,
   `status` enum('Draft','Selesai') NOT NULL DEFAULT 'Draft',
   `user_input` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`kode_kategori`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- -----------------------------------------------------------------------------
@@ -552,7 +555,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_pengiriman` (
   `waktu_terima` datetime DEFAULT NULL,
   `penerima` varchar(100) DEFAULT NULL,
   `keterangan` text DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   KEY `no_sppb` (`no_sppb`),
   KEY `no_manifest` (`no_manifest`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -585,7 +588,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_perencanaan` (
   `status` enum('Draft','Diajukan','Disetujui','Ditolak') NOT NULL DEFAULT 'Draft',
   `tgl_input` datetime DEFAULT NULL,
   `user_input` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`kode_kategori`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- -----------------------------------------------------------------------------
@@ -626,7 +629,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_po` (
   `tgl_dikirim` datetime DEFAULT NULL,
   `user_input` varchar(100) DEFAULT NULL,
   `tgl_input` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`kode_kategori`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- -----------------------------------------------------------------------------
@@ -647,7 +650,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_pr` (
   `petugas_logistik` varchar(100) DEFAULT NULL,
   `tgl_acc` datetime DEFAULT NULL,
   `user_input` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`kode_kategori`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- -----------------------------------------------------------------------------
@@ -695,7 +698,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_report_schedules` (
   `last_run` datetime DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `created_by` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`kode_kategori`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- -----------------------------------------------------------------------------
@@ -711,7 +714,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_report_verifications` (
   `generated_by` varchar(100) NOT NULL,
   `generated_at` datetime NOT NULL,
   `checksum_data` text NOT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   UNIQUE KEY `verification_hash` (`verification_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -736,7 +739,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_retur_unit` (
   `tgl_approval` datetime DEFAULT NULL,
   `user_input` varchar(100) DEFAULT NULL,
   `tgl_input` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   KEY `no_retur` (`no_retur`),
   KEY `kode_unit` (`kode_unit`),
   KEY `no_sppb` (`no_sppb`)
@@ -752,7 +755,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_satuan` (
   `nama_satuan` varchar(100) NOT NULL,
   `satuan_dasar` varchar(50) DEFAULT NULL,
   `nilai_konversi` double NOT NULL DEFAULT '1',
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   UNIQUE KEY `kode_satuan` (`kode_satuan`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -772,7 +775,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_serah_terima` (
   `tanda_terima` longtext DEFAULT NULL,
   `keterangan` text DEFAULT NULL,
   `arsip_bast` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   UNIQUE KEY `no_serah_terima` (`no_serah_terima`),
   KEY `no_sppb` (`no_sppb`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -809,7 +812,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_sppb` (
   `tgl_approve_unit` datetime DEFAULT NULL,
   `user_verifikasi` varchar(100) DEFAULT NULL,
   `tgl_verifikasi` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   KEY `no_sppb` (`no_sppb`),
   KEY `kode_unit` (`kode_unit`),
   KEY `kode_item` (`kode_item`)
@@ -854,10 +857,9 @@ CREATE TABLE `rsns_custom_logistik_non_medis_unit` (
   `gedung` varchar(100) DEFAULT NULL,
   `lantai` varchar(50) DEFAULT NULL,
   `lokasi_detail` text DEFAULT NULL,
-  `kuota_periode` double NOT NULL DEFAULT '0',
-  `kode_cost_center` varchar(50) DEFAULT NULL,
+
   `status` enum('Aktif','Tidak Aktif') NOT NULL DEFAULT 'Aktif',
-  PRIMARY KEY (`id`),
+  PRIMARY KEY (`kode_kategori`),
   UNIQUE KEY `kode_unit` (`kode_unit`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -911,7 +913,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_vendor_evaluasi` (
   `file_lampiran` varchar(255) DEFAULT NULL,
   `keterangan` text DEFAULT NULL,
   `user_input` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`kode_kategori`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 SET FOREIGN_KEY_CHECKS = 1;

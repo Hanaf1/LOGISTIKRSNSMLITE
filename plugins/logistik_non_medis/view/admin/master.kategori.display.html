@@ -1,15 +1,14 @@
 {if: !empty($kategori)}
     {loop: $kategori}
     <tr>
-        <td>{$value.id}</td>
-        <td>{$value.nama_kategori}</td>
+                <td>{$value.nama_kategori}</td>
         <td>{$value.deskripsi}</td>
         <td class="text-right">
             <div class="btn-group">
-                <button type="button" class="btn btn-info btn-xs edit-kategori" data-id="{$value.id}">
+                <button type="button" class="btn btn-info btn-xs edit-kategori" data-id="{$value.kode_kategori}">
                     <i class="fa fa-edit"></i> Edit
                 </button>
-                <button type="button" class="btn btn-danger btn-xs hapus-kategori" data-id="{$value.id}">
+                <button type="button" class="btn btn-danger btn-xs hapus-kategori" data-id="{$value.kode_kategori}">
                     <i class="fa fa-trash"></i> Hapus
                 </button>
             </div>
@@ -18,7 +17,7 @@
     {/loop}
 {else}
     <tr>
-        <td colspan="4" class="text-center">Data kategori tidak ditemukan.</td>
+        <td colspan="3" class="text-center">Data kategori tidak ditemukan.</td>
     </tr>
 {/if}
 

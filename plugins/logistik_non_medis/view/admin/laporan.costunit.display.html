@@ -1,0 +1,24 @@
+<div class="row cost-kpi">
+  <div class="col-sm-3"><div class="panel panel-primary"><div class="panel-body"><small>Total HPP</small><h3>Rp. {?=number_format($total_cost,0,',','.')?}</h3></div></div></div>
+  <div class="col-sm-3"><div class="panel panel-info"><div class="panel-body"><small>Unit / SPPB</small><h3>{$total_unit} / {$total_sppb}</h3></div></div></div>
+  <div class="col-sm-3"><div class="panel panel-success"><div class="panel-body"><small>Total Item</small><h3>{$total_item}</h3></div></div></div>
+  <div class="col-sm-3"><div class="panel panel-warning"><div class="panel-body"><small>Harga Belum Terisi</small><h3>{$belum_harga}</h3></div></div></div>
+</div>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-hover">
+    <thead><tr class="active"><th>No</th><th>Tanggal</th><th>Minggu</th><th>No. SPPB</th><th>Nama Unit</th><th class="text-center">Item</th><th class="text-right">HPP Unit</th><th>Status</th><th class="text-center">Aksi</th></tr></thead>
+    <tbody>
+    {if: !empty($rows)}
+      {loop: $rows}<tr><td>{$value.no}</td><td>{$value.tgl_sppb_format}</td><td>Ke-{$value.minggu_ke}</td><td><strong>{$value.no_sppb}</strong></td><td>{$value.nama_unit}</td><td class="text-center">{$value.jumlah_item}</td><td class="text-right"><strong>Rp. {?=number_format($value.total_cost,0,',','.')?}</strong>{if: $value.belum_harga > 0}<br><small class="text-danger">{$value.belum_harga} belum ada harga</small>{/if}</td><td>{if: $value.status == 'Diajukan'}<span class="label label-warning">Diajukan</span>{else}<span class="label label-success">Selesai</span>{/if}</td><td class="text-center"><button type="button" class="btn btn-xs {if: $value.status == 'Diajukan'}btn-primary{else}btn-info{/if} btn-detail-cost" data-no="{$value.no_sppb}"><i class="fa {if: $value.status == 'Diajukan'}fa-calculator{else}fa-eye{/if}"></i> {if: $value.status == 'Diajukan'}Hitung{else}Lihat{/if}</button></td></tr>{/loop}
+    {else}<tr><td colspan="9" class="text-center text-muted" style="padding:35px"><i class="fa fa-inbox fa-2x"></i><br>Belum ada SPPB mingguan Diajukan/Selesai pada filter ini.</td></tr>{/if}
+    </tbody>
+    {if: !empty($rows)}<tfoot><tr class="info"><th colspan="6" class="text-right">TOTAL HPP PERIODE</th><th class="text-right">Rp. {?=number_format($total_cost,0,',','.')?}</th><th colspan="2"></th></tr></tfoot>{/if}
+  </table>
+</div>
+
+<div class="panel panel-default" style="margin-top:25px">
+  <div class="panel-heading"><strong><i class="fa fa-history"></i> Audit Perubahan Cost Unit Terakhir</strong></div>
+  <div class="table-responsive"><table class="table table-condensed table-striped" style="margin-bottom:0"><thead><tr><th>Waktu</th><th>Pengguna</th><th>No. SPPB</th><th>Unit</th><th>Barang</th><th class="text-right">Harga Lama</th><th class="text-right">Harga Baru</th><th>Aksi</th><th>Keterangan</th></tr></thead><tbody>
+  {if: !empty($audit)}{loop: $audit}<tr><td>{$value.tgl_proses_format}</td><td>{$value.user_proses}</td><td>{$value.no_sppb}</td><td>{$value.nama_unit}</td><td>{$value.nama_barang}</td><td class="text-right">Rp. {?=number_format($value.harga_lama,0,',','.')?}</td><td class="text-right">Rp. {?=number_format($value.harga_baru,0,',','.')?}</td><td>{if: $value.aksi == 'Selesaikan'}<span class="label label-success">Selesaikan</span>{else}<span class="label label-info">Simpan</span>{/if}</td><td>{$value.keterangan}</td></tr>{/loop}{else}<tr><td colspan="9" class="text-center text-muted">Belum ada riwayat perubahan.</td></tr>{/if}
+  </tbody></table></div>
+</div>

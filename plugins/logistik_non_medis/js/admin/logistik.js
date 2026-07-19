@@ -32,18 +32,82 @@ $(document).ready(function() {
 
     // ======== MASTER BARANG ========
 
+    // Initialize DataTables for Master Barang
+
+
+    // Refresh DataTables on save/delete instead of loadMasterBarang
+    // We will hook this later or just reload
+    
+    // Handle Import Form Submission
+    $('#form-import-barang').on('submit', function(e) {
+        e.preventDefault();
+        var form = this;
+        var data = new FormData(form);
+        var btn = $('#btn-submit-import-barang');
+        
+        var fileInput = $('input[name="file"]', form).val();
+        if(!fileInput) {
+            bootbox.alert("Silakan pilih file CSV terlebih dahulu!");
+            return;
+        }
+
+        $('#import-loading').show();
+        btn.prop('disabled', true).text('Memproses...');
+        
+        $.ajax({
+            type: "POST",
+            enctype: 'multipart/form-data',
+            url: baseURL + "/logistik_non_medis/importmasterbarang?t=" + mlite.token,
+            data: data,
+            processData: false,
+            contentType: false,
+            cache: false,
+            timeout: 600000,
+            success: function (res) {
+                $('#import-loading').hide();
+                btn.prop('disabled', false).text('Mulai Import');
+                try {
+                    var response = JSON.parse(res);
+                    if(response.status == 'success') {
+                        bootbox.alert(response.pesan);
+                        $('#modal-import-barang').modal('hide');
+                        $('#form-import-barang')[0].reset();
+                        if(typeof tableMasterBarang !== 'undefined') {
+                            tableMasterBarang.ajax.reload();
+                        }
+                    } else {
+                        bootbox.alert(response.pesan);
+                    }
+                } catch(e) {
+                    bootbox.alert("Terjadi kesalahan sistem saat parsing respon import.");
+                }
+            },
+            error: function (e) {
+                $('#import-loading').hide();
+                $('#btn-proses-import').prop('disabled', false);
+                bootbox.alert("Terjadi kesalahan jaringan atau server.");
+            }
+        });
+    });
+
+
+
+
     function loadMasterBarang(page = 1, cari = '') {
-        $('#master-barang-list').html('<tr><td colspan="8" class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i><p>Memuat data...</p></td></tr>');
+        $('#check-all-barang').prop('checked', false);
+        $('#btn-bulk-delete-barang').hide();
+        $('#master-barang-list').html('<tr><td colspan="9" class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i><p>Memuat data...</p></td></tr>');
         $.post(baseURL + '/logistik_non_medis/displaymasterbarang?t=' + mlite.token, {halaman: page, cari: cari}, function(data) {
             $('#master-barang-list').html(data);
         }).fail(function() {
-            $('#master-barang-list').html('<tr><td colspan="8" class="text-center text-danger"><i class="fa fa-exclamation-triangle fa-2x"></i><p>Gagal memuat data dari server.</p></td></tr>');
+            $('#master-barang-list').html('<tr><td colspan="9" class="text-center text-danger"><i class="fa fa-exclamation-triangle fa-2x"></i><p>Gagal memuat data dari server.</p></td></tr>');
         });
     }
 
     if($('#table-master-barang').length > 0) {
         loadMasterBarang();
     }
+
 
     $('.searchbox-masterbarang').on('submit', function(e) {
         e.preventDefault();
@@ -95,7 +159,7 @@ $(document).ready(function() {
                 var res = JSON.parse(response);
                 if(res.status == 'success') {
                     $('#modal-form-barang').modal('hide');
-                    loadMasterBarang();
+                    if(typeof tableMasterBarang !== "undefined") tableMasterBarang.ajax.reload(null, false);
                     alert('Data berhasil disimpan!');
                 } else {
                     alert('Error: ' + res.message);
@@ -131,6 +195,46 @@ $(document).ready(function() {
         var kode_item = $(this).data('id');
         if(confirm('Yakin ingin menghapus data ini?')) {
             $.post(baseURL + '/logistik_non_medis/hapusmasterbarang?t=' + mlite.token, {kode_item: kode_item}, function() {
+                loadMasterBarang();
+                alert('Data berhasil dihapus!');
+            });
+        }
+    });
+
+    // Bulk Delete Checkbox Handlers
+    $(document).on('change', '#check-all-barang', function() {
+        var isChecked = $(this).prop('checked');
+        $('.check-barang').prop('checked', isChecked);
+        updateBulkDeleteButton();
+    });
+
+    $(document).on('change', '.check-barang', function() {
+        var totalCheckboxes = $('.check-barang').length;
+        var checkedCheckboxes = $('.check-barang:checked').length;
+        $('#check-all-barang').prop('checked', totalCheckboxes === checkedCheckboxes);
+        updateBulkDeleteButton();
+    });
+
+    function updateBulkDeleteButton() {
+        var checkedCount = $('.check-barang:checked').length;
+        if (checkedCount > 0) {
+            $('#bulk-delete-count').text(checkedCount);
+            $('#btn-bulk-delete-barang').show();
+        } else {
+            $('#btn-bulk-delete-barang').hide();
+        }
+    }
+
+    $(document).on('click', '#btn-bulk-delete-barang', function() {
+        var selectedIds = [];
+        $('.check-barang:checked').each(function() {
+            selectedIds.push($(this).val());
+        });
+
+        if (selectedIds.length === 0) return;
+
+        if(confirm('Yakin ingin menghapus ' + selectedIds.length + ' data barang terpilih?')) {
+            $.post(baseURL + '/logistik_non_medis/bulkdeletemasterbarang?t=' + mlite.token, {kode_items: selectedIds}, function(res) {
                 loadMasterBarang();
                 alert('Data berhasil dihapus!');
             });
@@ -213,6 +317,44 @@ $(document).ready(function() {
                 alert('Data berhasil dihapus!');
             });
         }
+    });
+
+    // Import Satuan
+    $(document).on('submit', '#form-import-satuan', function (e) {
+        e.preventDefault();
+        var data = new FormData(this);
+        $('#btn-proses-import-satuan').prop('disabled', true).text('Memproses...');
+        
+        $.ajax({
+            type: "POST",
+            enctype: 'multipart/form-data',
+            url: baseURL + "/logistik_non_medis/importmastersatuan?t=" + mlite.token,
+            data: data,
+            processData: false,
+            contentType: false,
+            cache: false,
+            timeout: 600000,
+            success: function (res) {
+                $('#btn-proses-import-satuan').prop('disabled', false).text('Proses Import');
+                try {
+                    var response = JSON.parse(res);
+                    if(response.status == 'success') {
+                        bootbox.alert(response.pesan);
+                        $('#modal-import-satuan').modal('hide');
+                        $('#form-import-satuan')[0].reset();
+                        loadMasterSatuan();
+                    } else {
+                        bootbox.alert(response.pesan);
+                    }
+                } catch(e) {
+                    bootbox.alert("Terjadi kesalahan sistem saat parsing respon import.");
+                }
+            },
+            error: function (e) {
+                $('#btn-proses-import-satuan').prop('disabled', false).text('Proses Import');
+                bootbox.alert("Terjadi kesalahan saat memproses data.");
+            }
+        });
     });
 
     // ======== MASTER KATEGORI ========
@@ -506,6 +648,44 @@ $(document).ready(function() {
         }
     });
 
+    // Import Unit
+    $(document).on('submit', '#form-import-unit', function (e) {
+        e.preventDefault();
+        var data = new FormData(this);
+        $('#btn-proses-import-unit').prop('disabled', true).text('Memproses...');
+        
+        $.ajax({
+            type: "POST",
+            enctype: 'multipart/form-data',
+            url: baseURL + "/logistik_non_medis/importmasterunit?t=" + mlite.token,
+            data: data,
+            processData: false,
+            contentType: false,
+            cache: false,
+            timeout: 600000,
+            success: function (res) {
+                $('#btn-proses-import-unit').prop('disabled', false).text('Proses Import');
+                try {
+                    var response = JSON.parse(res);
+                    if(response.status == 'success') {
+                        bootbox.alert(response.pesan);
+                        $('#modal-import-unit').modal('hide');
+                        $('#form-import-unit')[0].reset();
+                        loadMasterUnit();
+                    } else {
+                        bootbox.alert(response.pesan);
+                    }
+                } catch(e) {
+                    bootbox.alert("Terjadi kesalahan sistem saat parsing respon import.");
+                }
+            },
+            error: function (e) {
+                $('#btn-proses-import-unit').prop('disabled', false).text('Proses Import');
+                bootbox.alert("Terjadi kesalahan saat memproses data.");
+            }
+        });
+    });
+
     // ======== MASTER LOKASI ========
 
     function loadMasterLokasi(page = 1, cari = '') {
@@ -765,4 +945,5 @@ mlite.logistik_non_medis = {
         });
     }
 };
+
 

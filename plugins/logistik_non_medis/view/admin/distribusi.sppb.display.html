@@ -16,7 +16,10 @@
                 {loop: $sppb}
                     <tr>
                         <td>{$value.no}</td>
-                        <td>{$value.tgl_sppb}</td>
+                        <td>
+                            {$value.tgl_sppb}
+                            {if: !empty($value.minggu_ke)}<br><span class="label label-info">Minggu ke-{$value.minggu_ke}</span>{/if}
+                        </td>
                         <td><a href="javascript:void(0)" onclick="detailSPPB('{$value.no_sppb}')"><strong>{$value.no_sppb}</strong></a></td>
                         <td>{$value.nama_unit}</td>
                         <td>

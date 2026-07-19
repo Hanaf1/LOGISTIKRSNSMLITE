@@ -1,0 +1,236 @@
+<!-- Select2 CSS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js"></script>
+
+<div class="modal fade" id="modalFormRutin" tabindex="-1" role="dialog" aria-labelledby="modalFormRutinLabel">
+    <div class="modal-dialog modal-lg" role="document" style="width: 80%;">
+        <div class="modal-content">
+            <form id="form-rencana-rutin" method="post" action="{?=url([ADMIN, 'logistik_non_medis', 'saverencanarutin'])?}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="modalFormRutinLabel">{if: $id}Ubah Rencana Pembelian Rutin{else}Tambah Rencana Pembelian Rutin Baru{/if}</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>No. Rencana</label>
+                                <input type="text" name="no_rencana" class="form-control" value="{$rencana.no_rencana}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Bulan / Tahun</label>
+                                <div class="input-group">
+                                    <select name="bulan" class="form-control">
+                                        <option value="01" {if: $rencana.bulan == '01'}selected{/if}>Januari</option>
+                                        <option value="02" {if: $rencana.bulan == '02'}selected{/if}>Februari</option>
+                                        <option value="03" {if: $rencana.bulan == '03'}selected{/if}>Maret</option>
+                                        <option value="04" {if: $rencana.bulan == '04'}selected{/if}>April</option>
+                                        <option value="05" {if: $rencana.bulan == '05'}selected{/if}>Mei</option>
+                                        <option value="06" {if: $rencana.bulan == '06'}selected{/if}>Juni</option>
+                                        <option value="07" {if: $rencana.bulan == '07'}selected{/if}>Juli</option>
+                                        <option value="08" {if: $rencana.bulan == '08'}selected{/if}>Agustus</option>
+                                        <option value="09" {if: $rencana.bulan == '09'}selected{/if}>September</option>
+                                        <option value="10" {if: $rencana.bulan == '10'}selected{/if}>Oktober</option>
+                                        <option value="11" {if: $rencana.bulan == '11'}selected{/if}>November</option>
+                                        <option value="12" {if: $rencana.bulan == '12'}selected{/if}>Desember</option>
+                                    </select>
+                                    <span class="input-group-addon">/</span>
+                                    <input type="number" name="tahun" class="form-control" value="{$rencana.tahun}" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Tanggal Dibuat</label>
+                                <input type="date" name="tanggal_buat" class="form-control" value="{$rencana.tanggal_buat}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Keterangan Tambahan</label>
+                                <input type="text" name="keterangan" class="form-control" value="{$rencana.keterangan}">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Vendor</label>
+                                <select name="kode_vendor" class="form-control">
+                                    <option value="">-- Pilih Vendor --</option>
+                                    {loop: $list_vendor as $vendor}
+                                    <option value="{$vendor.kode_vendor}" {if: $rencana.kode_vendor == $vendor.kode_vendor}selected{/if}>{$vendor.nama_vendor}</option>
+                                    {/loop}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h4>Daftar Barang Rutin yang Direncanakan</h4>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="tbl-items-rutin">
+                            <thead>
+                                <tr>
+                                    <th width="32%">Pilih Barang (Dari Master)</th>
+                                    <th width="10%">Satuan</th>
+                                    <th width="20%">Estimasi Harga Satuan (Rp)</th>
+                                    <th width="13%">Qty Rencana</th>
+                                    <th width="20%">Subtotal Estimasi (Rp)</th>
+                                    <th width="5%" class="text-center">
+                                        <button type="button" class="btn btn-xs btn-success" onclick="addItemRowRutin()"><i class="fa fa-plus"></i></button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-items-rutin">
+                                {if: empty($details)}
+                                <!-- Default 1 Row -->
+                                <tr>
+                                    <td>
+                                        <select name="items[0][kode_item]" class="form-control select2-barang" required style="width:100%;"></select>
+                                    </td>
+                                    <td><input type="text" class="form-control input-satuan" value="" readonly></td>
+                                    <td><input type="number" name="items[0][estimasi_harga]" class="form-control input-harga" value="0" required oninput="calcSubtotalRutin(this)"></td>
+                                    <td><input type="number" name="items[0][qty_rencana]" class="form-control input-qty" value="1" required oninput="calcSubtotalRutin(this)"></td>
+                                    <td><input type="text" class="form-control input-subtotal" value="0" readonly></td>
+                                    <td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="removeItemRowRutin(this)"><i class="fa fa-trash"></i></button></td>
+                                </tr>
+                                {else}
+                                    {loop: $details as $i => $det}
+                                    <tr>
+                                        <td>
+                                            <select name="items[{$i}][kode_item]" class="form-control select2-barang" required style="width:100%;">
+                                                <option value="{$det.kode_item}" selected>{$det.kode_item} - {$det.nama_barang}</option>
+                                            </select>
+                                        </td>
+                                        <td><input type="text" class="form-control input-satuan" value="{$det.satuan}" readonly></td>
+                                        <td><input type="number" name="items[{$i}][estimasi_harga]" class="form-control input-harga" value="{$det.estimasi_harga}" required oninput="calcSubtotalRutin(this)"></td>
+                                        <td><input type="number" name="items[{$i}][qty_rencana]" class="form-control input-qty" value="{$det.qty_rencana}" required oninput="calcSubtotalRutin(this)"></td>
+                                        <td><input type="text" class="form-control input-subtotal" value="{?=number_format($det.estimasi_harga * $det.qty_rencana, 0, ',', '.')?}" readonly></td>
+                                        <td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="removeItemRowRutin(this)"><i class="fa fa-trash"></i></button></td>
+                                    </tr>
+                                    {/loop}
+                                {/if}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan Rencana</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+var rowIdxRutin = {?=count($details) > 0 ? count($details) : 1?};
+
+// Daftar barang dari master (sudah diload dari PHP)
+var listBarangRutin = {?=json_encode($list_barang)?};
+
+function buildBarangOptions(selectedKode) {
+    var opts = '<option value=""></option>';
+    for (var i = 0; i < listBarangRutin.length; i++) {
+        var b = listBarangRutin[i];
+        var sel = (b.kode_item === selectedKode) ? ' selected' : '';
+        opts += '<option value="' + b.kode_item + '"' + sel + '>' + b.kode_item + ' - ' + b.nama_barang + '</option>';
+    }
+    return opts;
+}
+
+function getSatuanBarangRutin(kodeItem) {
+    for (var i = 0; i < listBarangRutin.length; i++) {
+        if (listBarangRutin[i].kode_item === kodeItem) {
+            return listBarangRutin[i].satuan_dasar || '';
+        }
+    }
+    return '';
+}
+
+function setSatuanBarangRutin(el) {
+    var $select = $(el);
+    $select.closest('tr').find('.input-satuan').val(getSatuanBarangRutin($select.val()));
+}
+
+function initSelect2BarangRutin(el) {
+    $(el).each(function() {
+        var $this = $(this);
+        $this.html(buildBarangOptions($this.val()));
+        $this.select2({
+            placeholder: 'Ketik nama / kode barang...',
+            dropdownParent: $('#modalFormRutin'),
+            width: '100%'
+        });
+        $this.off('change.satuanRutin').on('change.satuanRutin', function() {
+            setSatuanBarangRutin(this);
+        });
+        setSatuanBarangRutin($this);
+    });
+}
+
+function addItemRowRutin() {
+    var tr = '<tr>' +
+        '<td><select name="items[' + rowIdxRutin + '][kode_item]" class="form-control select2-barang" required style="width:100%;"></select></td>' +
+        '<td><input type="text" class="form-control input-satuan" value="" readonly></td>' +
+        '<td><input type="number" name="items[' + rowIdxRutin + '][estimasi_harga]" class="form-control input-harga" value="0" required oninput="calcSubtotalRutin(this)"></td>' +
+        '<td><input type="number" name="items[' + rowIdxRutin + '][qty_rencana]" class="form-control input-qty" value="1" required oninput="calcSubtotalRutin(this)"></td>' +
+        '<td><input type="text" class="form-control input-subtotal" value="0" readonly></td>' +
+        '<td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="removeItemRowRutin(this)"><i class="fa fa-trash"></i></button></td>' +
+        '</tr>';
+    $('#tbody-items-rutin').append(tr);
+    initSelect2BarangRutin($('#tbody-items-rutin tr:last .select2-barang'));
+    rowIdxRutin++;
+}
+
+function removeItemRowRutin(btn) {
+    if($('#tbody-items-rutin tr').length > 1) {
+        $(btn).closest('tr').remove();
+    } else {
+        alert('Minimal harus ada 1 barang dalam rencana!');
+    }
+}
+
+function calcSubtotalRutin(el) {
+    var tr = $(el).closest('tr');
+    var harga = parseFloat(tr.find('.input-harga').val()) || 0;
+    var qty = parseFloat(tr.find('.input-qty').val()) || 0;
+    var sub = harga * qty;
+    tr.find('.input-subtotal').val(sub.toLocaleString('id-ID'));
+}
+
+$(document).ready(function() {
+    initSelect2BarangRutin($('.select2-barang'));
+
+    var $formRencanaRutin = $('#form-rencana-rutin');
+    $formRencanaRutin.off('submit.rencanaRutin').on('submit.rencanaRutin', function(e) {
+        e.preventDefault();
+
+        var $submitButton = $formRencanaRutin.find('button[type="submit"]');
+        $submitButton.prop('disabled', true);
+
+        $.ajax({
+            url: $formRencanaRutin.attr('action'),
+            type: 'POST',
+            data: $formRencanaRutin.serialize(),
+            dataType: 'json'
+        }).done(function(r) {
+            if(r.status == 'success') {
+                $('#modalFormRutin').modal('hide');
+                window.location.reload();
+            } else {
+                alert(r.message || 'Rencana gagal disimpan.');
+            }
+        }).fail(function(xhr) {
+            var message = 'Rencana gagal disimpan. Silakan muat ulang halaman dan coba lagi.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                message = xhr.responseJSON.message;
+            }
+            alert(message);
+        }).always(function() {
+            $submitButton.prop('disabled', false);
+        });
+    });
+});
+</script>

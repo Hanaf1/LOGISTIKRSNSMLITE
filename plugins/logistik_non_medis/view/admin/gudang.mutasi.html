@@ -2,7 +2,47 @@
     <div class="col-md-12">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <h3 class="panel-title"><i class="fa fa-exchange"></i> Mutasi Antar Gudang</h3>
+                <style>
+                    .custom-breadcrumb {
+                        display: inline-flex;
+                        align-items: center;
+                        background: #f8f9fa;
+                        border: 1px solid #e1e4e8;
+                        border-radius: 6px;
+                        padding: 6px 15px;
+                        font-size: 13px;
+                        margin-bottom: 15px;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                    }
+                    .custom-breadcrumb a {
+                        color: #4a4a4a;
+                        text-decoration: none;
+                        display: inline-flex;
+                        align-items: center;
+                        font-weight: 500;
+                    }
+                    .custom-breadcrumb a:hover {
+                        color: #337ab7;
+                    }
+                    .custom-breadcrumb .separator {
+                        margin: 0 10px;
+                        color: #a0a0a0;
+                        font-size: 11px;
+                    }
+                    .custom-breadcrumb .active {
+                        color: #337ab7;
+                        font-weight: 600;
+                    }
+                </style>
+                <div class="custom-breadcrumb">
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Gudang</a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <span class="active">Mutasi</span>
+                </div>
+
+                <h3 class="panel-title" style="margin-top: 5px;"><i class="fa fa-exchange"></i> Mutasi Antar Gudang</h3>
             </div>
             <div class="panel-body">
                 <ul class="nav nav-tabs" role="tablist">
@@ -16,6 +56,17 @@
                         <div class="row">
                             <div class="col-md-8">
                                 <button class="btn btn-primary" onclick="tambahMutasi()"><i class="fa fa-plus"></i> Tambah Mutasi</button>
+                                <div class="btn-group" style="margin-left: 10px;">
+                                    <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fa fa-file-excel-o"></i> CSV Options <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="{?=url(ADMIN."/logistik_non_medis/downloadtemplatemutasicsv")?}"><i class="fa fa-download"></i> Download Template CSV</a></li>
+                                        <li><a href="javascript:void(0)" onclick="$('#modal-import-csv').modal('show')"><i class="fa fa-upload"></i> Import CSV</a></li>
+                                        <li role="separator" class="divider"></li>
+                                        <li><a href="javascript:void(0)" onclick="$('#modal-export-csv').modal('show')"><i class="fa fa-file-text-o"></i> Export CSV Filter</a></li>
+                                    </ul>
+                                </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="input-group">
@@ -94,6 +145,30 @@
 </div>
 
 <script>
+
+$('#form-import-csv').submit(function(e) {
+    e.preventDefault();
+    var formData = new FormData(this);
+    $.ajax({
+        url: '{?=url(ADMIN."/logistik_non_medis/importmutasicsv")?}',
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(res) {
+            var r = JSON.parse(res);
+            if (r.status == 'success') {
+                $('#modal-import-csv').modal('hide');
+                loadDaftarMutasi();
+                alert(r.message);
+            } else {
+                alert(r.message);
+            }
+        }
+    });
+});
+
+
 $(document).ready(function() {
     $('.datepicker').datetimepicker({
         format: 'YYYY-MM-DD',
@@ -201,4 +276,104 @@ function prosesMutasi(no, action) {
         });
     }
 }
+</script>
+
+
+<!-- MODAL IMPORT CSV -->
+<div class="modal fade" id="modal-import-csv" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <form id="form-import-csv">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Import Data Mutasi (CSV)</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Pilih File CSV (.csv)</label>
+                        <input type="file" name="file_csv" class="form-control" accept=".csv" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success"><i class="fa fa-upload"></i> Proses Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EXPORT CSV -->
+<div class="modal fade" id="modal-export-csv" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <form id="form-export-csv" method="GET" action="{?=url(ADMIN."/logistik_non_medis/exportmutasicsv")?}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Filter Export CSV</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Kategori Barang</label>
+                        <select name="kategori" class="form-control">
+                            <option value="">-- Semua Kategori --</option>
+                            {loop: $kategori}
+                            <option value="{$value.kode_kategori}">{$value.nama_kategori}</option>
+                            {/loop}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Bulan</label>
+                        <select name="bulan" class="form-control">
+                            <option value="01" {if: date('m') == '01'}selected{/if}>Januari</option>
+                            <option value="02" {if: date('m') == '02'}selected{/if}>Februari</option>
+                            <option value="03" {if: date('m') == '03'}selected{/if}>Maret</option>
+                            <option value="04" {if: date('m') == '04'}selected{/if}>April</option>
+                            <option value="05" {if: date('m') == '05'}selected{/if}>Mei</option>
+                            <option value="06" {if: date('m') == '06'}selected{/if}>Juni</option>
+                            <option value="07" {if: date('m') == '07'}selected{/if}>Juli</option>
+                            <option value="08" {if: date('m') == '08'}selected{/if}>Agustus</option>
+                            <option value="09" {if: date('m') == '09'}selected{/if}>September</option>
+                            <option value="10" {if: date('m') == '10'}selected{/if}>Oktober</option>
+                            <option value="11" {if: date('m') == '11'}selected{/if}>November</option>
+                            <option value="12" {if: date('m') == '12'}selected{/if}>Desember</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tahun</label>
+                        <input type="number" name="tahun" class="form-control" value="{?=date('Y')?}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary" onclick="$('#modal-export-csv').modal('hide')"><i class="fa fa-download"></i> Download CSV</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+$('#form-import-csv').submit(function(e) {
+    e.preventDefault();
+    var formData = new FormData(this);
+    $.ajax({
+        url: '{?=url(ADMIN."/logistik_non_medis/importmutasicsv")?}',
+        type: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(res) {
+            var r = JSON.parse(res);
+            if (r.status == 'success') {
+                $('#modal-import-csv').modal('hide');
+                loadDaftarMutasi();
+                alert(r.message);
+            } else {
+                alert(r.message);
+            }
+        }
+    });
+});
 </script>

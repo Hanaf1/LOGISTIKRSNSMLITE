@@ -1,0 +1,76 @@
+<div class="modal fade" id="modalDetailTerima" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document" style="width: 80%;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Detail Penerimaan Barang Rutin</h4>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered">
+                    <tr>
+                        <th width="20%" class="active">No. Penerimaan</th>
+                        <td width="30%">{$terima.no_terima}</td>
+                        <th width="20%" class="active">Tanggal Terima</th>
+                        <td width="30%">{$terima.tanggal_terima}</td>
+                    </tr>
+                    <tr>
+                        <th class="active">No. Faktur / SJ</th>
+                        <td>{$terima.no_faktur}</td>
+                        <th class="active">Berdasarkan Rencana</th>
+                        <td>{if: $terima.no_rencana}{$terima.no_rencana}{else}- (Langsung){/if}</td>
+                    </tr>
+                    <tr>
+                        <th class="active">Vendor / Supplier</th>
+                        <td>{$terima.nama_vendor}</td>
+                        <th class="active">Keterangan</th>
+                        <td>{$terima.keterangan}</td>
+                    </tr>
+                </table>
+                
+                <hr>
+                <h4>Rincian Barang Diterima</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Kode Barang</th>
+                                <th>Nama Barang</th>
+                                <th>Harga Beli (Rp)</th>
+                                <th>Qty Terima</th>
+                                <th>Subtotal (Rp)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {if: !empty($details)}
+                                {loop: $details as $i => $det}
+                                <tr>
+                                    <td>{?=($i+1)?}</td>
+                                    <td>{$det.kode_item}</td>
+                                    <td>{$det.nama_barang}</td>
+                                    <td>{?=number_format($det.harga_beli, 0, ',', '.')?}</td>
+                                    <td>{$det.qty_terima} {$det.satuan}</td>
+                                    <td>{?=number_format($det.total, 0, ',', '.')?}</td>
+                                </tr>
+                                {/loop}
+                            {else}
+                                <tr>
+                                    <td colspan="6" class="text-center">Tidak ada detail barang.</td>
+                                </tr>
+                            {/if}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="5" class="text-right">TOTAL PEMBELIAN</th>
+                                <th>Rp. {?=number_format($total_pembelian, 0, ',', '.')?}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>

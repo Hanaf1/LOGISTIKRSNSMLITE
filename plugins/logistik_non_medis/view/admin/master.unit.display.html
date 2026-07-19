@@ -7,8 +7,6 @@
         <td>
             <small class="text-muted">{$value.gedung} - Lt.{$value.lantai}</small>
         </td>
-        <td><span class="label label-default">{$value.kode_cost_center}</span></td>
-        <td>{$value.kuota_periode}</td>
         <td>
             {if: $value.status == 'Aktif'}
                 <span class="label label-success">Aktif</span>
@@ -27,14 +25,14 @@
     {/loop}
 {else}
     <tr>
-        <td colspan="8" class="text-center text-muted">Data tidak ditemukan.</td>
+        <td colspan="6" class="text-center text-muted">Data tidak ditemukan.</td>
     </tr>
 {/if}
 
 <script>
     $('#total-unit').text('{$jumlah_data}');
-    var halaman = {?= (int)$halaman ?};
-    var jml_halaman = {?= (int)$jml_halaman ?};
+    var halaman = parseInt('{?= (int)$halaman ?}') || 1;
+    var jml_halaman = parseInt('{?= (int)$jml_halaman ?}') || 1;
     
     var pagination = '';
     if (jml_halaman > 1) {

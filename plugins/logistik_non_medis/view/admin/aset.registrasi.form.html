@@ -15,6 +15,46 @@
             <div class="col-md-6">
                 <div class="panel panel-default">
                     <div class="panel-heading">
+                <style>
+                    .custom-breadcrumb {
+                        display: inline-flex;
+                        align-items: center;
+                        background: #f8f9fa;
+                        border: 1px solid #e1e4e8;
+                        border-radius: 6px;
+                        padding: 6px 15px;
+                        font-size: 13px;
+                        margin-bottom: 15px;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                    }
+                    .custom-breadcrumb a {
+                        color: #4a4a4a;
+                        text-decoration: none;
+                        display: inline-flex;
+                        align-items: center;
+                        font-weight: 500;
+                    }
+                    .custom-breadcrumb a:hover {
+                        color: #337ab7;
+                    }
+                    .custom-breadcrumb .separator {
+                        margin: 0 10px;
+                        color: #a0a0a0;
+                        font-size: 11px;
+                    }
+                    .custom-breadcrumb .active {
+                        color: #337ab7;
+                        font-weight: 600;
+                    }
+                </style>
+                <div class="custom-breadcrumb">
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Aset</a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <span class="active">Registrasi</span>
+                </div>
+
                         <i class="fa fa-info-circle"></i> Identitas & Spesifikasi Aset
                     </div>
                     <div class="panel-body">
@@ -133,13 +173,13 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label class="control-label">Masa Manfaat (Tahun)</label>
-                                    <input type="number" name="masa_manfaat_tahun" class="form-control" value="{$aset.masa_manfaat_tahun}" min="0" placeholder="0 (Ikuti default jenis KIB)">
+                                    <input type="number" name="masa_manfaat_tahun" class="form-control" value="{?=isset($aset['masa_manfaat_tahun']) ? $aset['masa_manfaat_tahun'] : ''?}" min="0" placeholder="0 (Ikuti default jenis KIB)">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label class="control-label">Nilai Residu (Rp)</label>
-                                    <input type="text" id="form_nilai_residu" name="nilai_residu" class="form-control" value="{$aset.nilai_residu}" placeholder="Rp. 0">
+                                    <input type="text" id="form_nilai_residu" name="nilai_residu" class="form-control" value="{?=isset($aset['nilai_residu']) ? $aset['nilai_residu'] : ''?}" placeholder="Rp. 0">
                                 </div>
                             </div>
                         </div>

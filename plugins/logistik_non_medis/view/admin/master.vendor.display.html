@@ -22,7 +22,7 @@
                         <small class="text-muted"><i class="fa fa-phone"></i> {$row.no_telp}</small>
                     </td>
                     <td>
-                        {? $cats = explode(',', $row.kategori_vendor) ?}
+                        {? $cats = !empty($row.kategori_vendor) ? explode(',', $row.kategori_vendor) : [] ?}
                         {loop: $cats as $c}
                             <span class="label label-info">{$c}</span>
                         {/loop}

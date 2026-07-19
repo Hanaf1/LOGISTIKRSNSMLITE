@@ -47,12 +47,12 @@
         <table class="table table-bordered table-hover">
             <thead>
                 <tr>
-                    <th>No. Mutasi</th>
+                    <th>No. Transaksi</th>
                     <th>Tanggal</th>
-                    <th>Gudang Asal</th>
-                    <th>Gudang Tujuan</th>
+                    <th>Jml Item</th>
+                    <th>Catatan Umum</th>
                     <th>Status</th>
-                    <th width="150">Aksi</th>
+                    <th width="80">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -61,26 +61,16 @@
                 <tr>
                     <td><b>{$value.no_mutasi}</b></td>
                     <td>{$value.tgl_mutasi}</td>
-                    <td>{$value.asal}</td>
-                    <td>{$value.tujuan}</td>
+                    <td><span class="label label-primary">{$value.jumlah_item} Item</span></td>
+                    <td>{$value.keterangan}</td>
                     <td>
                         {if: $value.status == 'Draft'}<span class="label label-default">Draft</span>
-                        {elseif: $value.status == 'Dikirim'}<span class="label label-info">Dikirim</span>
-                        {elseif: $value.status == 'Diterima'}<span class="label label-success">Diterima</span>
-                        {elseif: $value.status == 'Batal'}<span class="label label-danger">Batal</span>
+                        {elseif: $value.status == 'Diterima'}<span class="label label-success">Selesai</span>
                         {/if}
                     </td>
                     <td>
                         <div class="btn-group">
-                            <button class="btn btn-xs btn-primary" onclick="detailMutasi('{$value.no_mutasi}')" title="Detail"><i class="fa fa-eye"></i></button>
-                            {if: $value.status == 'Draft'}
-                            <button class="btn btn-xs btn-success" onclick="editMutasi('{$value.no_mutasi}')" title="Edit"><i class="fa fa-edit"></i></button>
-                            <button class="btn btn-xs btn-info" onclick="prosesMutasi('{$value.no_mutasi}', 'kirim')" title="Kirim Barang"><i class="fa fa-truck"></i></button>
-                            {/if}
-                            {if: $value.status == 'Dikirim'}
-                            <button class="btn btn-xs btn-success" onclick="prosesMutasi('{$value.no_mutasi}', 'terima')" title="Konfirmasi Terima"><i class="fa fa-check"></i></button>
-                            {/if}
-                            <a href="{?=url(ADMIN.'/logistik_non_medis/printmutasi?no_mutasi='.$value.no_mutasi)?}" class="btn btn-xs btn-default" target="_blank" title="Cetak Surat Jalan"><i class="fa fa-print"></i></a>
+                            <button class="btn btn-xs btn-primary" onclick="editMutasi('{$value.no_mutasi}')" title="Detail/Edit"><i class="fa fa-search"></i></button>
                         </div>
                     </td>
                 </tr>

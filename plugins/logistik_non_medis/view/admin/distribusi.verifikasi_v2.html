@@ -39,9 +39,8 @@
                     <!-- Content via AJAX -->
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-danger pull-left" id="btn_tolak_sppb"><i class="fa fa-times"></i> Tolak Permintaan</button>
                     <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
-                    <button type="button" class="btn btn-primary" id="btn_simpan_verifikasi"><i class="fa fa-save"></i> Simpan Verifikasi</button>
+                    <button type="button" class="btn btn-primary" id="btn_simpan_verifikasi"><i class="fa fa-save"></i> Simpan Keputusan Terpilih</button>
                 </div>
             </form>
         </div>
@@ -56,10 +55,6 @@ $(document).ready(function() {
     function displayVerifikasi(halaman = 1) {
         var cari = $('#cari_verifikasi').val();
         var url = '{?=url(ADMIN."/logistik_non_medis/displaydistribusiverifikasi")?}';
-        
-        if(typeof mlite !== 'undefined' && mlite.token) {
-            url += (url.indexOf('?') > -1 ? '&' : '?') + 't=' + mlite.token;
-        }
 
         $.post(url, {
             halaman: halaman,
@@ -82,9 +77,6 @@ $(document).ready(function() {
     $(document).on('click', '.btn-verif', function() {
         current_no_sppb = $(this).data('no');
         var url = '{?=url(ADMIN."/logistik_non_medis/detaildistribusiverifikasi")?}';
-        if(typeof mlite !== 'undefined' && mlite.token) {
-            url += (url.indexOf('?') > -1 ? '&' : '?') + 't=' + mlite.token;
-        }
 
         $.post(url, {
             no_sppb: current_no_sppb
@@ -97,56 +89,26 @@ $(document).ready(function() {
     });
 
     $('#btn_simpan_verifikasi').click(function() {
-        var formData = $('#form_verifikasi_sppb').serialize() + '&no_sppb=' + encodeURIComponent(current_no_sppb) + '&status_verif=Terverifikasi';
+        var formData = $('#form_verifikasi_sppb').serialize() + '&no_sppb=' + encodeURIComponent(current_no_sppb);
 
         var url = '{?=url(ADMIN."/logistik_non_medis/savedistribusiverifikasi")?}';
-        if(typeof mlite !== 'undefined' && mlite.token) {
-            url += (url.indexOf('?') > -1 ? '&' : '?') + 't=' + mlite.token;
-        }
 
-        $.post(url, formData, function(data) {
-            try {
-                var res = JSON.parse(data);
-                if(res.status == 'success') {
-                    $('#modal_verifikasi').modal('hide');
-                    displayVerifikasi();
-                    alert('Verifikasi berhasil disimpan!');
-                } else {
-                    alert('Gagal menyimpan verifikasi: ' + res.message);
-                }
-            } catch(e) {
-                console.error("JSON Parse Error:", e, data);
-                alert('Respon server tidak valid. Silakan cek konsol browser.');
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: formData,
+            dataType: 'json'
+        }).done(function(res) {
+            if(res.status == 'success') {
+                $('#modal_verifikasi').modal('hide');
+                displayVerifikasi();
+                alert(res.message || 'Verifikasi berhasil disimpan!');
+            } else {
+                alert('Gagal menyimpan verifikasi: ' + res.message);
             }
+        }).fail(function(xhr) {
+            alert((xhr.responseJSON && xhr.responseJSON.message) || 'Respon server tidak valid.');
         });
-    });
-
-    $('#btn_tolak_sppb').click(function() {
-        var alasan = prompt("Masukkan alasan penolakan:");
-        if (alasan != null && alasan != "") {
-            var formData = 'no_sppb=' + encodeURIComponent(current_no_sppb) + '&status_verif=Ditolak&alasan_penolakan=' + encodeURIComponent(alasan);
-            
-            var url = '{?=url(ADMIN."/logistik_non_medis/savedistribusiverifikasi")?}';
-            if(typeof mlite !== 'undefined' && mlite.token) {
-                url += (url.indexOf('?') > -1 ? '&' : '?') + 't=' + mlite.token;
-            }
-
-            $.post(url, formData, function(data) {
-                try {
-                    var res = JSON.parse(data);
-                    if(res.status == 'success') {
-                        $('#modal_verifikasi').modal('hide');
-                        displayVerifikasi();
-                        alert('Permintaan telah ditolak.');
-                    } else {
-                        alert('Gagal menolak permintaan: ' + res.message);
-                    }
-                } catch(e) {
-                    console.error("JSON Parse Error:", e, data);
-                    alert('Respon server tidak valid.');
-                }
-            });
-        }
     });
 
     $(document).on('click', '.pagination li a', function(e) {

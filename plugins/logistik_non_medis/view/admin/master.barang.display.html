@@ -1,10 +1,11 @@
 {if: !empty($barang)}
 {loop: $barang}
 <tr>
+    <td><input type="checkbox" class="check-barang" value="{$value.kode_item}"></td>
     <td>{$value.kode_item}</td>
-    <td>{$value.barcode}</td>
+    
     <td>{$value.nama_barang}</td>
-    <td>{$value.kategori}</td>
+    <td>{$value.nama_kategori}</td>
     <td>{$value.satuan_dasar}</td>
     <td>{?=number_format($value.harga_referensi,0,',','.')?}</td>
     <td>
@@ -24,13 +25,13 @@
 </tr>
 {/loop}
 {else}
-<tr><td colspan="8" class="text-center">Belum ada data barang.</td></tr>
+<tr><td colspan="9" class="text-center">Belum ada data barang.</td></tr>
 {/if}
 
 <script>
     $('#total-data').text('{$jumlah_data}');
-    var halaman = {?= (int)$halaman ?};
-    var jml_halaman = {?= (int)$jml_halaman ?};
+    var halaman = parseInt('{?= (int)$halaman ?}') || 1;
+    var jml_halaman = parseInt('{?= (int)$jml_halaman ?}') || 1;
     
     var pagination = '';
     if (jml_halaman > 1) {

@@ -48,8 +48,11 @@
                 <th width="50">No</th>
                 <th width="150">Kode Barang</th>
                 <th>Nama Barang</th>
-                <th width="100" class="text-right">Jumlah</th>
-                <th width="100">Satuan</th>
+                <th width="80" class="text-right">Jumlah Minta</th>
+                <th width="80">Satuan</th>
+                <th width="100">Jumlah ACC</th>
+                <th width="100">Status Item</th>
+                <th width="100">Aksi</th>
                 <th>Catatan Item</th>
             </tr>
         </thead>
@@ -61,6 +64,20 @@
                     <td>{$value.nama_barang}</td>
                     <td class="text-right">{$value.jumlah}</td>
                     <td>{$value.satuan}</td>
+                    <td>
+                        {if: $value.status == 'Diajukan'}
+                            <input type="number" id="acc_{$value.kode_item}" class="form-control input-sm" value="{$value.jumlah}" style="width: 80px;">
+                        {else}
+                            {$value.jumlah_disetujui}
+                        {/if}
+                    </td>
+                    <td><span class="label label-default">{$value.status}</span></td>
+                    <td>
+                        {if: $value.status == 'Diajukan'}
+                            <button class="btn btn-success btn-xs" onclick="setItemStatus('{$value.no_sppb}', '{$value.kode_item}', 'Disetujui Unit')" title="Setujui"><i class="fa fa-check"></i></button>
+                            <button class="btn btn-danger btn-xs" onclick="setItemStatus('{$value.no_sppb}', '{$value.kode_item}', 'Ditolak')" title="Tolak"><i class="fa fa-times"></i></button>
+                        {/if}
+                    </td>
                     <td>{$value.keterangan}</td>
                 </tr>
             {/loop}
@@ -76,3 +93,33 @@
     {/if}
     <a href="{?=url(ADMIN.'/logistik_non_medis/cetaksppb/'.$sppb.no_sppb)?}" target="_blank" class="btn btn-info"><i class="fa fa-print"></i> Cetak</a>
 </div>
+
+<script>
+function setItemStatus(no_sppb, kode_item, status) {
+    var qty = $('#acc_' + kode_item).val();
+    if(status == 'Ditolak') {
+        qty = 0;
+    }
+    $.post(url + '/setitemstatus', {
+        no_sppb: no_sppb,
+        kode_item: kode_item,
+        status: status,
+        jumlah_disetujui: qty
+    }, function(res) {
+        try {
+            var data = JSON.parse(res);
+            if(data.status == 'success') {
+                // reload detail modal
+                $.post(url + '/detailsppb', {no_sppb: no_sppb}, function(html){
+                    $('#modal-detail').html(html);
+                });
+                if(typeof loadDisplay == 'function') loadDisplay();
+            } else {
+                alert(data.pesan);
+            }
+        } catch(e) {
+            alert('Kesalahan server.');
+        }
+    });
+}
+</script>

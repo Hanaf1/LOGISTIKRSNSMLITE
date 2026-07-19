@@ -8,7 +8,7 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label>Kode Item</label>
-                    <input type="text" name="kode_item" class="form-control" value="{$barang.kode_item}" {if: $mode == 'edit'}readonly{/if} required>
+                    <input type="text" name="kode_item" class="form-control" value="{if: $mode == 'edit'}{$barang.kode_item}{else}(Otomatis){/if}" readonly required>
                 </div>
                 <div class="form-group">
                     <label>Nama Barang</label>
@@ -16,10 +16,10 @@
                 </div>
                 <div class="form-group">
                     <label>Kategori</label>
-                    <select name="kategori" class="form-control select2" style="width:100%">
+                    <select name="kode_kategori" class="form-control select2" style="width:100%">
                         <option value="">-- Pilih Kategori --</option>
                         {loop: $kategori}
-                        <option value="{$value.nama_kategori}" {if: $barang.kategori == $value.nama_kategori}selected{/if}>{$value.nama_kategori}</option>
+                        <option value="{$value.kode_kategori}" {if: $barang.kategori == $value.nama_kategori}selected{/if}>{$value.nama_kategori} ({$value.kode_kategori})</option>
                         {/loop}
                     </select>
                 </div>
@@ -38,22 +38,21 @@
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="form-group">
+                <div class="form-group" style="display:none;">
                     <label>Barcode / QR String</label>
-                    <input type="text" name="barcode" class="form-control" value="{$barang.barcode}">
                 </div>
                 <div class="form-group">
                     <label>Deskripsi</label>
                     <textarea name="deskripsi" class="form-control" rows="2">{$barang.deskripsi}</textarea>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="display:none;">
                     <label>Sub-Kategori</label>
-                    <input type="text" name="sub_kategori" class="form-control" value="{$barang.sub_kategori}">
                 </div>
                 <div class="form-group">
                     <label>Satuan Konversi</label>
                     <input type="text" name="satuan_konversi" class="form-control" id="satuan_konversi" value="{$barang.satuan_konversi}" placeholder="Contoh: 1 BOX = 12 PCS">
                 </div>
+                <!--
                 <div class="form-group">
                     <label>Default Lokasi Gudang</label>
                     <select name="default_kode_lokasi" class="form-control select2" style="width:100%">
@@ -63,6 +62,7 @@
                         {/loop}
                     </select>
                 </div>
+                -->
                 <div class="form-group">
                     <label>Status</label>
                     <select name="status" class="form-control">

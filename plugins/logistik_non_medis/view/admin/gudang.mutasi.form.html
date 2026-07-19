@@ -1,192 +1,138 @@
-<form id="formMutasi">
+<form id="form-mutasi">
     <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
-        <h4 class="modal-title">{if: $mode == 'add'}Tambah Mutasi Baru{else}Edit Mutasi #{$mutasi.no_mutasi}{/if}</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">{if: $mode == 'edit'}Detail / Edit{else}Tambah{/if} Penyesuaian Stok (Multi-Item)</h4>
     </div>
     <div class="modal-body">
+        <input type="hidden" name="mode" value="{$mode}">
+        
+        <div class="alert alert-info">
+            <i class="fa fa-info-circle"></i> Catat penambahan atau pengurangan stok secara manual. Stok inventaris akan otomatis disesuaikan setelah disimpan.
+        </div>
+
         <div class="row">
             <div class="col-md-4">
                 <div class="form-group">
-                    <label>No. Mutasi</label>
+                    <label>No. Transaksi</label>
                     <input type="text" name="no_mutasi" class="form-control" value="{$mutasi.no_mutasi}" readonly>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="form-group">
                     <label>Tanggal</label>
-                    <input type="text" name="tgl_mutasi" class="form-control datepicker" value="{$mutasi.tgl_mutasi}">
+                    <input type="date" name="tgl_mutasi" class="form-control" value="{$mutasi.tgl_mutasi}" required>
                 </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label>Gudang Asal (Sumber)</label>
-                    <select name="kode_lokasi_asal" id="asal-mutasi" class="form-control select2" style="width:100%;" {if: $mode == 'edit'}disabled{/if}>
-                        <option value="">-- Pilih Lokasi Asal --</option>
-                        {loop: $lokasi}
-                        <option value="{$value.kode_lokasi}" {if: $mutasi.kode_lokasi_asal == $value.kode_lokasi}selected{/if}>{$value.nama_lokasi}</option>
-                        {/loop}
-                    </select>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label>Gudang Tujuan</label>
-                    <select name="kode_lokasi_tujuan" class="form-control select2" style="width:100%;">
-                        <option value="">-- Pilih Lokasi Tujuan --</option>
-                        {loop: $lokasi}
-                        <option value="{$value.kode_lokasi}" {if: $mutasi.kode_lokasi_tujuan == $value.kode_lokasi}selected{/if}>{$value.nama_lokasi}</option>
-                        {/loop}
-                    </select>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-12">
-                <div class="form-group">
-                    <label>Keterangan</label>
-                    <textarea name="keterangan" class="form-control" rows="2">{$mutasi.keterangan}</textarea>
-                </div>
-            </div>
-        </div>
-
-        <hr>
-        <h4>Daftar Barang</h4>
-        <div class="row" style="margin-bottom: 10px;">
-            <div class="col-md-8">
-                <select id="pilih-item-mutasi" class="form-control select2" style="width: 100%;">
-                    <option value="">-- Cari Barang di Gudang Asal --</option>
-                </select>
             </div>
             <div class="col-md-4">
-                <button type="button" class="btn btn-info btn-block" id="btn-tambah-item-mutasi"><i class="fa fa-plus"></i> Tambah ke List</button>
+                <div class="form-group">
+                    <label>Catatan Umum (Opsional)</label>
+                    <input type="text" name="keterangan" class="form-control" value="{$mutasi.keterangan}">
+                </div>
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table table-bordered" id="tabel-item-mutasi">
+        <div class="table-responsive" style="margin-top: 15px;">
+            <table class="table table-bordered table-condensed" id="tabel-detail-mutasi">
                 <thead>
-                    <tr class="bg-gray">
-                        <th>Barang</th>
-                        <th>Batch</th>
-                        <th width="120">Stok</th>
-                        <th width="120">Qty Mutasi</th>
-                        <th width="100">Satuan</th>
-                        <th width="50">#</th>
+                    <tr style="background-color: #f4f4f4;">
+                        <th>Pilih Barang</th>
+                        <th width="150">Jenis Mutasi</th>
+                        <th width="100">Jumlah</th>
+                        <th width="200">Catatan Item</th>
+                        <th width="50" class="text-center"><button type="button" class="btn btn-xs btn-success" onclick="tambahBarisItem()"><i class="fa fa-plus"></i></button></th>
                     </tr>
                 </thead>
                 <tbody>
-                    {loop: $mutasi.details}
-                    <tr>
-                        <td><input type="hidden" name="kode_item[]" value="{$value.kode_item}">{$value.nama_barang}</td>
-                        <td><input type="hidden" name="batch_no[]" value="{$value.batch_no}">{$value.batch_no}</td>
-                        <td><input type="text" class="form-control input-sm text-right" value="-" readonly></td>
-                        <td><input type="number" name="qty[]" class="form-control input-sm text-right" value="{$value.qty}" step="any"></td>
-                        <td><input type="hidden" name="satuan[]" value="{$value.satuan}">{$value.satuan}</td>
-                        <td><button type="button" class="btn btn-xs btn-danger" onclick="$(this).closest('tr').remove()"><i class="fa fa-trash"></i></button></td>
-                    </tr>
-                    {/loop}
+                    {if: $mode == 'edit' && !empty($mutasi.details)}
+                        {loop: $mutasi.details}
+                        <tr>
+                            <td>
+                                <select name="kode_item[]" class="form-control select2-item" required style="width:100%">
+                                    <option value="{$value.kode_item}" selected>{$value.kode_item} - {$value.nama_barang}</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select name="jenis_mutasi[]" class="form-control" required>
+                                    <option value="Masuk" {if: $value.jenis_mutasi == 'Masuk'}selected{/if}>Masuk (+)</option>
+                                    <option value="Keluar" {if: $value.jenis_mutasi == 'Keluar'}selected{/if}>Keluar (-)</option>
+                                    <option value="Penyesuaian" {if: $value.jenis_mutasi == 'Penyesuaian'}selected{/if}>Timpa</option>
+                                </select>
+                            </td>
+                            <td><input type="number" step="0.01" name="qty[]" class="form-control" value="{$value.qty}" required></td>
+                            <td><input type="text" name="keterangan_item[]" class="form-control" value="{$value.keterangan}"></td>
+                            <td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="$(this).closest('tr').remove()"><i class="fa fa-trash"></i></button></td>
+                        </tr>
+                        {/loop}
+                    {else}
+                        <tr>
+                            <td><select name="kode_item[]" class="form-control select2-item" required style="width:100%"></select></td>
+                            <td>
+                                <select name="jenis_mutasi[]" class="form-control" required>
+                                    <option value="Masuk">Masuk (+)</option>
+                                    <option value="Keluar">Keluar (-)</option>
+                                    <option value="Penyesuaian" selected>Timpa</option>
+                                </select>
+                            </td>
+                            <td><input type="number" step="0.01" name="qty[]" class="form-control" required></td>
+                            <td><input type="text" name="keterangan_item[]" class="form-control" placeholder="Opsional"></td>
+                            <td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="$(this).closest('tr').remove()"><i class="fa fa-trash"></i></button></td>
+                        </tr>
+                    {/if}
                 </tbody>
             </table>
         </div>
+
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="background-color: #f8f9fa;">
         <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
-        <button type="submit" class="btn btn-primary">Simpan Draft</button>
+        <button type="submit" class="btn btn-success" style="background-color: #458279; border-color: #458279;"><i class="fa fa-save"></i> Simpan Data</button>
     </div>
 </form>
 
 <script>
+function initSelect2Item(element) {
+    $(element).select2({
+        dropdownParent: $('#modalMutasi'),
+        placeholder: 'Ketik nama/kode barang...',
+        minimumInputLength: 1,
+        ajax: {
+            url: '{?=url(ADMIN."/logistik_non_medis/ajaxbarangselect2")?}',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+                return { q: params.term, page: params.page || 1 };
+            },
+            processResults: function (data) {
+                return { results: data.results, pagination: data.pagination };
+            },
+            cache: true
+        }
+    });
+}
+
+function tambahBarisItem() {
+    var tr = `
+        <tr>
+            <td><select name="kode_item[]" class="form-control select2-item" required style="width:100%"></select></td>
+            <td>
+                <select name="jenis_mutasi[]" class="form-control" required>
+                    <option value="Masuk">Masuk (+)</option>
+                    <option value="Keluar">Keluar (-)</option>
+                    <option value="Penyesuaian" selected>Timpa</option>
+                </select>
+            </td>
+            <td><input type="number" step="0.01" name="qty[]" class="form-control" required></td>
+            <td><input type="text" name="keterangan_item[]" class="form-control" placeholder="Opsional"></td>
+            <td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="$(this).closest('tr').remove()"><i class="fa fa-trash"></i></button></td>
+        </tr>
+    `;
+    $('#tabel-detail-mutasi tbody').append(tr);
+    initSelect2Item($('#tabel-detail-mutasi tbody tr:last').find('.select2-item'));
+}
+
 $(document).ready(function() {
-    $('.datepicker').datetimepicker({
-        format: 'YYYY-MM-DD',
-        locale: 'id'
-    });
-
-
-
-    // Load items when origin warehouse changes
-    $('#asal-mutasi').change(function() {
-        var lok = $(this).val();
-        if(lok != '') {
-            $.post('{?=url(ADMIN."/logistik_non_medis/loaditemsformutasi")?}', { kode_lokasi: lok }, function(res) {
-                console.log("Load Items Response:", res);
-                var data = (typeof res === 'object') ? res : JSON.parse(res);
-                var opt = '<option value="">-- Cari Barang di Gudang Asal --</option>';
-                if(data.status == 'success') {
-                    $.each(data.items, function(i, item) {
-                        opt += '<option value="'+item.kode_item+'" data-batch="'+item.batch_no+'" data-nama="'+item.nama_barang+'" data-stok="'+item.stok+'" data-satuan="'+item.satuan_dasar+'">'+item.nama_barang+' (Batch: '+item.batch_no+' | Stok: '+item.stok+')</option>';
-                    });
-                }
-                console.log("Generated Options:", opt);
-                $('#pilih-item-mutasi').html(opt).trigger('change').trigger('change.select2');
-            });
-        }
-    });
-
-    // Handle initial load for edit mode
-    {if: $mode == 'edit'}
-    $('#asal-mutasi').trigger('change');
-    {/if}
-
-    $('#btn-tambah-item-mutasi').click(function() {
-        var sel = $('#pilih-item-mutasi option:selected');
-        var kode = sel.val();
-        if(kode == '') return;
-
-        var batch = sel.data('batch');
-        var nama = sel.data('nama');
-        var stok = sel.data('stok');
-        var satuan = sel.data('satuan');
-
-        // Check if already in table
-        var exists = false;
-        $('#tabel-item-mutasi tbody tr').each(function() {
-            var k = $(this).find('input[name="kode_item[]"]').val();
-            var b = $(this).find('input[name="batch_no[]"]').val();
-            if(k == kode && b == batch) exists = true;
-        });
-
-        if(exists) {
-            alert('Item dengan batch ini sudah ada di daftar!');
-            return;
-        }
-
-        var row = '<tr>' +
-                  '<td><input type="hidden" name="kode_item[]" value="'+kode+'">'+nama+'</td>' +
-                  '<td><input type="hidden" name="batch_no[]" value="'+batch+'">'+batch+'</td>' +
-                  '<td><input type="text" class="form-control input-sm text-right" value="'+stok+'" readonly></td>' +
-                  '<td><input type="number" name="qty[]" class="form-control input-sm text-right" value="1" step="any" max="'+stok+'"></td>' +
-                  '<td><input type="hidden" name="satuan[]" value="'+satuan+'">'+satuan+'</td>' +
-                  '<td><button type="button" class="btn btn-xs btn-danger" onclick="$(this).closest(\'tr\').remove()"><i class="fa fa-trash"></i></button></td>' +
-                  '</tr>';
-        $('#tabel-item-mutasi tbody').append(row);
-    });
-
-    $('#formMutasi').submit(function(e) {
-        e.preventDefault();
-        
-        var count = $('#tabel-item-mutasi tbody tr').length;
-        if(count == 0) {
-            alert('Daftar barang masih kosong!');
-            return;
-        }
-
-        $.ajax({
-            url: '{?=url(ADMIN."/logistik_non_medis/savemutasi")?}',
-            type: 'POST',
-            data: $(this).serialize(),
-            success: function(res) {
-                var data = JSON.parse(res);
-                if(data.status == 'success') {
-                    $('#modalMutasi').modal('hide');
-                    loadMutasi();
-                } else {
-                    alert(data.message);
-                }
-            }
-        });
+    $('.select2-item').each(function() {
+        initSelect2Item(this);
     });
 });
 </script>

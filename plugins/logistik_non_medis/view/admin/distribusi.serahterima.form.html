@@ -21,8 +21,8 @@
                             <input type="text" class="form-control" value="{$sppb.nama_unit}" readonly disabled>
                         </div>
                         <div class="form-group">
-                            <label>Nama Penerima (User Unit) <span class="text-danger">*</span></label>
-                            <input type="text" name="penerima_nama" class="form-control" placeholder="Masukkan nama penerima..." required>
+                            <label>Nama Pengambil / Penerima <span class="text-danger">*</span></label>
+                            <input type="text" name="penerima_nama" class="form-control" placeholder="Nama lengkap orang yang mengambil barang..." required>
                         </div>
                         <div class="form-group">
                             <label>NIP/ID Penerima (Opsional)</label>
@@ -68,6 +68,46 @@
 
         <div class="panel panel-default" style="margin-bottom:0;">
             <div class="panel-heading">
+                <style>
+                    .custom-breadcrumb {
+                        display: inline-flex;
+                        align-items: center;
+                        background: #f8f9fa;
+                        border: 1px solid #e1e4e8;
+                        border-radius: 6px;
+                        padding: 6px 15px;
+                        font-size: 13px;
+                        margin-bottom: 15px;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                    }
+                    .custom-breadcrumb a {
+                        color: #4a4a4a;
+                        text-decoration: none;
+                        display: inline-flex;
+                        align-items: center;
+                        font-weight: 500;
+                    }
+                    .custom-breadcrumb a:hover {
+                        color: #337ab7;
+                    }
+                    .custom-breadcrumb .separator {
+                        margin: 0 10px;
+                        color: #a0a0a0;
+                        font-size: 11px;
+                    }
+                    .custom-breadcrumb .active {
+                        color: #337ab7;
+                        font-weight: 600;
+                    }
+                </style>
+                <div class="custom-breadcrumb">
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Distribusi</a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <span class="active">Serahterima</span>
+                </div>
+
                 <h5 class="panel-title" style="margin:0;"><i class="fa fa-list"></i> Detail Barang yang Diserahkan</h5>
             </div>
             <div class="table-responsive">
@@ -162,7 +202,7 @@ function simpanSerahTerima() {
         return;
     }
 
-    var sigData = signaturePad.toDataURL();
+    var sigData = signaturePad.toDataURL('image/png');
     $('#tanda_terima_data').val(sigData);
     
     var btn = $('.btn-primary').last();

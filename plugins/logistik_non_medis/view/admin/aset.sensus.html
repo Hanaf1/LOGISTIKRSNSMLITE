@@ -20,7 +20,47 @@
     <div class="col-md-12">
         <div class="panel panel-default">
             <div class="panel-heading">
-                <h3 class="panel-title">
+                <style>
+                    .custom-breadcrumb {
+                        display: inline-flex;
+                        align-items: center;
+                        background: #f8f9fa;
+                        border: 1px solid #e1e4e8;
+                        border-radius: 6px;
+                        padding: 6px 15px;
+                        font-size: 13px;
+                        margin-bottom: 15px;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                    }
+                    .custom-breadcrumb a {
+                        color: #4a4a4a;
+                        text-decoration: none;
+                        display: inline-flex;
+                        align-items: center;
+                        font-weight: 500;
+                    }
+                    .custom-breadcrumb a:hover {
+                        color: #337ab7;
+                    }
+                    .custom-breadcrumb .separator {
+                        margin: 0 10px;
+                        color: #a0a0a0;
+                        font-size: 11px;
+                    }
+                    .custom-breadcrumb .active {
+                        color: #337ab7;
+                        font-weight: 600;
+                    }
+                </style>
+                <div class="custom-breadcrumb">
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Aset</a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <span class="active">Sensus</span>
+                </div>
+
+                <h3 class="panel-title" style="margin-top: 5px;">
                     <i class="fa fa-clipboard-check"></i> Sensus & Verifikasi Aset Berkala
                 </h3>
             </div>

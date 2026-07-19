@@ -8,10 +8,19 @@
         <h3 class="panel-title" style="padding-top: 5px;">Dashboard Logistik Non Medis</h3>
       </div>
       <div class="panel-body">
-        
-        <div class="row">
-          <div class="col-md-12">
-            <h4><i class="fa fa-database"></i> Master Data</h4>
+<ul class="nav nav-tabs" role="tablist" style="margin-bottom: 20px;">
+<li role="presentation" class="active"><a href="#master-data" aria-controls="master-data" role="tab" data-toggle="tab"><i class="fa fa-database"></i> Master Data</a></li>
+<li role="presentation" ><a href="#pengadaan" aria-controls="pengadaan" role="tab" data-toggle="tab"><i class="fa fa-shopping-cart"></i> Pengadaan</a></li>
+<li role="presentation" ><a href="#manajemen-gudang" aria-controls="manajemen-gudang" role="tab" data-toggle="tab"><i class="fa fa-home"></i> Manajemen Gudang</a></li>
+<li role="presentation" ><a href="#distribusi" aria-controls="distribusi" role="tab" data-toggle="tab"><i class="fa fa-share-alt"></i> Distribusi</a></li>
+<li role="presentation" ><a href="#aset" aria-controls="aset" role="tab" data-toggle="tab"><i class="fa fa-cubes"></i> Aset</a></li>
+<li role="presentation" ><a href="#laporan-audit" aria-controls="laporan-audit" role="tab" data-toggle="tab"><i class="fa fa-line-chart"></i> Laporan & Audit</a></li>
+</ul>
+<div class="tab-content">
+<div role="tabpanel" class="tab-pane active" id="master-data">
+    <div class="row">
+        <div class="col-md-12">
+            <h4 style="display:none;"><i class="fa fa-database"></i> Master Data</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
                 
@@ -51,17 +60,7 @@
                     </div>
                 </li>
 
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','masterlokasi'])?}" class="panel-body text-center">
-                            <div class="panel-thumb">
-                                <i class="fa fa-map-marker"></i>
-                                <div class="desc">Manajemen Data Lokasi Gudang</div>
-                            </div>
-                            <h4><b>Lokasi Gudang</b></h4>
-                        </a>
-                    </div>
-                </li>
+
 
                 <li class="module">
                     <div class="panel panel-default">
@@ -99,36 +98,27 @@
                     </div>
                 </li>
 
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','mastercoa'])?}" class="panel-body text-center">
-                            <div class="panel-thumb">
-                                <i class="fa fa-book"></i>
-                                <div class="desc">Manajemen Kode Akun (COA)</div>
-                            </div>
-                            <h4><b>Kode Akun</b></h4>
-                        </a>
-                    </div>
-                </li>
+
 
             </ul>
-          </div>
         </div>
-
-        <div class="row" style="margin-top: 25px;">
-          <div class="col-md-12">
-            <h4><i class="fa fa-shopping-cart"></i> Pengadaan</h4>
+    </div>
+</div>
+<div role="tabpanel" class="tab-pane " id="pengadaan">
+    <div class="row">
+        <div class="col-md-12">
+            <h4 style="display:none;"><i class="fa fa-shopping-cart"></i> Pengadaan</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
                 
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','pengadaanperencanaan'])?}" class="panel-body text-center">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','rencanapembelian'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-calendar-check-o"></i>
-                                <div class="desc">Perencanaan Kebutuhan</div>
+                                <div class="desc">Rutin, Non-Rutin & Aset</div>
                             </div>
-                            <h4><b>Perencanaan</b></h4>
+                            <h4><b>Perencanaan Pembelian</b></h4>
                         </a>
                     </div>
                 </li>
@@ -171,27 +161,19 @@
 
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','pengadaanekatalog'])?}" class="panel-body text-center">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','pengadaanpenerimaan'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
-                                <i class="fa fa-globe"></i>
-                                <div class="desc">E-Katalog & E-Purchasing</div>
+                                <i class="fa fa-truck"></i>
+                                <div class="desc">Realisasi, verifikasi, dan stok masuk</div>
                             </div>
-                            <h4><b>E-Katalog</b></h4>
+                            <h4><b>Penerimaan Barang</b></h4>
                         </a>
                     </div>
                 </li>
 
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','pengadaanpenerimaan'])?}" class="panel-body text-center">
-                            <div class="panel-thumb">
-                                <i class="fa fa-check-square-o"></i>
-                                <div class="desc">Penerimaan & Verifikasi</div>
-                            </div>
-                            <h4><b>Penerimaan</b></h4>
-                        </a>
-                    </div>
-                </li>
+
+
+
 
                 <li class="module">
                     <div class="panel panel-default">
@@ -206,12 +188,13 @@
                 </li>
 
             </ul>
-          </div>
         </div>
-
-        <div class="row" style="margin-top: 25px;">
-          <div class="col-md-12">
-            <h4><i class="fa fa-home"></i> Manajemen Gudang</h4>
+    </div>
+</div>
+<div role="tabpanel" class="tab-pane " id="manajemen-gudang">
+    <div class="row">
+        <div class="col-md-12">
+            <h4 style="display:none;"><i class="fa fa-home"></i> Manajemen Gudang</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
                 
@@ -223,18 +206,6 @@
                                 <div class="desc">Penerimaan Barang Masuk</div>
                             </div>
                             <h4><b>Barang Masuk</b></h4>
-                        </a>
-                    </div>
-                </li>
-                
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','gudanglokasi'])?}" class="panel-body text-center">
-                            <div class="panel-thumb">
-                                <i class="fa fa-map-marker"></i>
-                                <div class="desc">Manajemen Lokasi & Rak</div>
-                            </div>
-                            <h4><b>Manajemen Lokasi</b></h4>
                         </a>
                     </div>
                 </li>
@@ -300,11 +271,13 @@
                 </li>
 
             </ul>
-          </div>
         </div>
-        <div class="row" style="margin-top: 25px;">
-          <div class="col-md-12">
-            <h4><i class="fa fa-share-alt"></i> Distribusi</h4>
+    </div>
+</div>
+<div role="tabpanel" class="tab-pane " id="distribusi">
+    <div class="row">
+        <div class="col-md-12">
+            <h4 style="display:none;"><i class="fa fa-share-alt"></i> Distribusi</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
                 <li class="module">
@@ -386,12 +359,13 @@
                     </div>
                 </li>
             </ul>
-          </div>
         </div>
-
-        <div class="row" style="margin-top: 25px;">
-          <div class="col-md-12">
-            <h4><i class="fa fa-cubes"></i> Aset</h4>
+    </div>
+</div>
+<div role="tabpanel" class="tab-pane " id="aset">
+    <div class="row">
+        <div class="col-md-12">
+            <h4 style="display:none;"><i class="fa fa-cubes"></i> Aset</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
                 <li class="module">
@@ -472,12 +446,13 @@
                     </div>
                 </li>
             </ul>
-          </div>
         </div>
-
-        <div class="row" style="margin-top: 25px;">
-          <div class="col-md-12">
-            <h4><i class="fa fa-line-chart"></i> Laporan & Audit</h4>
+    </div>
+</div>
+<div role="tabpanel" class="tab-pane " id="laporan-audit">
+    <div class="row">
+        <div class="col-md-12">
+            <h4 style="display:none;"><i class="fa fa-line-chart"></i> Laporan & Audit</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
                 
@@ -513,6 +488,18 @@
                                 <div class="desc">Laporan Distribusi Barang ke Unit</div>
                             </div>
                             <h4><b>Distribusi</b></h4>
+                        </a>
+                    </div>
+                </li>
+
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','laporancostunit'])?}" class="panel-body text-center">
+                            <div class="panel-thumb">
+                                <i class="fa fa-calculator"></i>
+                                <div class="desc">Perhitungan HPP SPPB Mingguan per Unit</div>
+                            </div>
+                            <h4><b>Cost Unit Mingguan</b></h4>
                         </a>
                     </div>
                 </li>
@@ -555,8 +542,10 @@
                 </li>
 
             </ul>
-          </div>
         </div>
+    </div>
+</div>
+</div>
 
       </div>
     </div>

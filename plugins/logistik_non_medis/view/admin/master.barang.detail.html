@@ -7,9 +7,8 @@
         <div class="col-md-6">
             <table class="table table-striped">
                 <tr><th width="150">Kode Item</th><td>: {$barang.kode_item}</td></tr>
-                <tr><th>Barcode</th><td>: {$barang.barcode}</td></tr>
                 <tr><th>Nama Barang</th><td>: {$barang.nama_barang}</td></tr>
-                <tr><th>Kategori</th><td>: {$barang.kategori} ({$barang.sub_kategori})</td></tr>
+                <tr><th>Kategori</th><td>: {$barang.kategori}</td></tr>
                 <tr><th>Satuan</th><td>: {$barang.satuan_dasar} (Konversi: {$barang.satuan_konversi})</td></tr>
                 <tr><th>Harga Referensi</th><td>: Rp. {?=number_format($barang.harga_referensi,0,',','.')?}</td></tr>
                 <tr><th>Status</th><td>: 
@@ -22,14 +21,54 @@
             </table>
             <div class="well" style="margin-top: 10px;">
                 <strong>Deskripsi:</strong><br>
-                {?=nl2br($barang.deskripsi)?}<br><br>
+                {?=nl2br($barang.deskripsi ?? '')?}<br><br>
                 <strong>Spesifikasi:</strong><br>
-                {?=nl2br($barang.spesifikasi)?}
+                {?=nl2br($barang.spesifikasi ?? '')?}
             </div>
         </div>
         <div class="col-md-6">
             <div class="panel panel-default">
-                <div class="panel-heading">Foto Barang</div>
+                <div class="panel-heading">
+                <style>
+                    .custom-breadcrumb {
+                        display: inline-flex;
+                        align-items: center;
+                        background: #f8f9fa;
+                        border: 1px solid #e1e4e8;
+                        border-radius: 6px;
+                        padding: 6px 15px;
+                        font-size: 13px;
+                        margin-bottom: 15px;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                    }
+                    .custom-breadcrumb a {
+                        color: #4a4a4a;
+                        text-decoration: none;
+                        display: inline-flex;
+                        align-items: center;
+                        font-weight: 500;
+                    }
+                    .custom-breadcrumb a:hover {
+                        color: #337ab7;
+                    }
+                    .custom-breadcrumb .separator {
+                        margin: 0 10px;
+                        color: #a0a0a0;
+                        font-size: 11px;
+                    }
+                    .custom-breadcrumb .active {
+                        color: #337ab7;
+                        font-weight: 600;
+                    }
+                </style>
+                <div class="custom-breadcrumb">
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Data Master</a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <span class="active">Barang</span>
+                </div>
+Foto Barang</div>
                 <div class="panel-body text-center">
                     {if: $barang.foto}
                     <a href="{?=url('uploads/logistik_non_medis/foto/'.$barang.foto)?}" target="_blank" title="Klik untuk memperbesar">

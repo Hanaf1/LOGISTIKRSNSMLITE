@@ -1,0 +1,152 @@
+<div class="modal fade" id="modalFormNonRutin" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document" style="width: 80%;">
+        <div class="modal-content">
+            <form id="form-rencana-nonrutin">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">{if: $id}Ubah Usulan Pembelian Non-Rutin{else}Buat Usulan Pembelian Non-Rutin Baru{/if}</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>No. Rencana</label>
+                                <input type="text" name="no_rencana" class="form-control" value="{$rencana.no_rencana}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Tahun Anggaran</label>
+                                <input type="number" name="tahun" class="form-control" value="{$rencana.tahun}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Tanggal Dibuat</label>
+                                <input type="date" name="tanggal_buat" class="form-control" value="{$rencana.tanggal_buat}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Unit Pengaju</label>
+                                <select name="kode_unit" class="form-control" required>
+                                    <option value="">-- Pilih Unit --</option>
+                                    {loop: $units as $unit}
+                                    <option value="{$unit.kode_unit}" {if: $rencana.kode_unit == $unit.kode_unit}selected{/if}>{$unit.nama_unit}</option>
+                                    {/loop}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Keterangan / Judul Usulan</label>
+                                <input type="text" name="keterangan" class="form-control" value="{$rencana.keterangan}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <h4>Daftar Barang Non-Rutin / Aset yang Diusulkan</h4>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="tbl-items-nonrutin">
+                            <thead>
+                                <tr>
+                                    <th width="25%">Nama Barang (Bebas)</th>
+                                    <th width="15%">Kategori / Jenis</th>
+                                    <th width="15%">Estimasi Harga Satuan (Rp)</th>
+                                    <th width="10%">Qty</th>
+                                    <th width="20%">Subtotal Estimasi (Rp)</th>
+                                    <th width="10%">Alasan / Urgensi</th>
+                                    <th width="5%" class="text-center">
+                                        <button type="button" class="btn btn-xs btn-success" onclick="addItemRowNonRutin()"><i class="fa fa-plus"></i></button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-items-nonrutin">
+                                {if: empty($details)}
+                                <!-- Default 1 Row -->
+                                <tr>
+                                    <td><input type="text" name="items[0][nama_barang]" class="form-control" placeholder="Nama Aset / Barang..." required></td>
+                                    <td><input type="text" name="items[0][kategori]" class="form-control" placeholder="Cth: Elektronik"></td>
+                                    <td><input type="number" name="items[0][estimasi_harga]" class="form-control input-harga" value="0" required oninput="calcSubtotalNonRutin(this)"></td>
+                                    <td><input type="number" name="items[0][qty_rencana]" class="form-control input-qty" value="1" required oninput="calcSubtotalNonRutin(this)"></td>
+                                    <td><input type="text" class="form-control input-subtotal" value="0" readonly></td>
+                                    <td><input type="text" name="items[0][alasan]" class="form-control" placeholder="..."></td>
+                                    <td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="removeItemRowNonRutin(this)"><i class="fa fa-trash"></i></button></td>
+                                </tr>
+                                {else}
+                                    {loop: $details as $i => $det}
+                                    <tr>
+                                        <td><input type="text" name="items[{$i}][nama_barang]" class="form-control" value="{$det.nama_barang}" required></td>
+                                        <td><input type="text" name="items[{$i}][kategori]" class="form-control" value="{$det.kategori}"></td>
+                                        <td><input type="number" name="items[{$i}][estimasi_harga]" class="form-control input-harga" value="{$det.estimasi_harga}" required oninput="calcSubtotalNonRutin(this)"></td>
+                                        <td><input type="number" name="items[{$i}][qty_rencana]" class="form-control input-qty" value="{$det.qty_rencana}" required oninput="calcSubtotalNonRutin(this)"></td>
+                                        <td><input type="text" class="form-control input-subtotal" value="{?=number_format($det.estimasi_harga * $det.qty_rencana, 0, ',', '.')?}" readonly></td>
+                                        <td><input type="text" name="items[{$i}][alasan]" class="form-control" value="{$det.alasan}"></td>
+                                        <td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="removeItemRowNonRutin(this)"><i class="fa fa-trash"></i></button></td>
+                                    </tr>
+                                    {/loop}
+                                {/if}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan Usulan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+var rowIdxNonRutin = {?=count($details) > 0 ? count($details) : 1?};
+
+function addItemRowNonRutin() {
+    var tr = `
+    <tr>
+        <td><input type="text" name="items[${rowIdxNonRutin}][nama_barang]" class="form-control" placeholder="Nama Aset / Barang..." required></td>
+        <td><input type="text" name="items[${rowIdxNonRutin}][kategori]" class="form-control" placeholder="Cth: Elektronik"></td>
+        <td><input type="number" name="items[${rowIdxNonRutin}][estimasi_harga]" class="form-control input-harga" value="0" required oninput="calcSubtotalNonRutin(this)"></td>
+        <td><input type="number" name="items[${rowIdxNonRutin}][qty_rencana]" class="form-control input-qty" value="1" required oninput="calcSubtotalNonRutin(this)"></td>
+        <td><input type="text" class="form-control input-subtotal" value="0" readonly></td>
+        <td><input type="text" name="items[${rowIdxNonRutin}][alasan]" class="form-control" placeholder="..."></td>
+        <td class="text-center"><button type="button" class="btn btn-xs btn-danger" onclick="removeItemRowNonRutin(this)"><i class="fa fa-trash"></i></button></td>
+    </tr>
+    `;
+    $('#tbody-items-nonrutin').append(tr);
+    rowIdxNonRutin++;
+}
+
+function removeItemRowNonRutin(btn) {
+    if($('#tbody-items-nonrutin tr').length > 1) {
+        $(btn).closest('tr').remove();
+    } else {
+        alert('Minimal harus ada 1 barang dalam usulan!');
+    }
+}
+
+function calcSubtotalNonRutin(el) {
+    var tr = $(el).closest('tr');
+    var harga = parseFloat(tr.find('.input-harga').val()) || 0;
+    var qty = parseFloat(tr.find('.input-qty').val()) || 0;
+    var sub = harga * qty;
+    tr.find('.input-subtotal').val(sub.toLocaleString('id-ID'));
+}
+
+$(document).ready(function() {
+    $('#form-rencana-nonrutin').submit(function(e) {
+        e.preventDefault();
+        $.post(baseURL + '/saverencananonrutin?t=' + mlite.token, $(this).serialize(), function(res) {
+            var r = JSON.parse(res);
+            if(r.status == 'success') {
+                $('#modalFormNonRutin').modal('hide');
+                window.location.reload();
+            } else {
+                alert(r.message);
+            }
+        });
+    });
+});
+</script>

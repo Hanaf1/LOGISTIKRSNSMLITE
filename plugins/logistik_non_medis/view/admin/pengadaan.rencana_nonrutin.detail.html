@@ -1,0 +1,97 @@
+<div class="modal fade" id="modalDetailNonRutin" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document" style="width: 80%;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Detail Usulan Pembelian Non-Rutin (Tahun {$rencana.tahun})</h4>
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered">
+                    <tr>
+                        <th width="20%" class="active">No. Usulan</th>
+                        <td width="30%">{$rencana.no_rencana}</td>
+                        <th width="20%" class="active">Tanggal Dibuat</th>
+                        <td width="30%">{$rencana.tanggal_buat}</td>
+                    </tr>
+                    <tr>
+                        <th class="active">Unit Pengaju</th>
+                        <td>{$rencana.nama_unit}</td>
+                        <th class="active">Keterangan / Judul</th>
+                        <td>{$rencana.keterangan}</td>
+                    </tr>
+                    <tr>
+                        <th class="active">Status</th>
+                        <td colspan="3">{$rencana.status}</td>
+                    </tr>
+                    {if: $rencana.status == 'Ditolak'}
+                    <tr>
+                        <th class="active">Alasan Penolakan</th>
+                        <td colspan="3" class="text-danger">{$rencana.alasan_penolakan}</td>
+                    </tr>
+                    {/if}
+                </table>
+                
+                <hr>
+                <h4>Rincian Barang & Estimasi</h4>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Nama Barang / Aset</th>
+                                <th>Kategori</th>
+                                <th>Estimasi Harga (Rp)</th>
+                                <th>Qty Usulan</th>
+                                <th>Qty Realisasi</th>
+                                <th>Alasan Kebutuhan</th>
+                                <th>Subtotal Estimasi (Rp)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {if: !empty($details)}
+                                {loop: $details as $i => $det}
+                                <tr>
+                                    <td>{?=($i+1)?}</td>
+                                    <td>{$det.nama_barang}</td>
+                                    <td>{$det.kategori}</td>
+                                    <td>{?=number_format($det.estimasi_harga, 0, ',', '.')?}</td>
+                                    <td>{$det.qty_rencana}</td>
+                                    <td><b>{$det.qty_realisasi}</b></td>
+                                    <td>{$det.alasan}</td>
+                                    <td>{?=number_format($det.estimasi_harga * $det.qty_rencana, 0, ',', '.')?}</td>
+                                </tr>
+                                {/loop}
+                            {else}
+                                <tr>
+                                    <td colspan="8" class="text-center">Tidak ada detail barang.</td>
+                                </tr>
+                            {/if}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="7" class="text-right">TOTAL ESTIMASI ANGGARAN</th>
+                                <th>Rp. {?=number_format($total_estimasi, 0, ',', '.')?}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
+                {if: $rencana.status == 'Draft'}
+                <button type="button" class="btn btn-success" onclick="approveRencanaNonRutin('{$rencana.no_rencana}')"><i class="fa fa-check"></i> Setujui Usulan</button>
+                {/if}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function approveRencanaNonRutin(id) {
+    if(confirm('Setujui usulan pembelian ini?')) {
+        $.post(baseURL + '/approverencananonrutin?t=' + mlite.token, {id: id}, function(res) {
+            window.location.reload();
+        });
+    }
+}
+</script>

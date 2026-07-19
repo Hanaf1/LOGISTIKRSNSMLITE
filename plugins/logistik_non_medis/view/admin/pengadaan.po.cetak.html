@@ -101,7 +101,7 @@
     
     {if: !empty($po['catatan'])}
     <p><b>Catatan Khusus:</b><br>
-    {?= nl2br($po['catatan']) ?}</p>
+    {?= nl2br($po['catatan'] ?? '') ?}</p>
     {/if}
     
     <table class="footer-sig">

@@ -1,0 +1,74 @@
+<style>
+.cost-breadcrumb{display:inline-flex;align-items:center;background:#f8f9fa;border:1px solid #e1e4e8;border-radius:6px;padding:7px 15px;margin-bottom:15px}
+.cost-breadcrumb .separator{margin:0 10px;color:#aaa;font-size:11px}.cost-breadcrumb .active{color:#337ab7;font-weight:600}
+.cost-filter{background:#f7f8fa;border:1px solid #e3e6e8;padding:15px;margin-bottom:18px}.cost-filter .form-group{margin-bottom:0}
+.cost-kpi .panel-body{padding:14px}.cost-kpi h3{margin:0;font-weight:700}.cost-kpi small{text-transform:uppercase;color:#777;font-weight:600}
+</style>
+
+<div class="row">
+  <div class="col-md-12">
+    <div class="cost-breadcrumb">
+      <a href="{?=url([ADMIN,'logistik_non_medis','manage'])?}"><i class="fa fa-home"></i></a>
+      <i class="fa fa-chevron-right separator"></i><span>Laporan & Audit</span>
+      <i class="fa fa-chevron-right separator"></i><span class="active">Cost Unit Mingguan</span>
+    </div>
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-calculator"></i> Cost Unit SPPB Mingguan</h3>
+      </div>
+      <div class="panel-body">
+        <div class="alert alert-info">
+          <i class="fa fa-info-circle"></i> Data berasal dari SPPB mingguan berstatus <strong>Diajukan</strong>. Simpan harga untuk tetap sebagai Diajukan, lalu finalisasi setelah nilai sudah benar agar status berubah menjadi <strong>Selesai</strong>.
+        </div>
+        <div class="cost-filter">
+          <div class="row">
+            <div class="col-md-3">
+              <div class="form-group">
+                <label>Periode Bulan / Tahun</label>
+                <div class="input-group date" id="cost-periode-picker">
+                  <input type="text" id="cost-periode" class="form-control" value="{?=date('Y-m')?}" readonly>
+                  <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3"><div class="form-group"><label>Minggu</label>
+              <select id="cost-minggu" class="form-control"><option value="0">Semua Minggu</option><option value="1">Minggu ke-1 (1–7)</option><option value="2">Minggu ke-2 (8–14)</option><option value="3">Minggu ke-3 (15–21)</option><option value="4">Minggu ke-4 (22–akhir bulan)</option></select>
+            </div></div>
+            <div class="col-md-3"><div class="form-group"><label>Status</label>
+              <select id="cost-status" class="form-control"><option value="">Diajukan & Selesai</option><option value="Diajukan">Diajukan</option><option value="Selesai">Selesai</option></select>
+            </div></div>
+            <div class="col-md-3" style="padding-top:25px">
+              <div class="btn-group btn-group-justified"><a href="#" id="btn-cost-tampil" class="btn btn-primary"><i class="fa fa-search"></i> Tampilkan</a><a href="#" id="btn-cost-export" class="btn btn-success"><i class="fa fa-file-excel-o"></i> Export</a></div>
+            </div>
+          </div>
+        </div>
+        <div id="display-cost-unit"><div class="text-center" style="padding:40px"><i class="fa fa-spinner fa-spin fa-3x"></i><p>Memuat Cost Unit...</p></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modal-cost-unit" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document"><div class="modal-content">
+    <form id="form-cost-unit"><div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Rincian Cost Unit</h4></div>
+    <div class="modal-body" id="detail-cost-unit"></div>
+    <div class="modal-footer" id="footer-cost-unit"><button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button><button type="button" class="btn btn-primary btn-save-cost" data-action="simpan"><i class="fa fa-save"></i> Simpan Harga</button><button type="button" class="btn btn-success btn-save-cost" data-action="selesai"><i class="fa fa-check"></i> Simpan & Tandai Selesai</button></div></form>
+  </div></div>
+</div>
+
+<script>
+$(function(){
+  if($.fn.datetimepicker) $('#cost-periode-picker').datetimepicker({format:'YYYY-MM',viewMode:'months',ignoreReadonly:true,locale:'id'});
+  function loadCost(){
+    $('#display-cost-unit').html('<div class="text-center" style="padding:40px"><i class="fa fa-spinner fa-spin fa-3x"></i></div>');
+    $.post('{?=url(ADMIN."/logistik_non_medis/displaylaporancostunit")?}',{periode:$('#cost-periode').val(),minggu:$('#cost-minggu').val(),status:$('#cost-status').val()},function(html){$('#display-cost-unit').html(html);}).fail(function(){$('#display-cost-unit').html('<div class="alert alert-danger">Gagal memuat laporan Cost Unit.</div>');});
+  }
+  $('#btn-cost-tampil').on('click',function(e){e.preventDefault();loadCost();});
+  $('#btn-cost-export').on('click',function(e){e.preventDefault();var base='{?=url(ADMIN."/logistik_non_medis/exportlaporancostunit")?}';var sep=base.indexOf('?')>=0?'&':'?';window.location.href=base+sep+'periode='+encodeURIComponent($('#cost-periode').val())+'&minggu='+encodeURIComponent($('#cost-minggu').val())+'&status='+encodeURIComponent($('#cost-status').val());});
+  $(document).on('click','.btn-detail-cost',function(){var no=$(this).data('no');$('#detail-cost-unit').html('<div class="text-center" style="padding:30px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');$.post('{?=url(ADMIN."/logistik_non_medis/detaillaporancostunit")?}',{no_sppb:no},function(html){$('#detail-cost-unit').html(html);var editable=$('#cost-editable').val()==='1';$('#footer-cost-unit .btn-save-cost').toggle(editable);$('#modal-cost-unit').modal('show');});});
+  $(document).on('input','.cost-harga',function(){var tr=$(this).closest('tr'),qty=parseFloat(tr.data('qty'))||0,harga=parseFloat($(this).val())||0;tr.find('.cost-subtotal').text('Rp. '+Math.round(qty*harga).toLocaleString('id-ID'));hitungModal();});
+  function hitungModal(){var total=0;$('.cost-harga').each(function(){total+=(parseFloat($(this).val())||0)*(parseFloat($(this).closest('tr').data('qty'))||0);});$('#cost-grand-total').text('Rp. '+Math.round(total).toLocaleString('id-ID'));}
+  $('.btn-save-cost').on('click',function(){var action=$(this).data('action');if(action==='selesai'&&!confirm('Finalisasi Cost Unit ini? Setelah selesai harga menjadi arsip dan status SPPB berubah menjadi Selesai.'))return;var btn=$(this).prop('disabled',true);var data=$('#form-cost-unit').serialize()+'&action='+encodeURIComponent(action);$.ajax({url:'{?=url(ADMIN."/logistik_non_medis/savelaporancostunit")?}',type:'POST',data:data,dataType:'json'}).done(function(res){alert(res.message);if(res.status==='success'){$('#modal-cost-unit').modal('hide');loadCost();}}).fail(function(xhr){alert((xhr.responseJSON&&xhr.responseJSON.message)||'Gagal menyimpan Cost Unit.');}).always(function(){btn.prop('disabled',false);});});
+  loadCost();
+});
+</script>

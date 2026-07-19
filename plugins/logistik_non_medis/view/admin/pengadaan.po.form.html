@@ -1,6 +1,14 @@
 <form id="po-form-data" class="form-horizontal">
     <input type="hidden" name="id" value="{?= $data['id'] ?}">
     <input type="hidden" id="items_json" name="items_json" value='{?= json_encode($data['items']) ?}'>
+    <input type="hidden" name="sumber_tipe" value="{?= $data['sumber_tipe'] ?? '' ?}">
+    <input type="hidden" name="no_rencana" value="{?= $data['no_rencana'] ?? '' ?}">
+
+    {if: !empty($data['no_rencana'])}
+    <div class="alert alert-info">
+        <i class="fa fa-link"></i> PO ini berasal dari rencana <strong>{$data.no_rencana}</strong>.
+    </div>
+    {/if}
 
     <div class="row">
         <div class="col-md-6">

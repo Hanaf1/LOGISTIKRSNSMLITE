@@ -1,0 +1,112 @@
+<article class="row">
+    <div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <ol class="breadcrumb" style="margin:0; padding:0; background:none;">
+                    <li><a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a></li>
+                    <li><a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Pengadaan</a></li>
+                    <li class="active">Perencanaan Pembelian</li>
+                </ol>
+                <h3 class="panel-title" style="margin-top:12px;"><i class="fa fa-calendar"></i> Perencanaan Pembelian</h3>
+            </div>
+            <div class="panel-body">
+                <div class="alert alert-info" style="margin-bottom:15px;">
+                    <i class="fa fa-info-circle"></i>
+                    Buat rencana di sini, lanjutkan ke <b>Purchase Order</b>, lalu catat realisasi melalui menu
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'pengadaanpenerimaan'])?}"><b>Penerimaan Barang</b></a>.
+                </div>
+                <div class="text-right" style="margin-top:-7px; margin-bottom:12px;">
+                    <a class="btn btn-success" target="_blank" href="{?=url([ADMIN, 'logistik_non_medis', 'exportlaporanperencanaan'])?}&bulan={$bulan}&tahun={$tahun}"><i class="fa fa-download"></i> Export Laporan Perencanaan</a>
+                </div>
+                <div class="alert alert-warning" id="toolbar-rencana-terpilih" style="display:none; margin-bottom:12px;">
+                    <span><i class="fa fa-check-square-o"></i> <b id="jumlah-rencana-terpilih">0</b> rencana dipilih.</span>
+                    <button type="button" class="btn btn-success btn-sm pull-right" onclick="exportRencanaTerpilih()"><i class="fa fa-download"></i> Export Rincian Terpilih</button>
+                    <button type="button" class="btn btn-danger btn-sm pull-right" style="margin-right:6px;" onclick="bukaKeputusanBulk('tolak')"><i class="fa fa-times"></i> Tolak Terpilih</button>
+                    <button type="button" class="btn btn-success btn-sm pull-right" style="margin-right:6px;" onclick="bukaKeputusanBulk('setujui')"><i class="fa fa-check"></i> Setujui Terpilih</button>
+                </div>
+
+                <ul class="nav nav-tabs" role="tablist">
+                    <li role="presentation" {if: $tipe == 'rutin'}class="active"{/if}>
+                        <a href="#rutin" aria-controls="rutin" role="tab" data-toggle="tab"><i class="fa fa-repeat"></i> Rencana Rutin</a>
+                    </li>
+                    <li role="presentation" {if: $tipe == 'nonrutin'}class="active"{/if}>
+                        <a href="#nonrutin" aria-controls="nonrutin" role="tab" data-toggle="tab"><i class="fa fa-calendar-plus-o"></i> Non-Rutin / Aset</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content" style="padding-top:18px;">
+                    <div role="tabpanel" class="tab-pane {if: $tipe == 'rutin'}active{/if}" id="rutin">
+                        <div class="row" style="margin-bottom:15px;">
+                            <div class="col-md-6"><button class="btn btn-primary" onclick="tambahRencanaRutin()"><i class="fa fa-plus"></i> Tambah Rencana Rutin</button></div>
+                            <div class="col-md-6">
+                                <form method="GET" action="{?=url([ADMIN, 'logistik_non_medis', 'rencanapembelian'])?}">
+                                    <input type="hidden" name="tipe" value="rutin">
+                                    <div class="input-group">
+                                        <span class="input-group-addon">Periode</span>
+                                        <select name="bulan" class="form-control">
+                                            <option value="01" {if: $bulan == '01'}selected{/if}>Januari</option><option value="02" {if: $bulan == '02'}selected{/if}>Februari</option><option value="03" {if: $bulan == '03'}selected{/if}>Maret</option><option value="04" {if: $bulan == '04'}selected{/if}>April</option><option value="05" {if: $bulan == '05'}selected{/if}>Mei</option><option value="06" {if: $bulan == '06'}selected{/if}>Juni</option><option value="07" {if: $bulan == '07'}selected{/if}>Juli</option><option value="08" {if: $bulan == '08'}selected{/if}>Agustus</option><option value="09" {if: $bulan == '09'}selected{/if}>September</option><option value="10" {if: $bulan == '10'}selected{/if}>Oktober</option><option value="11" {if: $bulan == '11'}selected{/if}>November</option><option value="12" {if: $bulan == '12'}selected{/if}>Desember</option>
+                                        </select>
+                                        <input type="number" name="tahun" class="form-control" value="{$tahun}">
+                                        <span class="input-group-btn"><button class="btn btn-default"><i class="fa fa-search"></i> Tampilkan</button></span>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="table-responsive"><table class="table table-striped table-bordered table-hover">
+                            <thead><tr><th class="text-center"><input type="checkbox" class="pilih-semua-rencana" data-tipe="rutin" title="Pilih semua rencana rutin pada halaman ini"></th><th>No</th><th>No. Rencana</th><th>Periode</th><th>Tanggal</th><th>Keterangan</th><th>Vendor</th><th>Total Estimasi</th><th>Status</th><th>Aksi</th></tr></thead>
+                            <tbody>{if: !empty($rencana_rutin)}{loop: $rencana_rutin as $row}<tr>
+                                <td class="text-center"><input type="checkbox" class="check-rencana" value="rutin|{$row.no_rencana}"></td><td>{$row.no}</td><td><b>{$row.no_rencana}</b></td><td>{$row.bulan} / {$row.tahun}</td><td>{$row.tanggal_buat}</td><td>{$row.keterangan}</td><td>{if: !empty($row.nama_vendor)}{$row.nama_vendor}{else}-{/if}</td><td>Rp. {$row.total_estimasi}</td>
+                                <td>{if: $row.status == 'Disetujui'}<span class="label label-success">Disetujui</span>{elseif: $row.status == 'Ditolak'}<span class="label label-danger">Ditolak</span>{elseif: $row.status == 'Selesai'}<span class="label label-primary">Selesai</span>{else}<span class="label label-default">Draft</span>{/if}</td>
+                                <td><div class="btn-group"><button class="btn btn-xs btn-info" onclick="viewRencanaRutin('{$row.no_rencana}')" title="Lihat detail"><i class="fa fa-eye"></i></button>{if: $row.status == 'Draft'}<button class="btn btn-xs btn-success" onclick="bukaKeputusan('rutin', '{$row.no_rencana}', 'setujui')" title="Setujui"><i class="fa fa-check"></i></button><button class="btn btn-xs btn-danger" onclick="bukaKeputusan('rutin', '{$row.no_rencana}', 'tolak')" title="Tolak"><i class="fa fa-times"></i></button><button class="btn btn-xs btn-default" onclick="editRencanaRutin('{$row.no_rencana}')" title="Ubah"><i class="fa fa-edit"></i></button><button class="btn btn-xs btn-danger" onclick="hapusRencanaRutin('{$row.no_rencana}')" title="Hapus"><i class="fa fa-trash"></i></button>{/if}</div></td>
+                            </tr>{/loop}{else}<tr><td colspan="10" class="text-center text-muted" style="padding:30px;"><i class="fa fa-inbox fa-2x"></i><br>Belum ada rencana rutin pada periode ini.</td></tr>{/if}</tbody>
+                        </table></div>
+                    </div>
+
+                    <div role="tabpanel" class="tab-pane {if: $tipe == 'nonrutin'}active{/if}" id="nonrutin">
+                        <div class="row" style="margin-bottom:15px;">
+                            <div class="col-md-8"><button class="btn btn-primary" onclick="tambahRencanaNonRutin()"><i class="fa fa-plus"></i> Buat Usulan Non-Rutin</button></div>
+                            <div class="col-md-4"><form method="GET" action="{?=url([ADMIN, 'logistik_non_medis', 'rencanapembelian'])?}"><input type="hidden" name="tipe" value="nonrutin"><div class="input-group"><span class="input-group-addon">Tahun</span><input type="number" name="tahun" class="form-control" value="{$tahun}"><input type="hidden" name="bulan" value="{$bulan}"><span class="input-group-btn"><button class="btn btn-default"><i class="fa fa-search"></i> Tampilkan</button></span></div></form></div>
+                        </div>
+                        <div class="table-responsive"><table class="table table-striped table-bordered table-hover">
+                            <thead><tr><th class="text-center"><input type="checkbox" class="pilih-semua-rencana" data-tipe="nonrutin" title="Pilih semua usulan non-rutin pada halaman ini"></th><th>No</th><th>No. Rencana</th><th>Tahun</th><th>Tanggal</th><th>Unit Pengaju</th><th>Keterangan / Judul Usulan</th><th>Total Estimasi</th><th>Status</th><th>Aksi</th></tr></thead>
+                            <tbody>{if: !empty($rencana_nonrutin)}{loop: $rencana_nonrutin as $row}<tr>
+                                <td class="text-center"><input type="checkbox" class="check-rencana" value="nonrutin|{$row.no_rencana}"></td><td>{$row.no}</td><td><b>{$row.no_rencana}</b></td><td>{$row.tahun}</td><td>{$row.tanggal_buat}</td><td>{if: !empty($row.nama_unit)}{$row.nama_unit}{else}-{/if}</td><td>{$row.keterangan}</td><td>Rp. {$row.total_estimasi}</td>
+                                <td>{if: $row.status == 'Disetujui'}<span class="label label-success">Disetujui</span>{elseif: $row.status == 'Ditolak'}<span class="label label-danger">Ditolak</span>{elseif: $row.status == 'Selesai'}<span class="label label-primary">Selesai</span>{else}<span class="label label-default">Draft</span>{/if}</td>
+                                <td><div class="btn-group"><button class="btn btn-xs btn-info" onclick="viewRencanaNonRutin('{$row.no_rencana}')" title="Lihat detail"><i class="fa fa-eye"></i></button>{if: $row.status == 'Draft'}<button class="btn btn-xs btn-success" onclick="bukaKeputusan('nonrutin', '{$row.no_rencana}', 'setujui')" title="Setujui"><i class="fa fa-check"></i></button><button class="btn btn-xs btn-danger" onclick="bukaKeputusan('nonrutin', '{$row.no_rencana}', 'tolak')" title="Tolak"><i class="fa fa-times"></i></button><button class="btn btn-xs btn-default" onclick="editRencanaNonRutin('{$row.no_rencana}')" title="Ubah"><i class="fa fa-edit"></i></button><button class="btn btn-xs btn-danger" onclick="hapusRencanaNonRutin('{$row.no_rencana}')" title="Hapus"><i class="fa fa-trash"></i></button>{/if}</div></td>
+                            </tr>{/loop}{else}<tr><td colspan="10" class="text-center text-muted" style="padding:30px;"><i class="fa fa-inbox fa-2x"></i><br>Belum ada usulan pembelian non-rutin/aset.</td></tr>{/if}</tbody>
+                        </table></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</article>
+
+<div id="modal-container"></div>
+<div class="modal fade" id="modal-keputusan-rencana" tabindex="-1" role="dialog" aria-labelledby="judul-keputusan-rencana">
+    <div class="modal-dialog modal-sm" role="document"><div class="modal-content">
+        <div class="modal-header"><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button><h4 class="modal-title" id="judul-keputusan-rencana"></h4></div>
+        <div class="modal-body"><p id="pesan-keputusan-rencana"></p><div class="form-group" id="grup-alasan-penolakan"><label>Alasan Penolakan <span class="text-danger">*</span></label><textarea class="form-control" rows="3" id="alasan-penolakan" placeholder="Tuliskan alasan agar unit pengaju dapat menindaklanjuti..."></textarea></div></div>
+        <div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Batal</button><button type="button" id="btn-simpan-keputusan"><i></i> <span></span></button></div>
+    </div></div>
+</div>
+<script>
+var baseURL = mlite.url + '/' + mlite.admin + '/logistik_non_medis';
+var keputusanRencana = {};
+function modalRencana(url, id, modal) { $.post(baseURL + '/' + url + '?t=' + mlite.token, id ? {id:id} : {}, function(data) { $('#modal-container').html(data); $(modal).modal('show'); }); }
+function tambahRencanaRutin() { modalRencana('formrencanarutin', '', '#modalFormRutin'); }
+function viewRencanaRutin(id) { modalRencana('detailrencanarutin', id, '#modalDetailRutin'); }
+function editRencanaRutin(id) { modalRencana('formrencanarutin', id, '#modalFormRutin'); }
+function hapusRencanaRutin(id) { if (confirm('Hapus rencana rutin beserta seluruh detail barangnya?')) $.post(baseURL + '/hapusrencanarutin?t=' + mlite.token, {id:id}, function(){ window.location.reload(); }); }
+function tambahRencanaNonRutin() { modalRencana('formrencananonrutin', '', '#modalFormNonRutin'); }
+function viewRencanaNonRutin(id) { modalRencana('detailrencananonrutin', id, '#modalDetailNonRutin'); }
+function editRencanaNonRutin(id) { modalRencana('formrencananonrutin', id, '#modalFormNonRutin'); }
+function hapusRencanaNonRutin(id) { if (confirm('Hapus usulan non-rutin beserta seluruh detailnya?')) $.post(baseURL + '/hapusrencananonrutin?t=' + mlite.token, {id:id}, function(){ window.location.reload(); }); }
+function perbaruiPilihanRencana() { var jumlah = $('.check-rencana:checked').length; $('#jumlah-rencana-terpilih').text(jumlah); $('#toolbar-rencana-terpilih').toggle(jumlah > 0); $('.pilih-semua-rencana').each(function() { var tipe = $(this).data('tipe'); var semua = $('.check-rencana[value^="' + tipe + '|"]'); $(this).prop('checked', semua.length > 0 && semua.length === semua.filter(':checked').length); }); }
+$(document).on('change', '.check-rencana', perbaruiPilihanRencana);
+$(document).on('change', '.pilih-semua-rencana', function() { var tipe = $(this).data('tipe'); $('.check-rencana[value^="' + tipe + '|"]').prop('checked', this.checked); perbaruiPilihanRencana(); });
+function exportRencanaTerpilih() { var pilihan = $('.check-rencana:checked').map(function(){ return this.value; }).get(); if (!pilihan.length) return; var $form = $('<form>', {method:'post', action:baseURL + '/exportrencanaterpilih?t=' + encodeURIComponent(mlite.token), target:'_blank'}); pilihan.forEach(function(value) { $form.append($('<input>', {type:'hidden', name:'rencana[]', value:value})); }); $('body').append($form); $form.trigger('submit'); $form.remove(); }
+function bukaKeputusan(tipe, id, aksi) { keputusanRencana = {tipe:tipe, id:id, aksi:aksi}; var tolak = aksi === 'tolak'; $('#judul-keputusan-rencana').html(tolak ? '<i class="fa fa-times-circle text-danger"></i> Tolak Rencana' : '<i class="fa fa-check-circle text-success"></i> Setujui Rencana'); $('#pesan-keputusan-rencana').html((tolak ? 'Tolak' : 'Setujui') + ' rencana <b>' + id + '</b>?' + (tolak ? '' : ' Setelah disetujui, data tidak dapat diubah lagi.')); $('#grup-alasan-penolakan').toggle(tolak); $('#alasan-penolakan').val(''); $('#btn-simpan-keputusan').attr('class', 'btn ' + (tolak ? 'btn-danger' : 'btn-success')).find('i').attr('class', 'fa fa-' + (tolak ? 'times' : 'check')); $('#btn-simpan-keputusan span').text(tolak ? 'Ya, Tolak' : 'Ya, Setujui'); $('#modal-keputusan-rencana').modal('show'); }
+function bukaKeputusanBulk(aksi) { var pilihan = $('.check-rencana:checked').map(function(){ return this.value; }).get(); if (!pilihan.length) return; keputusanRencana = {bulk:true, pilihan:pilihan, aksi:aksi}; var tolak = aksi === 'tolak'; $('#judul-keputusan-rencana').html(tolak ? '<i class="fa fa-times-circle text-danger"></i> Tolak Rencana Terpilih' : '<i class="fa fa-check-circle text-success"></i> Setujui Rencana Terpilih'); $('#pesan-keputusan-rencana').html((tolak ? 'Tolak' : 'Setujui') + ' <b>' + pilihan.length + ' rencana terpilih</b>? Hanya rencana berstatus Draft yang akan diproses.'); $('#grup-alasan-penolakan').toggle(tolak); $('#alasan-penolakan').val(''); $('#btn-simpan-keputusan').attr('class', 'btn ' + (tolak ? 'btn-danger' : 'btn-success')).find('i').attr('class', 'fa fa-' + (tolak ? 'times' : 'check')); $('#btn-simpan-keputusan span').text(tolak ? 'Ya, Tolak Semua' : 'Ya, Setujui Semua'); $('#modal-keputusan-rencana').modal('show'); }
+$('#btn-simpan-keputusan').on('click', function() { var tolak = keputusanRencana.aksi === 'tolak'; var alasan = $('#alasan-penolakan').val().trim(); if (tolak && !alasan) { $('#alasan-penolakan').focus(); return; } var bulk = !!keputusanRencana.bulk; var endpoint = bulk ? 'bulkkeputusanrencana' : (keputusanRencana.tipe === 'rutin' ? (tolak ? 'rejectrencanarutin' : 'approverencanarutin') : (tolak ? 'rejectrencananonrutin' : 'approverencananonrutin')); var data = bulk ? {aksi:keputusanRencana.aksi, rencana:keputusanRencana.pilihan, alasan_penolakan:alasan} : {id:keputusanRencana.id, alasan_penolakan:alasan}; var $btn = $(this).prop('disabled', true); $.ajax({url:baseURL + '/' + endpoint + '?t=' + mlite.token, type:'POST', data:data, dataType:'json'}).done(function(res) { if (res.status === 'success') { $('#modal-keputusan-rencana').modal('hide'); window.location.reload(); } else { alert(res.message || 'Keputusan gagal disimpan.'); $btn.prop('disabled', false); } }).fail(function() { alert('Keputusan gagal disimpan.'); $btn.prop('disabled', false); }); });
+</script>
