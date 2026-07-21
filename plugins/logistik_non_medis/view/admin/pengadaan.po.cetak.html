@@ -69,10 +69,10 @@
             </tr>
         </thead>
         <tbody>
-            {loop: $items as $row}
+            {loop: $items as $index => $row}
             <tr>
                 <td class="text-center">{?= $index + 1 ?}</td>
-                <td>{$row.nama_barang} <br><small>Ref PR: {$row.no_pr}</small></td>
+                <td>{$row.nama_barang} {if: !empty($row.no_pr)}<br><small>Ref PR: {$row.no_pr}</small>{/if}</td>
                 <td class="text-center">{$row.qty_pesan}</td>
                 <td class="text-right">Rp. {?= number_format($row['harga_satuan'], 0, ',', '.') ?}</td>
                 <td class="text-right">Rp. {?= number_format($row['subtotal'], 0, ',', '.') ?}</td>

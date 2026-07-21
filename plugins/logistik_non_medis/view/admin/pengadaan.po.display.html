@@ -13,7 +13,7 @@
         </thead>
         <tbody>
             {if: !empty($po)}
-                {loop: $po as $row}
+                {loop: $po as $index => $row}
                 <tr>
                     <td>{?= $index + 1 + (($halaman - 1) * 10) ?}</td>
                     <td><b>{$row.no_po}</b></td>
@@ -35,18 +35,19 @@
                             <span class="label label-danger">Dibatalkan</span>
                         {/if}
                     </td>
-                    <td>
-                        <a href="{?=url([ADMIN, 'logistik_non_medis', 'cetakpo'])?}&id={$row.id}" target="_blank" class="btn btn-default btn-xs" title="Cetak PO"><i class="fa fa-print"></i></a>
+                    <td style="white-space: nowrap;">
+                        <a href="{?=url([ADMIN, 'logistik_non_medis', 'cetakpo'])?}&id={$row.id}" target="_blank" class="btn btn-default btn-xs" title="Cetak PO"><i class="fa fa-print"></i> Cetak</a>
                         {if: $row.status == 'Draft'}
                         <button type="button" class="btn btn-primary btn-xs edit-po" data-id="{$row.id}" title="Edit"><i class="fa fa-pencil"></i></button>
-                        <button type="button" class="btn btn-success btn-xs update-status-po" data-id="{$row.id}" data-status="Terkirim" title="Kirim PO"><i class="fa fa-paper-plane"></i></button>
+                        <button type="button" class="btn btn-success btn-xs update-status-po" data-id="{$row.id}" data-status="Terkirim" title="Tandai Sudah Diorder"><i class="fa fa-check"></i> Sudah Order</button>
                         {if: $admin_mode == 1}
                         <button type="button" class="btn btn-danger btn-xs delete-po" data-id="{$row.id}" title="Hapus"><i class="fa fa-trash"></i></button>
                         {/if}
                         {else}
-                        <button type="button" class="btn btn-info btn-xs edit-po" data-id="{$row.id}" title="Lihat/Amandemen"><i class="fa fa-eye"></i></button>
+                        <button type="button" class="btn btn-info btn-xs edit-po" data-id="{$row.id}" title="Lihat/Amandemen"><i class="fa fa-eye"></i> Detail</button>
                         {if: $row.status != 'Dibatalkan' && $row.status != 'Selesai'}
-                        <button type="button" class="btn btn-danger btn-xs update-status-po" data-id="{$row.id}" data-status="Dibatalkan" title="Batalkan PO"><i class="fa fa-times"></i></button>
+                        <button type="button" class="btn btn-warning btn-xs update-status-po" data-id="{$row.id}" data-status="Selesai" title="Tutup PO (Selesai Manual)"><i class="fa fa-lock"></i> Selesai</button>
+                        <button type="button" class="btn btn-danger btn-xs update-status-po" data-id="{$row.id}" data-status="Dibatalkan" title="Batalkan PO"><i class="fa fa-times"></i> Batal</button>
                         {/if}
                         {/if}
                     </td>

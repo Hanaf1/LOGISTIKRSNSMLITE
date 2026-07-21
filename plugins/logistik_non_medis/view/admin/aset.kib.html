@@ -54,24 +54,13 @@
                     <li class="active">
                         <a href="#tab-kib-rekap" data-toggle="tab" data-kib="rekap" style="padding: 12px 10px; font-weight: bold; border-radius: 0; transition: all 0.2s;"><i class="fa fa-bar-chart text-primary"></i> <span class="tab-label">Rekapitulasi</span></a>
                     </li>
+                    {if: !empty($kategori)}
+                    {loop: $kategori}
                     <li>
-                        <a href="#tab-kib-A" data-toggle="tab" data-kib="A" style="padding: 12px 10px; font-weight: bold; border-radius: 0; transition: all 0.2s;"><i class="fa fa-map text-success"></i> <span class="tab-label">KIB A <small style="display:block; font-size:9px; font-weight:normal; color:#777; margin-top:2px;">Tanah</small></span></a>
+                        <a href="#tab-kib-{$value.kode_kategori}" data-toggle="tab" data-kib="{$value.kode_kategori}" style="padding: 12px 10px; font-weight: bold; border-radius: 0; transition: all 0.2s;"><i class="fa fa-tags text-info"></i> <span class="tab-label">{$value.nama_kategori}</span></a>
                     </li>
-                    <li>
-                        <a href="#tab-kib-B" data-toggle="tab" data-kib="B" style="padding: 12px 10px; font-weight: bold; border-radius: 0; transition: all 0.2s;"><i class="fa fa-cogs text-info"></i> <span class="tab-label">KIB B <small style="display:block; font-size:9px; font-weight:normal; color:#777; margin-top:2px;">Peralatan</small></span></a>
-                    </li>
-                    <li>
-                        <a href="#tab-kib-C" data-toggle="tab" data-kib="C" style="padding: 12px 10px; font-weight: bold; border-radius: 0; transition: all 0.2s;"><i class="fa fa-building-o text-warning"></i> <span class="tab-label">KIB C <small style="display:block; font-size:9px; font-weight:normal; color:#777; margin-top:2px;">Gedung</small></span></a>
-                    </li>
-                    <li>
-                        <a href="#tab-kib-D" data-toggle="tab" data-kib="D" style="padding: 12px 10px; font-weight: bold; border-radius: 0; transition: all 0.2s;"><i class="fa fa-road text-primary"></i> <span class="tab-label">KIB D <small style="display:block; font-size:9px; font-weight:normal; color:#777; margin-top:2px;">Jalan/Jaringan</small></span></a>
-                    </li>
-                    <li>
-                        <a href="#tab-kib-E" data-toggle="tab" data-kib="E" style="padding: 12px 10px; font-weight: bold; border-radius: 0; transition: all 0.2s;"><i class="fa fa-book text-muted"></i> <span class="tab-label">KIB E <small style="display:block; font-size:9px; font-weight:normal; color:#777; margin-top:2px;">Aset Lainnya</small></span></a>
-                    </li>
-                    <li>
-                        <a href="#tab-kib-F" data-toggle="tab" data-kib="F" style="padding: 12px 10px; font-weight: bold; border-radius: 0; transition: all 0.2s;"><i class="fa fa-gavel text-danger"></i> <span class="tab-label">KIB F <small style="display:block; font-size:9px; font-weight:normal; color:#777; margin-top:2px;">Konstruksi</small></span></a>
-                    </li>
+                    {/loop}
+                    {/if}
                 </ul>
 
                 <!-- Filter & Search Bar Section (using host's standard .filter-well style) -->

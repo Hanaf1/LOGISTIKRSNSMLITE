@@ -252,7 +252,7 @@
                                         <select id="pemakaian-kategori" class="form-control select2" style="width: 100%;">
                                             <option value="">-- Semua Kategori --</option>
                                             {loop: $kategori as $k}
-                                            <option value="{$k.kategori}">{$k.kategori}</option>
+                                            <option value="{$k.kode_kategori}">{$k.nama_kategori}</option>
                                             {/loop}
                                         </select>
                                     </div>
@@ -337,7 +337,7 @@
                                         <select id="tren-kategori" class="form-control select2" style="width: 100%;">
                                             <option value="">-- Semua Kategori --</option>
                                             {loop: $kategori as $k}
-                                            <option value="{$k.kategori}">{$k.kategori}</option>
+                                            <option value="{$k.kode_kategori}">{$k.nama_kategori}</option>
                                             {/loop}
                                         </select>
                                     </div>
@@ -769,10 +769,13 @@ $(document).ready(function() {
         var chartTextColor = isDark ? '#eaecf4' : '#5a5c69';
         var chartGridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
         
-        // Setup base font
-        Chart.defaults.font = {
-            family: "'Inter', sans-serif"
-        };
+        // Jangan mengganti objek defaults (Chart.js v4 memakai proxy internal).
+        // Mengganti seluruh objek dapat menyebabkan recursive resolver pada tick label.
+        if (Chart.defaults.font) {
+            Chart.defaults.font.family = "'Inter', sans-serif";
+        } else if (Chart.defaults.global) {
+            Chart.defaults.global.defaultFontFamily = "'Inter', sans-serif";
+        }
     }
 
     // 1. Reset selectator if active to prevent overlapping mLite widgets
@@ -830,6 +833,62 @@ $(document).ready(function() {
 
         $canvas.show();
         return canvas.getContext('2d');
+    }
+
+    function showChartMessage(canvasId, message) {
+        var canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        $(canvas).hide().siblings('.chart-message').remove();
+        $(canvas).after('<div class="chart-message text-center text-danger" style="padding-top:145px; height:350px;"><i class="fa fa-exclamation-circle fa-2x"></i><br>' + message + '</div>');
+    }
+
+    // Halaman mLITE lain dapat memuat Chart.js v2, sedangkan CDN terbaru memakai v4.
+    // Normalisasi ini membuat konfigurasi grafik tetap berjalan pada kedua versi.
+    function normalizeChartOptions(config) {
+        var major = parseInt((Chart.version || '2').split('.')[0], 10);
+        if (major >= 3 || !config.options) return config;
+
+        if (config.options.plugins && config.options.plugins.legend) {
+            config.options.legend = config.options.plugins.legend;
+            delete config.options.plugins.legend;
+        }
+        if (config.options.scales && (config.options.scales.y || config.options.scales.y1)) {
+            var legacyAxes = [];
+            ['y', 'y1'].forEach(function(axisId) {
+                var source = config.options.scales[axisId];
+                if (!source) return;
+                var axis = $.extend(true, {}, source, { id: axisId });
+                if (source.title) {
+                    axis.scaleLabel = { display: source.title.display, labelString: source.title.text };
+                    delete axis.title;
+                }
+                if (source.grid) {
+                    axis.gridLines = { drawOnChartArea: source.grid.drawOnChartArea !== false };
+                    delete axis.grid;
+                }
+                legacyAxes.push(axis);
+            });
+            config.options.scales = { yAxes: legacyAxes };
+        }
+        return config;
+    }
+
+    function createReportChart(ctx, canvasId, config) {
+        try {
+            if (typeof Chart.getChart === 'function') {
+                var previousChart = Chart.getChart(canvasId);
+                if (previousChart) previousChart.destroy();
+            }
+            return new Chart(ctx, normalizeChartOptions(config));
+        } catch (error) {
+            if (typeof Chart.getChart === 'function') {
+                var failedChart = Chart.getChart(canvasId);
+                if (failedChart) failedChart.destroy();
+            }
+            console.error('Gagal membuat grafik ' + canvasId + ':', error);
+            showChartMessage(canvasId, 'Grafik gagal dibuat. Silakan muat ulang halaman.');
+            return null;
+        }
     }
 
     // 3. Autoload default reports on load
@@ -958,7 +1017,7 @@ $(document).ready(function() {
             values = [0];
         }
 
-        chartPemakaian = new Chart(ctx, {
+        chartPemakaian = createReportChart(ctx, 'chart-pemakaian-unit', {
             type: 'bar',
             data: {
                 labels: labels,
@@ -1025,7 +1084,7 @@ $(document).ready(function() {
             chartTren.destroy();
         }
 
-        chartTren = new Chart(ctx, {
+        chartTren = createReportChart(ctx, 'chart-tren-konsumsi', {
             type: 'line',
             data: {
                 labels: labels,
@@ -1154,7 +1213,7 @@ $(document).ready(function() {
             vol = [0];
         }
 
-        chartFrekVol = new Chart(ctx, {
+        chartFrekVol = createReportChart(ctx, 'chart-frekuensi-volume', {
             type: 'bar',
             data: {
                 labels: labels,
@@ -1236,7 +1295,7 @@ $(document).ready(function() {
             values = [0];
         }
 
-        chartBoros = new Chart(ctx, {
+        chartBoros = createReportChart(ctx, 'chart-unit-terboros', {
             type: 'doughnut',
             data: {
                 labels: labels,

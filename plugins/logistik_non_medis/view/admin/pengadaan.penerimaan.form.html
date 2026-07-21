@@ -27,16 +27,6 @@
                 <input type="hidden" name="kode_vendor" id="vendor-penerimaan" value="{$penerimaan.kode_vendor}">
             </div>
             <div class="form-group">
-                <label>No. Faktur</label>
-                <input type="text" name="no_faktur" class="form-control" value="{$penerimaan.no_faktur}">
-            </div>
-            <div class="form-group">
-                <label>No. Surat Jalan (DO)</label>
-                <input type="text" name="no_surat_jalan" class="form-control" value="{$penerimaan.no_surat_jalan}">
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="form-group">
                 <label>Lokasi Penyimpanan (Gudang)</label>
                 <select name="kode_lokasi" class="form-control" required>
                     <option value="">-- Pilih Lokasi --</option>
@@ -45,6 +35,8 @@
                     {/loop}
                 </select>
             </div>
+        </div>
+        <div class="col-md-4">
             <div class="form-group">
                 <label>Upload Faktur (PDF/JPG)</label>
                 <input type="file" name="file_faktur" class="form-control" accept=".pdf,.jpg,.jpeg">
@@ -126,6 +118,38 @@
         <button type="submit" class="btn btn-primary" id="btn-save-penerimaan">Simpan Penerimaan</button>
     </div>
 </form>
+<!-- Modal Pilih Barang PO -->
+<div class="modal fade" id="modal-po-items" tabindex="-1" role="dialog" aria-labelledby="modalPoItemsLabel">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="modalPoItemsLabel">Pilih Barang yang Diterima</h4>
+      </div>
+      <div class="modal-body">
+          <p>Tandai barang yang datang dari PO yang dipilih:</p>
+          <div class="table-responsive">
+              <table class="table table-bordered table-striped">
+                  <thead>
+                      <tr>
+                          <th width="50">#</th>
+                          <th>Kode Barang</th>
+                          <th>Nama Barang</th>
+                          <th width="100">Qty PO</th>
+                      </tr>
+                  </thead>
+                  <tbody id="modal-po-items-tbody">
+                  </tbody>
+              </table>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
+        <button type="button" class="btn btn-primary" id="btn-add-selected-po-items">Pilih Barang</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script type="text/javascript">
     $(document).ready(function() {
@@ -245,6 +269,8 @@
             }
         });
 
+        var loadedPoItems = [];
+
         $('#select-po').change(function() {
             var no_po = $(this).val();
             if(no_po == '') {
@@ -260,13 +286,36 @@
                     if(res.status == 'success') {
                         $('#vendor-penerimaan-display').val(res.kode_vendor + ' - ' + res.nama_vendor);
                         $('#vendor-penerimaan').val(res.kode_vendor);
-                        $('#item-list-penerimaan').empty();
-                        res.items.forEach(function(item) {
-                            addItemRow(item);
+                        
+                        var tbody = $('#modal-po-items-tbody');
+                        tbody.empty();
+                        loadedPoItems = res.items;
+                        
+                        res.items.forEach(function(item, index) {
+                            var qty_po = item.qty_po || item.qty_pesan || 0;
+                            var tr = '<tr>' +
+                                     '<td class="text-center"><input type="checkbox" class="cb-po-item" value="'+index+'" checked style="width: 20px; height: 20px;"></td>' +
+                                     '<td>'+item.kode_item+'</td>' +
+                                     '<td>'+item.nama_barang+'</td>' +
+                                     '<td>'+qty_po+'</td>' +
+                                     '</tr>';
+                            tbody.append(tr);
                         });
+                        
+                        $('#modal-po-items').modal('show');
                     }
                 }
             });
+        });
+
+        $('#btn-add-selected-po-items').click(function() {
+            $('#item-list-penerimaan').empty();
+            $('.cb-po-item:checked').each(function() {
+                var idx = $(this).val();
+                var item = loadedPoItems[idx];
+                addItemRow(item);
+            });
+            $('#modal-po-items').modal('hide');
         });
 
         $('#form-penerimaan-barang').submit(function(e) {

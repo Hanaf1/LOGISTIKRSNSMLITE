@@ -42,50 +42,27 @@
                     <span class="active">Mutasi</span>
                 </div>
 
-                <h3 class="panel-title" style="margin-top: 5px;"><i class="fa fa-exchange"></i> Mutasi Antar Gudang</h3>
+                <h3 class="panel-title" style="margin-top: 5px;"><i class="fa fa-exchange"></i> Penyesuaian Stok (Mutasi)</h3>
             </div>
             <div class="panel-body">
-                <ul class="nav nav-tabs" role="tablist">
-                    <li role="presentation" class="active"><a href="#daftar-mutasi" aria-controls="daftar-mutasi" role="tab" data-toggle="tab">Daftar Mutasi</a></li>
-                    <li role="presentation"><a href="#kartu-stok" aria-controls="kartu-stok" role="tab" data-toggle="tab">Kartu Stok (Histori)</a></li>
-                </ul>
-
-                <div class="tab-content" style="padding-top: 20px;">
-                    <!-- TAB DAFTAR MUTASI -->
-                    <div role="tabpanel" class="tab-pane active" id="daftar-mutasi">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <button class="btn btn-primary" onclick="tambahMutasi()"><i class="fa fa-plus"></i> Tambah Mutasi</button>
-                                <div class="btn-group" style="margin-left: 10px;">
-                                    <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <i class="fa fa-file-excel-o"></i> CSV Options <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a href="{?=url(ADMIN."/logistik_non_medis/downloadtemplatemutasicsv")?}"><i class="fa fa-download"></i> Download Template CSV</a></li>
-                                        <li><a href="javascript:void(0)" onclick="$('#modal-import-csv').modal('show')"><i class="fa fa-upload"></i> Import CSV</a></li>
-                                        <li role="separator" class="divider"></li>
-                                        <li><a href="javascript:void(0)" onclick="$('#modal-export-csv').modal('show')"><i class="fa fa-file-text-o"></i> Export CSV Filter</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="input-group">
-                                    <input type="text" id="cari-mutasi" class="form-control" placeholder="Cari no mutasi / lokasi...">
-                                    <span class="input-group-btn">
-                                        <button class="btn btn-default" id="btn-cari-mutasi"><i class="fa fa-search"></i></button>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="display-mutasi" style="margin-top: 20px;">
-                            <div class="text-center" style="padding: 50px;"><i class="fa fa-spinner fa-spin fa-3x"></i></div>
-                        </div>
+                <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+                    <button class="btn btn-primary" onclick="tambahMutasi()"><i class="fa fa-plus"></i> Tambah Penyesuaian Manual</button>
+                    <div class="btn-group" style="margin-left: 10px;">
+                        <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fa fa-file-excel-o"></i> CSV Options <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="{?=url(ADMIN."/logistik_non_medis/downloadtemplatemutasicsv")?}"><i class="fa fa-download"></i> Download Template CSV</a></li>
+                            <li><a href="javascript:void(0)" onclick="$('#modal-import-csv').modal('show')"><i class="fa fa-upload"></i> Import CSV</a></li>
+                            <li role="separator" class="divider"></li>
+                            <li><a href="javascript:void(0)" onclick="$('#modal-export-csv').modal('show')"><i class="fa fa-file-text-o"></i> Export CSV Filter</a></li>
+                        </ul>
                     </div>
+                </div>
 
-                    <!-- TAB KARTU STOK -->
-                    <div role="tabpanel" class="tab-pane" id="kartu-stok">
-                        <div class="row">
-                            <div class="col-md-3">
+                <div id="kartu-stok">
+                    <div class="row">
+                        <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Pilih Barang</label>
                                     <select id="filter-item-mutasi" class="form-control" style="width: 100%;">
@@ -98,22 +75,11 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
-                                    <label>Pilih Lokasi</label>
-                                    <select id="filter-lokasi-mutasi" class="form-control" style="width: 100%;">
-                                        <option value="">-- Semua Lokasi --</option>
-                                        {loop: $lokasi}
-                                        <option value="{$value.kode_lokasi}">{$value.nama_lokasi}</option>
-                                        {/loop}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
                                     <label>Dari Tanggal</label>
                                     <input type="text" id="tgl-awal" class="form-control datepicker" value="{?=date('Y-m-01')?}">
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Sampai Tanggal</label>
                                     <input type="text" id="tgl-akhir" class="form-control datepicker" value="{?=date('Y-m-d')?}">
@@ -127,10 +93,8 @@
                             <div class="alert alert-info">
                                 <i class="fa fa-info-circle"></i> Silakan pilih barang dan periode tanggal untuk menampilkan kartu stok.
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                </div> <!-- end kartu-stok -->
+            </div> <!-- end panel-body -->
         </div>
     </div>
 </div>
@@ -159,7 +123,7 @@ $('#form-import-csv').submit(function(e) {
             var r = JSON.parse(res);
             if (r.status == 'success') {
                 $('#modal-import-csv').modal('hide');
-                loadDaftarMutasi();
+                $('#btn-filter-kartu').click();
                 alert(r.message);
             } else {
                 alert(r.message);
@@ -179,32 +143,20 @@ $(document).ready(function() {
 
 
 
-    loadMutasi();
-
     // Auto-filter if coming from Stock Management
     {if: !empty($selected_item)}
         $('#filter-item-mutasi').val('{$selected_item}').trigger('change').trigger('change.select2');
-        $('a[href="#kartu-stok"]').tab('show');
         setTimeout(function() {
             $('#btn-filter-kartu').click();
         }, 800);
     {/if}
 
-    $('#btn-cari-mutasi').click(function() {
-        loadMutasi();
-    });
-
-    $('#cari-mutasi').keypress(function(e) {
-        if(e.which == 13) loadMutasi();
-    });
-
     $('#btn-filter-kartu').click(function() {
         var item = $('#filter-item-mutasi').val();
-        var lokasi = $('#filter-lokasi-mutasi').val();
         var tgl1 = $('#tgl-awal').val();
         var tgl2 = $('#tgl-akhir').val();
         
-        console.log("Filtering for Item:", item, "Location:", lokasi, "Dates:", tgl1, tgl2);
+        console.log("Filtering for Item:", item, "Dates:", tgl1, tgl2);
         
         if(!item) {
             alert('Pilih barang terlebih dahulu!');
@@ -215,7 +167,7 @@ $(document).ready(function() {
 
         $.post('{?=url(ADMIN."/logistik_non_medis/displaykartustok")?}', {
             kode_item: item,
-            kode_lokasi: lokasi,
+            kode_lokasi: '-',
             tgl_awal: tgl1,
             tgl_akhir: tgl2
         }, function(data) {
@@ -228,16 +180,7 @@ $(document).ready(function() {
     });
 });
 
-function loadMutasi(hal = 1) {
-    var cari = $('#cari-mutasi').val();
-    $('#display-mutasi').html('<div class="text-center" style="padding: 50px;"><i class="fa fa-spinner fa-spin fa-3x"></i></div>');
-    $.post('{?=url(ADMIN."/logistik_non_medis/displaymutasi")?}', {
-        halaman: hal,
-        cari: cari
-    }, function(data) {
-        $('#display-mutasi').html(data);
-    });
-}
+
 
 function tambahMutasi() {
     $.post('{?=url(ADMIN."/logistik_non_medis/formmutasi")?}', { mode: 'add' }, function(data) {

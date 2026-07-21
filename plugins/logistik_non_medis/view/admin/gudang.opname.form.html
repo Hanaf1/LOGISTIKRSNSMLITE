@@ -59,19 +59,7 @@
                                 <input type="text" name="tgl_opname" class="form-control datepicker" value="{$opname.tgl_opname}">
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="form-group">
-                                <label>Lokasi Gudang</label>
-                                <select name="kode_lokasi" id="sel_kode_lokasi" class="form-control select2" {if: $mode == 'edit'}disabled{/if}>
-                                    <option value="">-- Pilih Lokasi --</option>
-                                    {loop: $lokasi as $l}
-                                    <option value="{$l.kode_lokasi}" {if: $l.kode_lokasi == $opname.kode_lokasi}selected{/if}>{$l.nama_lokasi}</option>
-                                    {/loop}
-                                </select>
-                                {if: $mode == 'edit'}<input type="hidden" name="kode_lokasi" value="{$opname.kode_lokasi}">{/if}
-                            </div>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <div class="form-group" style="padding-top: 25px;">
                                 {if: $mode == 'add'}
                                 <button type="button" class="btn btn-info btn-block" id="btn_tarik_data">
@@ -149,20 +137,15 @@ $(document).ready(function() {
         format: 'YYYY-MM-DD',
         locale: 'id'
     });
-    $('.select2').select2({ width: '100%' });
-
     $('#btn_batal_opname').click(function() {
         $('#form_opname_container').hide();
         $('#opname_container').show();
     });
 
     $('#btn_tarik_data').click(function() {
-        let lok = $('#sel_kode_lokasi').val();
-        if(!lok) { alert('Pilih lokasi terlebih dahulu!'); return; }
-        
         $(this).html('<i class="fa fa-spinner fa-spin"></i> Memuat...').attr('disabled', true);
         
-        $.post('{?=url([ADMIN, "logistik_non_medis", "loaditemsforopname"])?}', { kode_lokasi: lok }, function(data) {
+        $.post('{?=url([ADMIN, "logistik_non_medis", "loaditemsforopname"])?}', {}, function(data) {
             try {
                 let res = JSON.parse(data);
                 $('#btn_tarik_data').html('<i class="fa fa-refresh"></i> Tarik Data Stok').attr('disabled', false);
@@ -182,7 +165,7 @@ $(document).ready(function() {
                             </tr>
                         `;
                     });
-                    if(html == '') html = '<tr><td colspan="7" class="text-center text-danger">Tidak ada stok di lokasi ini.</td></tr>';
+                    if(html == '') html = '<tr><td colspan="7" class="text-center text-danger">Belum ada stok barang untuk diopname.</td></tr>';
                     $('#list_items_opname').html(html);
                 } else {
                     alert(res.message);

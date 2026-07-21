@@ -3,7 +3,7 @@
         <div class="pull-right">
             <button class="btn btn-default btn-xs" onclick="loadGudangDashboard()"><i class="fa fa-arrow-left"></i> Kembali ke Dashboard</button>
         </div>
-        <h3 class="panel-title"><i class="fa fa-barcode"></i> Mode Penerimaan Barang: <strong>{$penerimaan.no_po}</strong></h3>
+        <h3 class="panel-title"><i class="fa fa-inbox"></i> Form Penerimaan Barang: <strong>{$penerimaan.no_po}</strong></h3>
     </div>
     <div class="panel-body">
         <form id="form-penerimaan-gudang" enctype="multipart/form-data">
@@ -22,28 +22,20 @@
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label>Lokasi Simpan Utama</label>
-                        <select name="kode_lokasi" class="form-control" required style="border: 2px solid #31708f; font-weight: bold;">
-                            {loop: $lokasi}
-                            <option value="{$value.kode_lokasi}" {if: $penerimaan.kode_lokasi == $value.kode_lokasi}selected{/if}>{$value.nama_lokasi}</option>
-                            {/loop}
-                        </select>
+                        <label>Upload Faktur <small class="text-muted">(opsional)</small></label>
+                        <input type="file" name="file_faktur" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
+                        {if: !empty($penerimaan.file_faktur)}
+                        <small class="text-success"><i class="fa fa-check"></i> File: {$penerimaan.file_faktur}</small>
+                        {/if}
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label>Surat Jalan / DO</label>
-                        <input type="text" name="no_surat_jalan" class="form-control" value="{$penerimaan.no_surat_jalan}" placeholder="Input No SJ Vendor...">
-                    </div>
-                </div>
-            </div>
-
-            <div class="well" style="background: #eef7fb; border: 2px dashed #31708f;">
-                <div class="row">
-                    <div class="col-md-12 text-center">
-                        <h4 style="margin-top: 0;"><i class="fa fa-search"></i> SCAN BARCODE BARANG DI SINI</h4>
-                        <input type="text" id="gudang-scan-barcode" class="form-control input-lg text-center" style="font-size: 24px; height: 60px; border-radius: 10px;" placeholder=">>> SCAN BARCODE <<<" autofocus>
-                        <p class="help-block">Pastikan kursor berada di kotak ini saat melakukan scanning.</p>
+                        <label>Upload Surat Jalan <small class="text-muted">(opsional)</small></label>
+                        <input type="file" name="file_surat_jalan" class="form-control" accept=".jpg,.jpeg,.png,.pdf">
+                        {if: !empty($penerimaan.file_surat_jalan)}
+                        <small class="text-success"><i class="fa fa-check"></i> File: {$penerimaan.file_surat_jalan}</small>
+                        {/if}
                     </div>
                 </div>
             </div>
@@ -53,11 +45,8 @@
                     <thead>
                         <tr class="bg-info">
                             <th>Nama Barang</th>
-                            <th width="100">Pesan PO</th>
-                            <th width="120">Diterima</th>
-                            <th>Batch / Lot</th>
-                            <th>Expired</th>
-                            <th>Lokasi Rak (Suggestion)</th>
+                            <th width="110">Pesan PO</th>
+                            <th width="130">Qty Diterima</th>
                             <th width="60">Aksi</th>
                         </tr>
                     </thead>
@@ -73,50 +62,59 @@
                             </td>
                             <td><input type="number" name="qty_po[]" class="form-control" value="{$value.qty_po}" readonly></td>
                             <td><input type="number" name="qty_terima[]" class="form-control input-qty" value="{$value.qty_terima}" step="any" required style="font-weight: bold; font-size: 16px;"></td>
-                            <td><input type="text" name="batch_no[]" class="form-control" value="{$value.batch_no}" placeholder="Lot/Batch"></td>
-                            <td><input type="text" name="tgl_expired[]" class="form-control datepicker-gudang" value="{$value.tgl_expired}"></td>
-                            <td><span class="label label-default" style="font-size: 12px;"><i class="fa fa-map-marker"></i> {$value.nama_lokasi}</span></td>
                             <td>
-                                <button type="button" class="btn btn-info btn-xs btn-print-label"><i class="fa fa-print"></i></button>
                                 <button type="button" class="btn btn-danger btn-xs btn-remove-item"><i class="fa fa-times"></i></button>
                             </td>
                             <input type="hidden" name="qty_tolak[]" value="0">
                             <input type="hidden" name="harga[]" value="{$value.harga}">
                             <input type="hidden" name="keterangan_item[]" value="">
+                            <input type="hidden" name="batch_no[]" value="-">
+                            <input type="hidden" name="tgl_expired[]" value="">
                         </tr>
                         {/loop}
                         {else}
-                        <tr id="gudang-empty-row"><td colspan="7" class="text-center">Belum ada barang di-scan.</td></tr>
+                        <tr id="gudang-empty-row"><td colspan="4" class="text-center text-muted"><i class="fa fa-info-circle"></i> Belum ada barang. Klik <b>Muat Barang dari PO</b> di bawah.</td></tr>
                         {/if}
                     </tbody>
                 </table>
+            </div>
+
+            <div class="row" style="margin-bottom:10px;">
+                <div class="col-md-12">
+                    <button type="button" id="btn-load-items" class="btn btn-default"><i class="fa fa-refresh"></i> Muat Barang dari PO</button>
+                </div>
             </div>
 
             <div class="row">
                 <div class="col-md-6">
                     <div class="form-group">
                         <label>Status</label>
-                        <select name="status" id="gudang-status" class="form-control">
-                            <option value="Draft">Draft (Simpan Belum Selesai)</option>
-                            <option value="Selesai">Selesai (Update Stok & PO)</option>
+                        <select name="status" id="gudang-status" class="form-control" {if: $penerimaan.status == 'Selesai'}disabled{/if}>
+                            <option value="Draft" {if: $penerimaan.status == 'Draft' || empty($penerimaan.status)}selected{/if}>Draft (Simpan Belum Selesai)</option>
+                            <option value="Selesai" {if: $penerimaan.status == 'Selesai'}selected{/if}>Selesai (Update Stok &amp; PO)</option>
                         </select>
+                        {if: $penerimaan.status == 'Selesai'}
+                        <input type="hidden" name="status" value="Selesai">
+                        {/if}
                     </div>
                 </div>
                 <div class="col-md-6 text-right" style="padding-top: 25px;">
+                    {if: $penerimaan.status == 'Selesai'}
+                    <button type="button" class="btn btn-default btn-lg btn-block" disabled><i class="fa fa-lock"></i> PENERIMAAN SELESAI</button>
+                    {else}
                     <button type="submit" class="btn btn-primary btn-lg btn-block"><i class="fa fa-save"></i> SIMPAN PENERIMAAN</button>
+                    {/if}
                 </div>
             </div>
             <input type="hidden" name="tgl_penerimaan" value="{?=date('Y-m-d')?}">
             <input type="hidden" name="kode_vendor" value="{$penerimaan.kode_vendor}">
+            <input type="hidden" name="kode_lokasi" value="-">
         </form>
     </div>
 </div>
 
 <script type="text/javascript">
     $(document).ready(function() {
-        $('.datepicker-gudang').datetimepicker({ format: 'YYYY-MM-DD', locale: 'id' });
-
-        // Auto load items if no_po is pre-filled
         var initial_po = '{$penerimaan.no_po}';
         if(initial_po != '' && $('#gudang-item-list tr.item-row').length == 0) {
             loadItemsFromPO(initial_po);
@@ -134,53 +132,19 @@
                         res.items.forEach(function(item) {
                             addGudangRow(item);
                         });
+                    } else {
+                        bootbox.alert({ title: '<i class="fa fa-warning text-warning"></i> Peringatan', message: res.message || 'Gagal memuat barang dari PO.' });
                     }
-                }
+                },
+                error: function() { bootbox.alert({ title: '<i class="fa fa-times-circle text-danger"></i> Error', message: 'Gagal menghubungi server.' }); }
             });
         }
 
-        $('#gudang-scan-barcode').keypress(function(e) {
-            if(e.which == 13) {
-                e.preventDefault();
-                var barcode = $(this).val();
-                var no_po = $('#gudang-select-po').val();
-                if(barcode == '') return;
-
-                $.ajax({
-                    url: '{?=url([ADMIN, "logistik_non_medis", "searchitembybarcode"])?}',
-                    type: 'POST',
-                    data: { barcode: barcode, no_po: no_po },
-                    dataType: 'json',
-                    success: function(res) {
-                        if(res.status == 'success') {
-                            processScan(res);
-                        } else {
-                            alert(res.message);
-                        }
-                        $('#gudang-scan-barcode').val('').focus();
-                    }
-                });
-            }
+        $('#btn-load-items').on('click', function() {
+            var no_po = $('#gudang-select-po').val();
+            if(!no_po) { bootbox.alert({ title: '<i class="fa fa-info-circle text-info"></i> Info', message: 'Tidak ada No. PO.' }); return; }
+            loadItemsFromPO(no_po);
         });
-
-        function processScan(item) {
-            var found = false;
-            $('#gudang-item-list tr.item-row').each(function() {
-                if($(this).find('input[name="kode_item[]"]').val() == item.kode_item) {
-                    var input = $(this).find('input[name="qty_terima[]"]');
-                    var current = parseFloat(input.val());
-                    input.val(current + 1);
-                    $(this).css('background-color', '#dff0d8');
-                    setTimeout(() => { $(this).css('background-color', 'transparent'); }, 500);
-                    found = true;
-                    return false;
-                }
-            });
-
-            if(!found) {
-                addGudangRow(item);
-            }
-        }
 
         function addGudangRow(item) {
             $('#gudang-empty-row').remove();
@@ -190,49 +154,64 @@
             html += '<input type="hidden" name="nama_barang[]" value="'+item.nama_barang+'"></td>';
             html += '<td><input type="number" name="qty_po[]" class="form-control" value="'+(item.qty_po||0)+'" readonly></td>';
             html += '<td><input type="number" name="qty_terima[]" class="form-control input-qty" value="'+(item.qty_terima||1)+'" step="any" required style="font-weight:bold; font-size:16px;"></td>';
-            html += '<td><input type="text" name="batch_no[]" class="form-control" value="'+(item.batch_no||'')+'" placeholder="Batch"></td>';
-            html += '<td><input type="text" name="tgl_expired[]" class="form-control datepicker-gudang-new" value="'+(item.tgl_expired||'')+'"></td>';
-            html += '<td><span class="label label-default" style="font-size:12px;"><i class="fa fa-map-marker"></i> '+(item.nama_lokasi||'-')+'</span></td>';
-            html += '<td><button type="button" class="btn btn-info btn-xs btn-print-label"><i class="fa fa-print"></i></button> <button type="button" class="btn btn-danger btn-xs btn-remove-item"><i class="fa fa-times"></i></button></td>';
+            html += '<td><button type="button" class="btn btn-danger btn-xs btn-remove-item"><i class="fa fa-times"></i></button></td>';
             html += '<input type="hidden" name="qty_tolak[]" value="0">';
             html += '<input type="hidden" name="harga[]" value="'+(item.harga||0)+'">';
             html += '<input type="hidden" name="keterangan_item[]" value="">';
+            html += '<input type="hidden" name="batch_no[]" value="-">';
+            html += '<input type="hidden" name="tgl_expired[]" value="">';
             html += '</tr>';
             $('#gudang-item-list').append(html);
-            $('.datepicker-gudang-new').datetimepicker({ format: 'YYYY-MM-DD', locale: 'id' }).removeClass('datepicker-gudang-new');
         }
 
         $(document).on('click', '.btn-remove-item', function() { $(this).closest('tr').remove(); });
 
         $('#form-penerimaan-gudang').submit(function(e) {
             e.preventDefault();
-            if($('#gudang-status').val() == 'Selesai' && !confirm('Selesaikan penerimaan? Stok akan segera masuk ke gudang.')) return;
-            
-            var formData = new FormData(this);
-            $.ajax({
-                url: '{?=url([ADMIN, "logistik_non_medis", "savepenerimaan"])?}',
-                type: 'POST',
-                data: formData,
-                contentType: false, processData: false, dataType: 'json',
-                success: function(res) {
-                    if(res.status == 'success') {
-                        alert('Penerimaan Berhasil Disimpan');
-                        loadGudangDashboard();
-                    } else { alert(res.message); }
-                }
-            });
-        });
+            if($('#gudang-item-list tr.item-row').length == 0) {
+                bootbox.alert({ title: '<i class="fa fa-warning text-warning"></i> Peringatan', message: 'Tidak ada barang yang akan diterima!' });
+                return;
+            }
 
-        $(document).on('click', '.btn-print-label', function() {
-            var row = $(this).closest('tr');
-            var url = '{?=url([ADMIN, "logistik_non_medis", "cetaklabelpenerimaan"])?}' + 
-                      '&kode_item=' + encodeURIComponent(row.find('input[name="kode_item[]"]').val()) + 
-                      '&nama_barang=' + encodeURIComponent(row.find('input[name="nama_barang[]"]').val()) + 
-                      '&batch_no=' + encodeURIComponent(row.find('input[name="batch_no[]"]').val()) + 
-                      '&tgl_expired=' + encodeURIComponent(row.find('input[name="tgl_expired[]"]').val()) + 
-                      '&tgl_penerimaan=' + $('input[name="tgl_penerimaan"]').val() + 
-                      '&kode_lokasi=' + $('select[name="kode_lokasi"]').val();
-            window.open(url, '_blank', 'width=600,height=400').focus();
+            var $form = this;
+            var doSave = function() {
+                var formData = new FormData($form);
+                $.ajax({
+                    url: '{?=url([ADMIN, "logistik_non_medis", "savepenerimaan"])?}',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false, processData: false, dataType: 'json',
+                    success: function(res) {
+                        if(res.status == 'success') {
+                            bootbox.alert({
+                                title: '<i class="fa fa-check-circle text-success"></i> Berhasil',
+                                message: 'Penerimaan berhasil disimpan!',
+                                callback: function() { loadGudangDashboard(); }
+                            });
+                        } else {
+                            bootbox.alert({ title: '<i class="fa fa-times-circle text-danger"></i> Gagal', message: res.message || 'Terjadi kesalahan.' });
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error(xhr.responseText);
+                        bootbox.alert({ title: '<i class="fa fa-times-circle text-danger"></i> Error', message: 'Gagal menghubungi server. <br><br><b>Debug Info:</b><br>' + xhr.responseText.substring(0, 500) });
+                    }
+                });
+            };
+
+            if($('#gudang-status').val() == 'Selesai') {
+                bootbox.confirm({
+                    title: '<i class="fa fa-question-circle text-warning"></i> Konfirmasi Penerimaan',
+                    message: 'Selesaikan penerimaan? Stok akan segera masuk ke gudang dan status PO akan diperbarui.',
+                    buttons: {
+                        cancel: { label: '<i class="fa fa-times"></i> Batal', className: 'btn-default' },
+                        confirm: { label: '<i class="fa fa-check"></i> Ya, Selesaikan', className: 'btn-success' }
+                    },
+                    callback: function(result) { if(result) doSave(); }
+                });
+            } else {
+                doSave();
+            }
         });
     });
 </script>

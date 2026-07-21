@@ -58,8 +58,8 @@
     </div>
     <div class="col-md-6 text-right">
         <ul class="pagination pagination-sm pagination-penerimaan" style="margin:0;">
-            {loop: $jml_halaman}
-            <li class="{if: $halaman == $value+1}active{/if}"><a href="#" data-hal="{$value+1}">{$value+1}</a></li>
+            {loop: $jml_halaman_arr}
+            <li class="{if: $halaman == $value}active{/if}"><a href="#" data-hal="{$value}">{$value}</a></li>
             {/loop}
         </ul>
     </div>

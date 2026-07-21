@@ -125,7 +125,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title">Pilih Purchase Request (PR) Disetujui</h4>
+        <h4 class="modal-title">Pilih Perencanaan Pembelian Disetujui</h4>
       </div>
       <div class="modal-body">
           <div class="table-responsive">
@@ -133,8 +133,8 @@
                   <thead>
                       <tr>
                           <th>Pilih</th>
-                          <th>No. PR</th>
-                          <th>Tanggal</th>
+                          <th>No. Perencanaan</th>
+                          <th>Tahun</th>
                           <th>Item</th>
                           <th>Qty</th>
                           <th>Harga Ref</th>
@@ -147,18 +147,19 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
-        <button type="button" class="btn btn-primary" id="btn-tambahkan-pr">Tambahkan ke PO</button>
+        <button type="button" class="btn btn-primary" id="btn-tambahkan-perencanaan">Tambahkan ke PO</button>
       </div>
     </div>
   </div>
 </div>
 
+<script type="application/json" id="barang-map-json">{?= json_encode($barang_map) ?}</script>
 <script>
 $(document).ready(function() {
     $('.select2').select2();
     var isEditable = "{?= ($data['status'] == 'Draft' || $data['status'] == 'Terkirim' || $data['status'] == 'Sebagian Diterima' || $data['status'] == 'Diamandemen') ? 'true' : 'false' ?}";
     var items = JSON.parse($('#items_json').val() || '[]');
-    var barangMap = {?= json_encode($barang_map) ?};
+    var barangMap = JSON.parse(document.getElementById('barang-map-json').textContent || '{}');
 
     function renderItems() {
         var tbody = $('#table-po-items tbody');
@@ -175,7 +176,7 @@ $(document).ready(function() {
                 total_nilai += subtotal;
 
                 var tr = $('<tr>');
-                tr.append('<td>' + nama + '<br><small>PR: ' + (item.no_pr || '-') + '</small></td>');
+                tr.append('<td>' + nama + '<br><small>Ref: ' + (item.no_pr || '-') + '</small></td>');
                 
                 if(isEditable === 'true') {
                     tr.append('<td><input type="number" class="form-control input-sm qty-pesan" data-index="'+index+'" value="'+item.qty_pesan+'" min="1"></td>');
@@ -243,7 +244,7 @@ $(document).ready(function() {
         // }
 
         $.ajax({
-            url: '{?=url([ADMIN, "logistik_non_medis", "loadprforpo"])?}',
+            url: '{?=url([ADMIN, "logistik_non_medis", "loadperencanaanforpo"])?}',
             type: 'POST',
             data: { kode_vendor: vendor },
             dataType: 'json',
@@ -256,9 +257,9 @@ $(document).ready(function() {
                         var chk = $('<input type="checkbox" class="chk-pr">').data('pr', pr);
                         tr.append($('<td>').append(chk));
                         tr.append('<td>' + pr.no_pr + '</td>');
-                        tr.append('<td>' + pr.tgl_pr + '</td>');
+                        tr.append('<td>' + pr.tahun + '</td>');
                         tr.append('<td>' + pr.nama_barang + '</td>');
-                        tr.append('<td>' + pr.jumlah + ' ' + pr.satuan + '</td>');
+                        tr.append('<td>' + pr.jumlah + '</td>');
                         tr.append('<td>' + parseFloat(pr.harga_referensi).toLocaleString('id-ID') + '</td>');
                         tbody.append(tr);
                     });

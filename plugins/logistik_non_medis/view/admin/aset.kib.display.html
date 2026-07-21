@@ -55,7 +55,10 @@
                 <td style="vertical-align: middle;">
                     <div style="font-weight: bold; font-family: monospace;">{$value.kode_aset}</div>
                     <div style="font-size: 12px; color: #555;">{$value.nama_aset}</div>
-                    <div style="font-size: 11px; color: #888; margin-top: 2px;"><i class="fa fa-home"></i> {$value.nama_unit}</div>
+                    <div style="font-size: 11px; color: #888; margin-top: 2px;">
+                        <i class="fa fa-home"></i> {$value.nama_unit} &nbsp; 
+                        <i class="fa fa-tags"></i> {$value.nama_kategori_aset}
+                    </div>
                 </td>
                 
                 <!-- Specific KIB Data Fields -->
@@ -116,7 +119,7 @@
                 <td style="vertical-align: middle;">{$value.kib_luas} m²</td>
                 <td style="vertical-align: middle;">
                     <div class="progress" style="margin-bottom: 2px; height: 12px; box-shadow: none; border-radius: 2px; background: #e3e3e3;">
-                        <div class="progress-bar progress-bar-success" role="progressbar" style="width: {$value.kib_progress_persen}%; line-height: 12px; font-size: 9px; font-weight: bold;"></div>
+                        <div class="progress-bar progress-bar-success" role="progressbar" {?= 'style="width: '.$value['kib_progress_persen'].'%; line-height: 12px; font-size: 9px; font-weight: bold;"' ?}></div>
                     </div>
                     <div style="font-size: 10px; font-weight: bold; color: #00a65a; text-align: center;">{$value.kib_progress_persen}% Selesai</div>
                 </td>

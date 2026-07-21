@@ -1,65 +1,18 @@
 <!-- KPI Cards Grid -->
 <div class="row" style="margin-bottom: 15px;">
     
-    <!-- KIB A -->
+        {if: !empty($kpi)}
+    {loop: $kpi}
     <div class="col-lg-4 col-md-6 col-sm-6" style="margin-bottom: 15px;">
-        <div class="kpi-card" style="background-color: #00a65a; color: #fff; padding: 15px; border-radius: 3px; position: relative; overflow: hidden; cursor: pointer; min-height: 95px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: transform 0.15s;" onclick="$('.kib-nav-tabs a[data-kib=\'A\']').tab('show');">
-            <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">KIB A — TANAH</div>
-            <div style="font-size: 20px; font-weight: bold; margin: 5px 0 2px 0;">Rp. {?=number_format($kpi.A.total_nilai, 0, ',', '.')?}</div>
-            <div style="font-size: 12px; opacity: 0.9;"><i class="fa fa-tag"></i> <strong>{$kpi.A.jumlah}</strong> Unit Aset Terdaftar</div>
-            <i class="fa fa-map" style="position: absolute; right: 15px; bottom: 8px; font-size: 45px; opacity: 0.25;"></i>
+        <div class="kpi-card" style="background-color: #3c8dbc; color: #fff; padding: 15px; border-radius: 3px; position: relative; overflow: hidden; cursor: pointer; min-height: 95px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: transform 0.15s;" onclick="$('.kib-nav-tabs a[data-kib=\'{$key}\']').tab('show');">
+            <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">{$value.nama_kategori}</div>
+            <div style="font-size: 20px; font-weight: bold; margin: 5px 0 2px 0;">Rp. {?=number_format($value.total_nilai, 0, ',', '.')?}</div>
+            <div style="font-size: 12px; opacity: 0.9;"><i class="fa fa-tag"></i> <strong>{$value.jumlah}</strong> Unit Aset Terdaftar</div>
+            <i class="fa fa-cubes" style="position: absolute; right: 15px; bottom: 8px; font-size: 45px; opacity: 0.25;"></i>
         </div>
     </div>
-
-    <!-- KIB B -->
-    <div class="col-lg-4 col-md-6 col-sm-6" style="margin-bottom: 15px;">
-        <div class="kpi-card" style="background-color: #00c0ef; color: #fff; padding: 15px; border-radius: 3px; position: relative; overflow: hidden; cursor: pointer; min-height: 95px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: transform 0.15s;" onclick="$('.kib-nav-tabs a[data-kib=\'B\']').tab('show');">
-            <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">KIB B — PERALATAN & MESIN</div>
-            <div style="font-size: 20px; font-weight: bold; margin: 5px 0 2px 0;">Rp. {?=number_format($kpi.B.total_nilai, 0, ',', '.')?}</div>
-            <div style="font-size: 12px; opacity: 0.9;"><i class="fa fa-tag"></i> <strong>{$kpi.B.jumlah}</strong> Unit Aset Terdaftar</div>
-            <i class="fa fa-cogs" style="position: absolute; right: 15px; bottom: 8px; font-size: 45px; opacity: 0.25;"></i>
-        </div>
-    </div>
-
-    <!-- KIB C -->
-    <div class="col-lg-4 col-md-6 col-sm-6" style="margin-bottom: 15px;">
-        <div class="kpi-card" style="background-color: #f39c12; color: #fff; padding: 15px; border-radius: 3px; position: relative; overflow: hidden; cursor: pointer; min-height: 95px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: transform 0.15s;" onclick="$('.kib-nav-tabs a[data-kib=\'C\']').tab('show');">
-            <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">KIB C — GEDUNG & BANGUNAN</div>
-            <div style="font-size: 20px; font-weight: bold; margin: 5px 0 2px 0;">Rp. {?=number_format($kpi.C.total_nilai, 0, ',', '.')?}</div>
-            <div style="font-size: 12px; opacity: 0.9;"><i class="fa fa-tag"></i> <strong>{$kpi.C.jumlah}</strong> Unit Aset Terdaftar</div>
-            <i class="fa fa-building-o" style="position: absolute; right: 15px; bottom: 8px; font-size: 45px; opacity: 0.25;"></i>
-        </div>
-    </div>
-
-    <!-- KIB D -->
-    <div class="col-lg-4 col-md-6 col-sm-6" style="margin-bottom: 15px;">
-        <div class="kpi-card" style="background-color: #3c8dbc; color: #fff; padding: 15px; border-radius: 3px; position: relative; overflow: hidden; cursor: pointer; min-height: 95px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: transform 0.15s;" onclick="$('.kib-nav-tabs a[data-kib=\'D\']').tab('show');">
-            <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">KIB D — JALAN & JARINGAN</div>
-            <div style="font-size: 20px; font-weight: bold; margin: 5px 0 2px 0;">Rp. {?=number_format($kpi.D.total_nilai, 0, ',', '.')?}</div>
-            <div style="font-size: 12px; opacity: 0.9;"><i class="fa fa-tag"></i> <strong>{$kpi.D.jumlah}</strong> Unit Aset Terdaftar</div>
-            <i class="fa fa-road" style="position: absolute; right: 15px; bottom: 8px; font-size: 45px; opacity: 0.25;"></i>
-        </div>
-    </div>
-
-    <!-- KIB E -->
-    <div class="col-lg-4 col-md-6 col-sm-6" style="margin-bottom: 15px;">
-        <div class="kpi-card" style="background-color: #605ca8; color: #fff; padding: 15px; border-radius: 3px; position: relative; overflow: hidden; cursor: pointer; min-height: 95px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: transform 0.15s;" onclick="$('.kib-nav-tabs a[data-kib=\'E\']').tab('show');">
-            <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">KIB E — ASET LAINNYA</div>
-            <div style="font-size: 20px; font-weight: bold; margin: 5px 0 2px 0;">Rp. {?=number_format($kpi.E.total_nilai, 0, ',', '.')?}</div>
-            <div style="font-size: 12px; opacity: 0.9;"><i class="fa fa-tag"></i> <strong>{$kpi.E.jumlah}</strong> Unit Aset Terdaftar</div>
-            <i class="fa fa-book" style="position: absolute; right: 15px; bottom: 8px; font-size: 45px; opacity: 0.25;"></i>
-        </div>
-    </div>
-
-    <!-- KIB F -->
-    <div class="col-lg-4 col-md-6 col-sm-6" style="margin-bottom: 15px;">
-        <div class="kpi-card" style="background-color: #d81b60; color: #fff; padding: 15px; border-radius: 3px; position: relative; overflow: hidden; cursor: pointer; min-height: 95px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: transform 0.15s;" onclick="$('.kib-nav-tabs a[data-kib=\'F\']').tab('show');">
-            <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">KIB F — KONSTRUKSI</div>
-            <div style="font-size: 20px; font-weight: bold; margin: 5px 0 2px 0;">Rp. {?=number_format($kpi.F.total_nilai, 0, ',', '.')?}</div>
-            <div style="font-size: 12px; opacity: 0.9;"><i class="fa fa-tag"></i> <strong>{$kpi.F.jumlah}</strong> Unit Aset Terdaftar</div>
-            <i class="fa fa-gavel" style="position: absolute; right: 15px; bottom: 8px; font-size: 45px; opacity: 0.25;"></i>
-        </div>
-    </div>
+    {/loop}
+    {/if}
 
 </div>
 
@@ -70,7 +23,7 @@
     <div class="col-md-8" style="margin-bottom: 20px;">
         <div class="panel panel-default" style="border-radius: 3px; overflow: hidden;">
             <div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: 10px 15px;">
-                <strong style="font-size: 13px;"><i class="fa fa-table text-primary"></i> Tabel Rekapitulasi Nilai Buku Aset Tetap per Golongan KIB</strong>
+                <strong style="font-size: 13px;"><i class="fa fa-table text-primary"></i> Tabel Rekapitulasi Nilai Buku Aset Tetap per Kategori</strong>
                 <div class="btn-group">
                     <button class="btn btn-default btn-xs" onclick="window.print()"><i class="fa fa-print"></i> Cetak Laporan</button>
                 </div>
@@ -80,8 +33,8 @@
                     <table class="table table-striped table-hover no-margin">
                         <thead>
                             <tr>
-                                <th style="width: 50px; text-align: center;">Gol</th>
-                                <th>Golongan Inventaris Barang (KIB)</th>
+                                <th style="width: 50px; text-align: center;">Kode</th>
+                                <th>Kategori Aset</th>
                                 <th style="text-align: center;">Jumlah Item</th>
                                 <th style="text-align: center; color: #00a65a;"><i class="fa fa-check-circle"></i> Baik</th>
                                 <th style="text-align: center; color: #f39c12;"><i class="fa fa-warning"></i> Ringan</th>
@@ -95,7 +48,7 @@
                                 <td style="text-align: center; font-weight: bold; color: #777; vertical-align: middle;">{$value.jenis}</td>
                                 <td style="vertical-align: middle;">
                                     <strong>{$value.nama}</strong>
-                                    <div style="font-size:10px; color:#888; margin-top:2px;">Atribut golongan KIB {$value.jenis}</div>
+                                    <div style="font-size:10px; color:#888; margin-top:2px;">Kategori Aset {$value.nama}</div>
                                 </td>
                                 <td style="text-align: center; font-weight: bold; vertical-align: middle;">{$value.jumlah} Unit</td>
                                 <td style="text-align: center; color: #00a65a; vertical-align: middle; font-weight: bold;">{$value.kondisi_baik}</td>
@@ -125,7 +78,7 @@
     <div class="col-md-4" style="margin-bottom: 20px;">
         <div class="panel panel-default" style="border-radius: 3px; overflow: hidden; height: 100%;">
             <div class="panel-heading" style="padding: 10px 15px;">
-                <strong><i class="fa fa-pie-chart text-primary"></i> Sebaran Nilai Aset per Golongan KIB</strong>
+                <strong><i class="fa fa-pie-chart text-primary"></i> Sebaran Nilai Aset per Kodeongan KIB</strong>
             </div>
             <div class="panel-body" style="padding: 15px;">
                 <p class="text-muted" style="font-size: 11px; margin-bottom: 15px;">Proporsi total harga perolehan masing-masing golongan KIB terhadap nilai keseluruhan aset non-medis.</p>
@@ -142,14 +95,14 @@
                         <span style="color: #3c8dbc;">{?=number_format($percentage, 1)?}%</span>
                     </div>
                     <div class="progress" style="height: 8px; background-color: #eee; border-radius: 2px; box-shadow: none; margin-bottom: 0;">
-                        <div class="progress-bar" role="progressbar" style="width: {$percentage}%; border-radius: 2px; box-shadow: none;
-                            {if: $value.jenis == 'A'}background-color: #00a65a;
-                            {elseif: $value.jenis == 'B'}background-color: #00c0ef;
-                            {elseif: $value.jenis == 'C'}background-color: #f39c12;
-                            {elseif: $value.jenis == 'D'}background-color: #3c8dbc;
-                            {elseif: $value.jenis == 'E'}background-color: #605ca8;
-                            {elseif: $value.jenis == 'F'}background-color: #d81b60;
-                            {/if}">
+                        {if: $value.jenis == 'A'}{?= $bg = '#00a65a' ?}
+                        {elseif: $value.jenis == 'B'}{?= $bg = '#00c0ef' ?}
+                        {elseif: $value.jenis == 'C'}{?= $bg = '#f39c12' ?}
+                        {elseif: $value.jenis == 'D'}{?= $bg = '#3c8dbc' ?}
+                        {elseif: $value.jenis == 'E'}{?= $bg = '#605ca8' ?}
+                        {elseif: $value.jenis == 'F'}{?= $bg = '#d81b60' ?}
+                        {else}{?= $bg = '#999' ?}{/if}
+                        <div class="progress-bar" role="progressbar" {?= 'style="width: '.$percentage.'%; border-radius: 2px; box-shadow: none; background-color: '.$bg.';"' ?}>
                         </div>
                     </div>
                 </div>

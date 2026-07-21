@@ -88,6 +88,19 @@
                             <input type="text" name="serial_number" class="form-control" value="{$aset.serial_number}" placeholder="Contoh: SN-AC-992138">
                         </div>
 
+                        <!-- Master Kategori Aset -->
+                        <div class="form-group">
+                            <label class="control-label">Kategori Aset <span class="text-danger">*</span></label>
+                            <select name="kode_kategori_aset" id="form_kode_kategori_aset" class="form-control" required>
+                                <option value="" data-kib="" data-umur="0">-- Pilih Kategori Aset --</option>
+                                {if: !empty($kategori_aset)}
+                                {loop: $kategori_aset}
+                                <option value="{$value.kode_kategori}" data-kib="{$value.kib_default}" data-umur="{$value.umur_manfaat_default}" {if: $aset.kode_kategori_aset == $value.kode_kategori}selected{/if}>{$value.nama_kategori}</option>
+                                {/loop}
+                                {/if}
+                            </select>
+                        </div>
+
                         <!-- Klasifikasi KIB -->
                         <div class="form-group">
                             <label class="control-label">Klasifikasi KIB</label>
@@ -618,6 +631,20 @@
 
         // Initialize KIB panel on load
         toggleKibPanel();
+        
+        // Auto-fill KIB and Masa Manfaat from Kategori Aset
+        $('#form_kode_kategori_aset').on('change', function() {
+            var selectedOption = $(this).find('option:selected');
+            var kibDefault = selectedOption.data('kib');
+            var umurDefault = selectedOption.data('umur');
+            
+            if (kibDefault) {
+                $('#form_kib_jenis').val(kibDefault).trigger('change');
+            }
+            if (umurDefault) {
+                $('input[name="masa_manfaat_tahun"]').val(umurDefault);
+            }
+        });
         
         // Initial price masking format
         var raw_harga = $('#form_harga_beli').val();

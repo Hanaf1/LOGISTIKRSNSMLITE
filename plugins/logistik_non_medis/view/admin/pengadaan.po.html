@@ -143,47 +143,86 @@
 
         $(document).on('click', '.delete-po', function() {
             var id = $(this).data('id');
-            if(confirm('Yakin ingin menghapus PO ini?')) {
-                $.ajax({
-                    url: '{?=url([ADMIN, "logistik_non_medis", "hapuspengadaanpo"])?}',
-                    type: 'POST',
-                    data: { id: id },
-                    dataType: 'json',
-                    success: function(res) {
-                        if(res.status == 'success') {
-                            alert('Data berhasil dihapus');
-                            loadPO();
-                        } else {
-                            alert(res.message);
+            bootbox.confirm({
+                title: '<i class="fa fa-trash text-danger"></i> Hapus PO',
+                message: 'Yakin ingin menghapus PO ini?',
+                buttons: {
+                    cancel: { label: '<i class="fa fa-times"></i> Batal', className: 'btn-default' },
+                    confirm: { label: '<i class="fa fa-trash"></i> Ya, Hapus', className: 'btn-danger' }
+                },
+                callback: function(result) {
+                    if(!result) return;
+                    $.ajax({
+                        url: '{?=url([ADMIN, "logistik_non_medis", "hapuspengadaanpo"])?}',
+                        type: 'POST',
+                        data: { id: id },
+                        dataType: 'json',
+                        success: function(res) {
+                            if(res.status == 'success') {
+                                bootbox.alert({ title: '<i class="fa fa-check-circle text-success"></i> Berhasil', message: 'Data berhasil dihapus.', callback: function(){ loadPO(); } });
+                            } else {
+                                bootbox.alert({ title: '<i class="fa fa-times-circle text-danger"></i> Gagal', message: res.message });
+                            }
                         }
-                    }
-                });
-            }
+                    });
+                }
+            });
         });
 
         $(document).on('click', '.update-status-po', function() {
             var id = $(this).data('id');
             var status = $(this).data('status');
-            var pesan = '';
-            if(status == 'Terkirim') pesan = 'Kirim PO ke Vendor?';
-            if(status == 'Dibatalkan') pesan = 'Yakin membatalkan PO ini? PR akan dikembalikan.';
-            
-            if(confirm(pesan)) {
-                $.ajax({
-                    url: '{?=url([ADMIN, "logistik_non_medis", "ubahstatuspo"])?}',
-                    type: 'POST',
-                    data: { id: id, status: status },
-                    dataType: 'json',
-                    success: function(res) {
-                        if(res.status == 'success') {
-                            alert('Status berhasil diubah');
-                            loadPO();
-                        } else {
-                            alert(res.message);
-                        }
-                    }
-                });
+            var judul = 'Konfirmasi';
+            var pesan = 'Ubah status PO?';
+            var btnClass = 'btn-primary';
+            var btnLabel = '<i class="fa fa-check"></i> Ya, Lanjutkan';
+            if(status == 'Terkirim') {
+                judul = '<i class="fa fa-check-circle text-success"></i> Sudah Diorder';
+                pesan = 'Tandai PO ini sebagai <b>"Sudah Diorder"</b>?';
+                btnClass = 'btn-success';
+                btnLabel = '<i class="fa fa-check"></i> Ya, Sudah Order';
             }
+            if(status == 'Selesai') {
+                judul = '<i class="fa fa-lock text-warning"></i> Tutup PO';
+                pesan = 'Tutup PO ini secara manual sebagai <b>Selesai</b>?';
+                btnClass = 'btn-warning';
+                btnLabel = '<i class="fa fa-lock"></i> Ya, Tutup PO';
+            }
+            if(status == 'Dibatalkan') {
+                judul = '<i class="fa fa-times-circle text-danger"></i> Batalkan PO';
+                pesan = 'Yakin membatalkan PO ini? Data perencanaan akan dikembalikan.';
+                btnClass = 'btn-danger';
+                btnLabel = '<i class="fa fa-times"></i> Ya, Batalkan';
+            }
+            
+            bootbox.confirm({
+                title: judul,
+                message: pesan,
+                buttons: {
+                    cancel: { label: '<i class="fa fa-arrow-left"></i> Kembali', className: 'btn-default' },
+                    confirm: { label: btnLabel, className: btnClass }
+                },
+                callback: function(result) {
+                    if(!result) return;
+                    $.ajax({
+                        url: '{?=url([ADMIN, "logistik_non_medis", "ubahstatuspo"])?}',
+                        type: 'POST',
+                        data: { id: id, status: status },
+                        dataType: 'json',
+                        success: function(res) {
+                            if(res.status == 'success') {
+                                bootbox.alert({ title: '<i class="fa fa-check-circle text-success"></i> Berhasil', message: 'Status PO berhasil diubah.', callback: function(){ loadPO(); } });
+                            } else {
+                                bootbox.alert({ title: '<i class="fa fa-times-circle text-danger"></i> Gagal', message: res.message });
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error(xhr.responseText);
+                            bootbox.alert({ title: '<i class="fa fa-times-circle text-danger"></i> Error', message: 'Terjadi kesalahan saat menghubungi server: ' + error });
+                        }
+                    });
+                }
+            });
         });
 
         {if: !empty($sumber_tipe) && !empty($no_rencana)}

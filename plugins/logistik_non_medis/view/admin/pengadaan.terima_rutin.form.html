@@ -111,9 +111,12 @@
     </div>
 </div>
 
+<script type="application/json" id="list_barang_data_terima">
+{?=json_encode($list_barang)?}
+</script>
 <script>
 var rowIdxTerima = 1;
-var listBarangTerima = {?=json_encode($list_barang)?};
+var listBarangTerima = JSON.parse(document.getElementById('list_barang_data_terima').textContent || '[]');
 
 function buildBarangOptionsTerima(selectedKode) {
     var opts = '<option value=""></option>';

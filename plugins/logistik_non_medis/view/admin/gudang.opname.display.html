@@ -4,7 +4,6 @@
             <tr>
                 <th>No. Opname</th>
                 <th>Tanggal</th>
-                <th>Lokasi</th>
                 <th>Status</th>
                 <th>User</th>
                 <th width="150">Aksi</th>
@@ -16,7 +15,6 @@
                 <tr>
                     <td><strong>{$row.no_opname}</strong></td>
                     <td>{if: $row.status == 'Jadwal'}{$row.tgl_jadwal}{else}{$row.tgl_opname}{/if}</td>
-                    <td>{$row.kode_lokasi}</td>
                     <td>
                         {if: $row.status == 'Jadwal'}
                             <span class="label label-info">Jadwal</span>
@@ -43,7 +41,7 @@
                 {/loop}
             {else}
                 <tr>
-                    <td colspan="6" class="text-center">Data tidak ditemukan.</td>
+                    <td colspan="5" class="text-center">Data tidak ditemukan.</td>
                 </tr>
             {/if}
         </tbody>
