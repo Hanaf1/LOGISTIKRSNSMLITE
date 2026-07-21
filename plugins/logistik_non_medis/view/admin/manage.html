@@ -282,59 +282,15 @@
             <ul class="modules" style="padding:0;margin:0;">
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusisppb'])?}" class="panel-body text-center">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusibhp'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-file-text-o"></i>
-                                <div class="desc">Permintaan Barang (SPPB)</div>
+                                <div class="desc">Satu alur: verifikasi hingga serah terima</div>
                             </div>
-                            <h4><b>Permintaan (SPPB)</b></h4>
+                            <h4><b>Permintaan BHP Mingguan</b></h4>
                         </a>
                     </div>
                 </li>
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusiverifikasi'])?}" class="panel-body text-center">
-                            <div class="panel-thumb">
-                                <i class="fa fa-check-square-o"></i>
-                                <div class="desc">Verifikasi Permintaan (SPPB)</div>
-                            </div>
-                            <h4><b>Verifikasi SPPB</b> {if: $count_verif > 0}<span class="label label-danger">{$count_verif}</span>{/if}</h4>
-                        </a>
-                    </div>
-                </li>
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusipacking'])?}" class="panel-body text-center">
-                            <div class="panel-thumb">
-                                <i class="fa fa-cube"></i>
-                                <div class="desc">Picking & Packing</div>
-                            </div>
-                            <h4><b>Picking & Packing</b> {if: $count_packing > 0}<span class="label label-danger">{$count_packing}</span>{/if}</h4>
-                        </a>
-                    </div>
-                </li>
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusiserahterima'])?}" class="panel-body text-center">
-                            <div class="panel-thumb">
-                                <i class="fa fa-handshake-o"></i>
-                                <div class="desc">Serah Terima Barang</div>
-                            </div>
-                            <h4><b>Serah Terima</b></h4>
-                        </a>
-                    </div>
-                </li>
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusitracking'])?}" class="panel-body text-center">
-                            <div class="panel-thumb">
-                                <i class="fa fa-map-o"></i>
-                                <div class="desc">Tracking Pengiriman</div>
-                            </div>
-                            <h4><b>Tracking</b></h4>
-                        </a>
-                    </div>
-
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','distribusiretur'])?}" class="panel-body text-center">
@@ -347,17 +303,6 @@
                     </div>
                 </li>
 
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusikuota'])?}" class="panel-body text-center">
-                            <div class="panel-thumb">
-                                <i class="fa fa-battery-half"></i>
-                                <div class="desc">Kuota & Alokasi Unit</div>
-                            </div>
-                            <h4><b>Kuota & Alokasi</b></h4>
-                        </a>
-                    </div>
-                </li>
             </ul>
         </div>
     </div>

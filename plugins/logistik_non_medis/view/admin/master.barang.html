@@ -69,6 +69,31 @@
                         <button type="button" class="btn btn-danger" id="btn-bulk-delete-barang" style="display:none; margin-left: 5px;"><i class="fa fa-trash"></i> Hapus Terpilih (<span id="bulk-delete-count">0</span>)</button>
                     </div>
                 </div>
+
+                <form id="form-filter-barang" class="well well-sm" style="margin-bottom:20px;">
+                    <div class="row">
+                        <div class="col-md-5">
+                            <label class="sr-only" for="cari-barang">Cari barang</label>
+                            <div class="input-group">
+                                <input type="text" id="cari-barang" name="cari" class="form-control" placeholder="Cari nama atau kode barang..." autocomplete="off">
+                                <span class="input-group-btn"><button type="submit" class="btn btn-default"><i class="fa fa-search"></i> Cari</button></span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="sr-only" for="filter-kategori-barang">Kategori</label>
+                            <select id="filter-kategori-barang" name="kategori" class="form-control">
+                                <option value="">-- Semua Kategori --</option>
+                                {loop: $kategori}
+                                <option value="{$value.kode_kategori}">{$value.nama_kategori}</option>
+                                {/loop}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="button" id="btn-reset-filter-barang" class="btn btn-default"><i class="fa fa-refresh"></i> Reset Filter</button>
+                            <span class="help-block" style="display:inline-block;margin:7px 0 0 8px"><span id="total-data">0</span> data</span>
+                        </div>
+                    </div>
+                </form>
                 
                 <div class="table-responsive no-margin">
                     <table class="table table-striped no-margin dataTable" id="table-master-barang">
@@ -87,6 +112,9 @@
                         </thead>
                         <tbody id="master-barang-list"></tbody>
                     </table>
+                </div>
+                <div class="text-center">
+                    <ul class="pagination pagination-master-barang" style="margin:10px 0 0"></ul>
                 </div>
             </div>
         </div>

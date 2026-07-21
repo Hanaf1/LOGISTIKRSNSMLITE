@@ -67,19 +67,18 @@ $(document).ready(function() {
                 $('#import-loading').hide();
                 btn.prop('disabled', false).text('Mulai Import');
                 try {
-                    var response = JSON.parse(res);
+                    var response = typeof res === 'string' ? JSON.parse(res) : res;
                     if(response.status == 'success') {
-                        bootbox.alert(response.pesan);
+                        var detail = response.errors && response.errors.length ? '<br><br><strong>Baris dilewati:</strong><br>' + response.errors.join('<br>') : '';
+                        bootbox.alert(response.pesan + detail);
                         $('#modal-import-barang').modal('hide');
                         $('#form-import-barang')[0].reset();
-                        if(typeof tableMasterBarang !== 'undefined') {
-                            tableMasterBarang.ajax.reload();
-                        }
+                        if($('#table-master-barang').length > 0) loadMasterBarang(1);
                     } else {
-                        bootbox.alert(response.pesan);
+                        bootbox.alert((response.pesan || 'Import gagal diproses.') + (response.errors && response.errors.length ? '<br><br>' + response.errors.join('<br>') : ''));
                     }
                 } catch(e) {
-                    bootbox.alert("Terjadi kesalahan sistem saat parsing respon import.");
+                    bootbox.alert("Server tidak memberikan respons import yang valid. Silakan coba ulang atau periksa log PHP.");
                 }
             },
             error: function (e) {
@@ -93,11 +92,13 @@ $(document).ready(function() {
 
 
 
-    function loadMasterBarang(page = 1, cari = '') {
+    function loadMasterBarang(page = 1) {
+        var cari = $('#cari-barang').val() || '';
+        var kategori = $('#filter-kategori-barang').val() || '';
         $('#check-all-barang').prop('checked', false);
         $('#btn-bulk-delete-barang').hide();
         $('#master-barang-list').html('<tr><td colspan="9" class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i><p>Memuat data...</p></td></tr>');
-        $.post(baseURL + '/logistik_non_medis/displaymasterbarang?t=' + mlite.token, {halaman: page, cari: cari}, function(data) {
+        $.post(baseURL + '/logistik_non_medis/displaymasterbarang?t=' + mlite.token, {halaman: page, cari: cari, kategori: kategori}, function(data) {
             $('#master-barang-list').html(data);
         }).fail(function() {
             $('#master-barang-list').html('<tr><td colspan="9" class="text-center text-danger"><i class="fa fa-exclamation-triangle fa-2x"></i><p>Gagal memuat data dari server.</p></td></tr>');
@@ -109,17 +110,25 @@ $(document).ready(function() {
     }
 
 
-    $('.searchbox-masterbarang').on('submit', function(e) {
+    $('#form-filter-barang').on('submit', function(e) {
         e.preventDefault();
-        var cari = $('input[name="cari"]', this).val();
-        loadMasterBarang(1, cari);
+        loadMasterBarang(1);
+    });
+
+    $('#filter-kategori-barang').on('change', function() {
+        loadMasterBarang(1);
+    });
+
+    $('#btn-reset-filter-barang').on('click', function() {
+        $('#cari-barang').val('');
+        $('#filter-kategori-barang').val('');
+        loadMasterBarang(1);
     });
 
     $(document).on('click', '.pagination-master-barang a', function(e) {
         e.preventDefault();
         var page = $(this).data('page');
-        var cari = $('.searchbox-masterbarang input[name="cari"]').val();
-        loadMasterBarang(page, cari);
+        loadMasterBarang(page);
     });
 
     $('#btn-tambah-barang').on('click', function() {

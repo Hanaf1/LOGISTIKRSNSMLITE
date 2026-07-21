@@ -142,30 +142,43 @@
 var signaturePad;
 var canvas = document.getElementById('signature-pad');
 
-function initSignaturePad() {
-    if(signaturePad) {
-        signaturePad.clear();
-    } else {
-        signaturePad = new SignaturePad(canvas, {
-            backgroundColor: 'rgb(255, 255, 255)',
-            penColor: 'rgb(0, 0, 128)',
-            velocityFilterWeight: 0.7
-        });
+/* Fallback agar TTD tetap dapat dipakai saat CDN SignaturePad tidak termuat. */
+function nativeSignaturePad(target) {
+    var ctx = target.getContext('2d'), drawing = false, signed = false;
+    function point(event) {
+        var rect = target.getBoundingClientRect(), source = event.touches ? event.touches[0] : event;
+        return {x: source.clientX - rect.left, y: source.clientY - rect.top};
     }
-    resizeCanvas();
+    function start(event) { drawing = true; signed = true; var p = point(event); ctx.beginPath(); ctx.moveTo(p.x, p.y); event.preventDefault(); }
+    function draw(event) { if (!drawing) return; var p = point(event); ctx.lineTo(p.x, p.y); ctx.stroke(); event.preventDefault(); }
+    function end() { drawing = false; }
+    target.addEventListener('pointerdown', start, {passive:false});
+    target.addEventListener('pointermove', draw, {passive:false});
+    target.addEventListener('pointerup', end); target.addEventListener('pointerleave', end);
+    return { clear:function(){ ctx.clearRect(0, 0, target.width, target.height); signed = false; }, isEmpty:function(){ return !signed; }, toDataURL:function(){ return target.toDataURL('image/png'); } };
 }
 
 function resizeCanvas() {
-    var ratio = Math.max(window.devicePixelRatio || 1, 1);
+    if (!canvas || !canvas.offsetWidth) return;
+    var ratio = Math.max(window.devicePixelRatio || 1, 1), data = null;
+    if (signaturePad && typeof signaturePad.toData === 'function') data = signaturePad.toData();
     canvas.width = canvas.offsetWidth * ratio;
     canvas.height = canvas.offsetHeight * ratio;
-    canvas.getContext("2d").scale(ratio, ratio);
-    if(signaturePad) {
-        // Prevent clearing on resize if user already signed, though ratio change might clear it on mobile rotations.
-        var data = signaturePad.toData();
-        signaturePad.clear();
-        signaturePad.fromData(data);
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgb(0, 0, 128)';
+    if (signaturePad && typeof signaturePad.clear === 'function') signaturePad.clear();
+    if (data && typeof signaturePad.fromData === 'function') signaturePad.fromData(data);
+}
+
+function initSignaturePad() {
+    if (!canvas) return;
+    if (typeof SignaturePad === 'function') {
+        signaturePad = new SignaturePad(canvas, { backgroundColor:'rgb(255,255,255)', penColor:'rgb(0,0,128)', velocityFilterWeight:0.7 });
+    } else {
+        signaturePad = nativeSignaturePad(canvas);
     }
+    resizeCanvas();
 }
 
 // Preview uploaded/captured image
@@ -181,8 +194,9 @@ function previewImage(event) {
     }
 }
 
-// Initial call if already visible (though usually handled by shown.bs.modal)
-initSignaturePad();
+// Canvas baru diukur setelah modal terlihat; sebelumnya lebar dapat terbaca nol.
+$('#modalSerahTerima').off('shown.bs.modal.signature').on('shown.bs.modal.signature', function(){ setTimeout(initSignaturePad, 30); });
+if ($('#modalSerahTerima').hasClass('in')) setTimeout(initSignaturePad, 30);
 window.addEventListener('resize', resizeCanvas);
 
 $('#clear_signature').on('click', function(){

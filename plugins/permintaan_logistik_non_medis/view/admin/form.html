@@ -1,0 +1,27 @@
+<div class="panel panel-default">
+  <div class="panel-heading"><h3 class="panel-title"><i class="fa fa-{if: $mode == 'edit'}pencil{else}plus{/if}"></i> {if: $mode == 'edit'}Edit Draft{else}Buat Permintaan Baru{/if}</h3></div>
+  <div class="panel-body">
+    <div class="alert alert-info"><strong>{$mapping.nama_unit}</strong> ({$mapping.kode_unit}) — nomor SPPB akan dibuat otomatis oleh sistem.</div>
+    <form id="unit-request-form">
+      <input type="hidden" name="no_sppb" value="{$document.no_sppb}"><input type="hidden" name="aksi" id="request-action" value="draft">
+      <div class="row"><div class="col-md-3"><div class="form-group"><label>Tanggal Permintaan *</label><input type="date" class="form-control" name="tgl_sppb" value="{$document.tgl_sppb}" required></div></div>
+      <div class="col-md-3"><div class="form-group"><label>Sifat Permintaan *</label><select name="sifat_permintaan" class="form-control"><option value="Rutin" {if: $document.sifat_permintaan == 'Rutin'}selected{/if}>Rutin</option><option value="Cito" {if: $document.sifat_permintaan == 'Cito'}selected{/if}>Cito / Mendesak</option></select></div></div>
+      <div class="col-md-6"><div class="form-group"><label>Keterangan / Keperluan</label><input type="text" name="keterangan" class="form-control" maxlength="500" value="{$document.keterangan}" placeholder="Contoh: kebutuhan operasional minggu ke-2"></div></div></div>
+      <h4>Daftar Barang</h4><div class="table-responsive"><table class="table table-bordered"><thead><tr class="active"><th>Barang *</th><th width="150">Jumlah *</th><th width="150">Satuan</th><th width="55"></th></tr></thead><tbody id="unit-item-rows">
+        {loop: $document.items}<tr><td><select name="kode_item[]" class="form-control unit-item-select" required><option value="{$value.kode_item}" selected>{$value.kode_item} - {$value.nama_barang}</option></select></td><td><input type="number" name="jumlah[]" min="0.01" step="0.01" value="{$value.jumlah}" class="form-control" required></td><td><input class="form-control item-unit" value="{$value.satuan}" readonly></td><td><button type="button" class="btn btn-danger btn-remove-row"><i class="fa fa-times"></i></button></td></tr>{/loop}
+      </tbody></table></div>
+      <button type="button" id="btn-add-unit-item" class="btn btn-default"><i class="fa fa-plus"></i> Tambah Barang</button><hr>
+      <div class="text-right"><button type="button" class="btn btn-default" id="btn-cancel-request">Batal</button> <button type="submit" class="btn btn-warning" data-action="draft"><i class="fa fa-save"></i> Simpan Draft</button> <button type="submit" class="btn btn-success" data-action="ajukan"><i class="fa fa-paper-plane"></i> Simpan & Ajukan</button></div>
+    </form>
+  </div>
+</div>
+<script>
+(function(){
+ function initItem($el){$el.select2({width:'100%',placeholder:'Ketik kode atau nama barang',minimumInputLength:0,ajax:{url:'{?=url([ADMIN,"permintaan_logistik_non_medis","barang"])?}',dataType:'json',delay:250,data:function(p){return {q:p.term||''}},processResults:function(d){return d}}}).on('select2:select',function(e){$(this).closest('tr').find('.item-unit').val(e.params.data.satuan||'')})}
+ function addRow(){var $r=$('<tr><td><select name="kode_item[]" class="form-control unit-item-select" required></select></td><td><input type="number" name="jumlah[]" min="0.01" step="0.01" value="1" class="form-control" required></td><td><input class="form-control item-unit" readonly></td><td><button type="button" class="btn btn-danger btn-remove-row"><i class="fa fa-times"></i></button></td></tr>');$('#unit-item-rows').append($r);initItem($r.find('select'))}
+ initItem($('.unit-item-select'));if(!$('#unit-item-rows tr').length)addRow();$('#btn-add-unit-item').click(addRow);$('#unit-item-rows').on('click','.btn-remove-row',function(){if($('#unit-item-rows tr').length>1)$(this).closest('tr').remove()});
+ $('#btn-cancel-request').click(function(){$('#request-form-page').hide().empty();$('#request-list-page').show()});
+ $('#unit-request-form button[type=submit]').click(function(){$('#request-action').val($(this).data('action'))});
+ $('#unit-request-form').submit(function(e){e.preventDefault();var action=$('#request-action').val();if(action==='ajukan'&&!confirm('Ajukan sekarang? Setelah diajukan permintaan tidak dapat diedit.'))return;var $buttons=$(this).find('button').prop('disabled',true);$.post('{?=url([ADMIN,"permintaan_logistik_non_medis","simpan"])?}',$(this).serialize(),function(r){try{if(typeof r==='string')r=JSON.parse(r)}catch(e){r={status:'error',message:'Respons server tidak valid.'}}alert(r.message);if(r.status==='success')window.location.reload()}).always(function(){$buttons.prop('disabled',false)})});
+})();
+</script>

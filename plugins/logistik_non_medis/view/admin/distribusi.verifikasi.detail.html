@@ -12,7 +12,6 @@
                     <th>Nama Barang</th>
                     <th class="text-center" width="100">Jml Minta</th>
                     <th class="text-center" width="100">Stok Gudang</th>
-                    <th class="text-center" width="100">Sisa Kuota</th>
                     <th class="text-center" width="150">Jml Disetujui</th>
                     <th width="120">Keputusan</th>
                     <th>Keterangan (Opsional)</th>
@@ -30,11 +29,6 @@
                     <td class="text-center">
                         <span class="label {$value.stok_color}">
                             {$value.stok}
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        <span class="label {$value.kuota_color}">
-                            {$value.kuota_display}
                         </span>
                     </td>
                     <td>
@@ -64,7 +58,6 @@
         <ul>
             <li>Gunakan <strong>Jml Disetujui</strong> untuk penanganan stok terbatas (*Partial Fulfillment*).</li>
             <li>Label <span class="label label-danger">Merah</span> pada stok menunjukkan stok di gudang tidak mencukupi permintaan.</li>
-            <li>Label <span class="label label-warning">Kuning</span> pada kuota menunjukkan permintaan melebihi sisa perencanaan unit.</li>
         </ul>
     </div>
 

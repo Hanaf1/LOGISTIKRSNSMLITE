@@ -42,13 +42,23 @@
             pagination += '<li class="disabled"><span>&laquo; Prev</span></li>';
         }
 
-        // Page Numbers
-        for (var i = 1; i <= jml_halaman; i++) {
+        // Batasi tombol nomor halaman agar daftar ribuan barang tetap ringkas.
+        var startPage = Math.max(1, halaman - 2);
+        var endPage = Math.min(jml_halaman, halaman + 2);
+        if (startPage > 1) {
+            pagination += '<li><a href="javascript:void(0)" data-page="1">1</a></li>';
+            if (startPage > 2) pagination += '<li class="disabled"><span>…</span></li>';
+        }
+        for (var i = startPage; i <= endPage; i++) {
             if (i == halaman) {
                 pagination += '<li class="active"><a href="javascript:void(0)" data-page="'+i+'">'+i+'</a></li>';
             } else {
                 pagination += '<li><a href="javascript:void(0)" data-page="'+i+'">'+i+'</a></li>';
             }
+        }
+        if (endPage < jml_halaman) {
+            if (endPage < jml_halaman - 1) pagination += '<li class="disabled"><span>…</span></li>';
+            pagination += '<li><a href="javascript:void(0)" data-page="'+jml_halaman+'">'+jml_halaman+'</a></li>';
         }
 
         // Next Button

@@ -19,7 +19,7 @@
                     <select name="kode_kategori" class="form-control select2" style="width:100%">
                         <option value="">-- Pilih Kategori --</option>
                         {loop: $kategori}
-                        <option value="{$value.kode_kategori}" {if: $barang.kategori == $value.nama_kategori}selected{/if}>{$value.nama_kategori} ({$value.kode_kategori})</option>
+                        <option value="{$value.kode_kategori}" {if: $barang.kode_kategori == $value.kode_kategori}selected{/if}>{$value.nama_kategori} ({$value.kode_kategori})</option>
                         {/loop}
                     </select>
                 </div>
