@@ -104,10 +104,6 @@ class Admin extends AdminModule
 
           $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
           $role = $userRoleData['role'] ?? 'unit';
-          if ($this->core->getUserInfo('role', null, true) === 'admin') {
-              $role = 'admin';
-          }
-
           $permsData = $this->db('rsns_custom_logistik_non_medis_role_permissions')->where('role', $role)->oneArray();
           $permissions = explode(',', $permsData['permissions'] ?? 'manage');
 
@@ -185,14 +181,10 @@ class Admin extends AdminModule
           if ($userRoleData) {
               $role = $userRoleData['role'];
           } else {
-              $mlite_role = $this->core->getUserInfo('role', null, true);
-              $role = ($mlite_role == 'admin') ? 'admin' : 'unit';
+              $role = 'unit';
           }
       }
 
-      if ($this->core->getUserInfo('role', null, true) === 'admin') {
-          $role = 'admin';
-      }
       $permsData = $this->db('rsns_custom_logistik_non_medis_role_permissions')->where('role', $role)->oneArray();
       $permissions = explode(',', $permsData['permissions'] ?? 'manage');
 
@@ -490,10 +482,6 @@ class Admin extends AdminModule
     $username = $this->core->getUserInfo('username', null, true);
     $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
     $role = $userRoleData['role'] ?? 'unit';
-    if ($this->core->getUserInfo('role', null, true) === 'admin') {
-        $role = 'admin';
-    }
-    
     $permsData = $this->db('rsns_custom_logistik_non_medis_role_permissions')->where('role', $role)->oneArray();
     $permissions = explode(',', $permsData['permissions'] ?? 'manage');
     $hakakses_access = in_array('hakakses', $permissions);
