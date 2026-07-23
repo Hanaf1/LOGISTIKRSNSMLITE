@@ -3261,9 +3261,13 @@ $(document).ready(function() {
 
       foreach ($columns as $col => $def) {
           try {
-              $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_po` ADD `$col` $def");
+              $checkColumn = $this->db()->pdo()->prepare("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_po` LIKE ?");
+              $checkColumn->execute([$col]);
+              if (!$checkColumn->fetch()) {
+                  $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_po` ADD `$col` $def");
+              }
           } catch (\Exception $e) {
-              // Column probably already exists
+              // Jangan hentikan halaman bila migrasi opsional gagal.
           }
       }
       
