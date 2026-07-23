@@ -210,7 +210,15 @@ abstract class Main
             }
 
             if (empty(parseURL(1))) {
-                redirect($this->getAdminLandingUrl());
+                if(MULTI_APP) {
+                    if(!empty(MULTI_APP_REDIRECT)) {
+                        redirect(url([ADMIN, MULTI_APP_REDIRECT, 'main']));
+                    } else {
+                        redirect(url([ADMIN, 'dashboard', 'main']));
+                    }
+                } else {
+                    redirect(url([ADMIN, 'dashboard', 'main']));
+                }
             } elseif (!isset($_GET['t']) || ($_SESSION['token'] != @$_GET['t'])) {
                 return false;
             }
@@ -233,7 +241,15 @@ abstract class Main
                         $this->db('mlite_remember_me')->where('mlite_remember_me.user_id', $token[0])->where('mlite_remember_me.token', $token[1])->save(['expiry' => time()+60*60*24*30]);
 
                         if (strpos($_SERVER['SCRIPT_NAME'], '/'.ADMIN.'/') !== false) {
-                            redirect($this->getAdminLandingUrl());
+                            if(MULTI_APP) {
+                                if(!empty(MULTI_APP_REDIRECT)) {
+                                    redirect(url([ADMIN, MULTI_APP_REDIRECT, 'main']));
+                                } else {
+                                    redirect(url([ADMIN, 'dashboard', 'main']));
+                                }
+                            } else {
+                                redirect(url([ADMIN, 'dashboard', 'main']));
+                            }
                         }
 
                         return true;
@@ -244,25 +260,6 @@ abstract class Main
         }
 
         return false;
-    }
-
-    public function getAdminLandingUrl()
-    {
-        $access = (string) $this->getUserInfo('access', null, true);
-        if ($access !== 'all') {
-            $modules = array_values(array_filter(array_map('trim', explode(',', $access))));
-            if (in_array('permintaan_logistik_non_medis', $modules, true)) {
-                return url([ADMIN, 'permintaan_logistik_non_medis', 'manage']);
-            }
-            if (in_array('logistik_non_medis', $modules, true)) {
-                return url([ADMIN, 'logistik_non_medis', 'manage']);
-            }
-        }
-
-        if (MULTI_APP && !empty(MULTI_APP_REDIRECT)) {
-            return url([ADMIN, MULTI_APP_REDIRECT, 'main']);
-        }
-        return url([ADMIN, 'dashboard', 'main']);
     }
 
     public function getUserInfo($field, $id = null, $refresh = false)

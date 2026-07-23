@@ -84,17 +84,6 @@ class Admin extends Main
 
     public function loadModule($name, $method, $params = [])
     {
-        $access = (string) $this->getUserInfo('access');
-        $adminOnlyModules = ['dashboard', 'modules', 'users', 'settings'];
-        if ($access !== 'all' && in_array($name, $adminOnlyModules, true)) {
-            $landing = $this->getAdminLandingUrl();
-            if (strpos($landing, '/'.$name.'/') === false) {
-                redirect($landing);
-            }
-            http_response_code(403);
-            exit('Akses ditolak.');
-        }
-
         $row = $this->module->{$name};
 
         if ($row && ($details = $this->getModuleInfo($name))) {
@@ -136,9 +125,6 @@ class Admin extends Main
 
         if ($this->getUserInfo('access', $id, $refresh = false) != 'all') {
             $modules = array_intersect_key($modules, array_fill_keys(explode(',', $this->getUserInfo('access')), null));
-            foreach (['dashboard', 'modules', 'users', 'settings'] as $adminOnlyModule) {
-                unset($modules[$adminOnlyModule]);
-            }
         }
 
         foreach ($modules as $dir => $module) {
