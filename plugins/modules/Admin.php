@@ -19,6 +19,7 @@ class Admin extends AdminModule
     */
     public function getManage($type = 'active')
     {
+        $this->requireAdministrator();
         $this->core->addCSS(url('assets/css/datatables.min.css'));
         $this->core->addJS(url('assets/jscripts/datatables.min.js'));
         $modules = $this->_modulesList($type);
@@ -30,6 +31,7 @@ class Admin extends AdminModule
     */
     public function getUpload()
     {
+        $this->requireAdministrator();
         return $this->draw('upload.html');
     }
 
@@ -38,6 +40,7 @@ class Admin extends AdminModule
      */
     public function postExtract()
     {
+        $this->requireAdministrator();
         if (isset($_FILES['zip_module']['tmp_name']) && !FILE_LOCK) {
             $backURL = url([ADMIN, 'modules', 'upload']);
             $file = $_FILES['zip_module']['tmp_name'];
@@ -87,6 +90,7 @@ class Admin extends AdminModule
 
     public function getInstall($dir)
     {
+        $this->requireAdministrator();
         $files = [
             'info'  => MODULES.'/'.$dir.'/Info.php',
             'admin' => MODULES.'/'.$dir.'/Admin.php',
@@ -116,6 +120,7 @@ class Admin extends AdminModule
 
     public function getUninstall($dir)
     {
+        $this->requireAdministrator();
         if (in_array($dir, $this->basicModules(), true)) {
             $this->notify('failure', 'Tidak dapat menonaktifkan modul %s.', $dir);
             redirect(url([ADMIN, 'modules', 'manage', 'active']));
@@ -139,6 +144,7 @@ class Admin extends AdminModule
 
     public function getRemove($dir)
     {
+        $this->requireAdministrator();
             if (in_array($dir, $this->basicModules(), true)) {
             $this->notify('failure', 'Tidak dapat menghapus berkas-berkas modul %s.', $dir);
             redirect(url([ADMIN, 'modules', 'manage', 'inactive']));
@@ -157,6 +163,7 @@ class Admin extends AdminModule
 
     public function getDetails($dir)
     {
+        $this->requireAdministrator();
         $files = [
             'info'      => MODULES.'/'.$dir.'/Info.php',
             'readme'    => MODULES.'/'.$dir.'/ReadMe.md'
@@ -262,5 +269,13 @@ class Admin extends AdminModule
         }
         $modules = @unserialize(BASIC_MODULES);
         return is_array($modules) ? $modules : [];
+    }
+
+    private function requireAdministrator()
+    {
+        if ($this->getUserInfo('access') !== 'all') {
+            http_response_code(403);
+            exit('Akses ditolak. Manajemen modul hanya dapat diakses administrator.');
+        }
     }
 }
