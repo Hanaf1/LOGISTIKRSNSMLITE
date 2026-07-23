@@ -508,9 +508,22 @@ class Admin extends AdminModule
     $count_verif = count($this->db('rsns_custom_logistik_non_medis_sppb')->where('status', 'Disetujui Unit')->group('no_sppb')->toArray());
     $count_packing = count($this->db('rsns_custom_logistik_non_medis_sppb')->where('status', 'Terverifikasi')->orWhere('status', 'Picking')->orWhere('status', 'Packing')->group('no_sppb')->toArray());
 
+    // Nilai default dashboard agar template lama tetap kompatibel meskipun
+    // tabel statistik tertentu belum tersedia pada database instalasi lama.
+    $dash_permintaan_minggu = 0;
+    $dash_cost_bulan = 0;
+    $dash_total_aset = 0;
+    $dash_total_perencanaan = 0;
+    $dash_total_po = 0;
+
     return $this->draw('manage.html', [
         'count_verif' => $count_verif,
         'count_packing' => $count_packing,
+        'dash_permintaan_minggu' => $dash_permintaan_minggu,
+        'dash_cost_bulan' => $dash_cost_bulan,
+        'dash_total_aset' => $dash_total_aset,
+        'dash_total_perencanaan' => $dash_total_perencanaan,
+        'dash_total_po' => $dash_total_po,
         'permissions' => $permissions,
         'hakakses_access' => $hakakses_access,
         'has_master' => $has_master,
