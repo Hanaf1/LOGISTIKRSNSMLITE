@@ -116,7 +116,7 @@ class Admin extends AdminModule
 
     public function getUninstall($dir)
     {
-        if (in_array($dir, unserialize(\BASIC_MODULES))) {
+        if (in_array($dir, $this->basicModules(), true)) {
             $this->notify('failure', 'Tidak dapat menonaktifkan modul %s.', $dir);
             redirect(url([ADMIN, 'modules', 'manage', 'active']));
         }
@@ -139,7 +139,7 @@ class Admin extends AdminModule
 
     public function getRemove($dir)
     {
-            if (in_array($dir, unserialize(\BASIC_MODULES))) {
+            if (in_array($dir, $this->basicModules(), true)) {
             $this->notify('failure', 'Tidak dapat menghapus berkas-berkas modul %s.', $dir);
             redirect(url([ADMIN, 'modules', 'manage', 'inactive']));
         }
@@ -211,7 +211,7 @@ class Admin extends AdminModule
 
                 $other['installed'] = $type == 'active' ? true : false;
 
-                if (in_array($dir, unserialize(\BASIC_MODULES))) {
+                if (in_array($dir, $this->basicModules(), true)) {
                     $other['basic'] = true;
                 } else {
                     $other['basic'] = false;
@@ -253,5 +253,14 @@ class Admin extends AdminModule
         $systemVersion = $this->settings('settings', 'version');
         $version = str_replace(['.', '*'], ['\\.', '[0-9]+'], $version);
         return preg_match('/^'.$version.'[a-z]*$/', $systemVersion);
+    }
+
+    private function basicModules()
+    {
+        if (!defined('BASIC_MODULES')) {
+            return [];
+        }
+        $modules = @unserialize(BASIC_MODULES);
+        return is_array($modules) ? $modules : [];
     }
 }
