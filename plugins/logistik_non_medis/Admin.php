@@ -57,6 +57,17 @@ class Admin extends AdminModule
           }
       }
 
+      // Database lama tetap dipakai. Tambahkan izin menu hakakses ke admin
+      // yang sudah ada tanpa menimpa permission lain.
+      $adminPermissions = $this->db('rsns_custom_logistik_non_medis_role_permissions')
+          ->where('role', 'admin')->oneArray();
+      if ($adminPermissions && strpos(',' . ($adminPermissions['permissions'] ?? '') . ',', ',hakakses,') === false) {
+          $permissions = trim((string)($adminPermissions['permissions'] ?? ''), ',');
+          $permissions = $permissions === '' ? 'hakakses' : $permissions . ',hakakses';
+          $this->db('rsns_custom_logistik_non_medis_role_permissions')
+              ->where('role', 'admin')->save(['permissions' => $permissions]);
+      }
+
       // Check current user role assignment
       $username = $this->core->getUserInfo('username', null, true);
       if ($username) {
