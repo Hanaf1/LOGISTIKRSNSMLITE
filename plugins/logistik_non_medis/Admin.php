@@ -149,7 +149,7 @@ class Admin extends AdminModule
       if (strpos($method, 'gudangopname') !== false || strpos($method, 'printopname') !== false || strpos($method, 'printrekapopname') !== false) return 'gudangopname';
       if (strpos($method, 'gudangmetode') !== false) return 'gudangmetode';
       if (strpos($method, 'gudangrusak') !== false || strpos($method, 'printbap') !== false || strpos($method, 'suratretur') !== false) return 'gudangrusak';
-      if (strpos($method, 'sppb') !== false) return 'distribusisppb';
+      if (strpos($method, 'sppb') !== false || strpos($method, 'distribusibhp') !== false) return 'distribusisppb';
       if (strpos($method, 'distribusiverifikasi') !== false) return 'distribusiverifikasi';
       if (strpos($method, 'distribusipacking') !== false || strpos($method, 'packinglabel') !== false) return 'distribusipacking';
       if (strpos($method, 'distribusiserahterima') !== false || strpos($method, 'printbast') !== false) return 'distribusiserahterima';
@@ -5996,6 +5996,12 @@ $(document).ready(function() {
       $this->_initSppb();
       $this->_addHeaderFiles();
       return $this->draw('distribusi.sppb.html');
+  }
+
+  // Kompatibilitas URL lama menu Distribusi BHP.
+  public function getDistribusiBhp()
+  {
+      return $this->getDistribusiSppb();
   }
 
   public function anyAjaxMasterBarang()
