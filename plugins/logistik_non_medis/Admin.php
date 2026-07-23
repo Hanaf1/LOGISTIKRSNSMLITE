@@ -134,7 +134,7 @@ class Admin extends AdminModule
       if (strpos($method, 'masterkategori') !== false) return 'masterkategori';
       if (strpos($method, 'masterrekanan') !== false) return 'masterrekanan';
       if (strpos($method, 'mastercoa') !== false) return 'mastercoa';
-      if (strpos($method, 'perencanaan') !== false) return 'pengadaanperencanaan';
+      if (strpos($method, 'perencanaan') !== false || strpos($method, 'rencanapembelian') !== false) return 'pengadaanperencanaan';
       if (strpos($method, 'pr') !== false) return 'pengadaanpr';
       if (strpos($method, 'manajemenvendor') !== false) return 'pengadaanvendor';
       if (strpos($method, 'po') !== false) return 'pengadaanpo';
@@ -2698,6 +2698,12 @@ $(document).ready(function() {
           echo json_encode(['harga' => $item['harga_referensi'] ?? 0]);
       }
       exit();
+  }
+
+  // Kompatibilitas URL lama menu Rencana Pembelian.
+  public function getRencanapembelian()
+  {
+    return $this->getPengadaanPerencanaan();
   }
 
   public function getPengadaanPr()
