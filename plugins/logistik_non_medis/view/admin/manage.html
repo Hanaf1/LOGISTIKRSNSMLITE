@@ -90,61 +90,73 @@
 </style>
 
 <div class="dash-cards-row">
-    <a class="dash-card blue" href="{?=url([ADMIN,'logistik_non_medis','distribusibhp'])?}">
+    {if: $perm_distribusisppb}
+    <a class="dash-card blue" href="{?=url([ADMIN,'logistik_non_medis','distribusibhp'])?>">
         <div class="dash-icon"><i class="fa fa-share-square-o"></i></div>
         <div class="dash-value">{?=$dash_permintaan_minggu?}</div>
         <div class="dash-label">Permintaan Minggu Ini</div>
         <div class="dash-sub">Total SPPB diterima</div>
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
-    <a class="dash-card green" href="{?=url([ADMIN,'logistik_non_medis','laporandistribusi'])?}">
+    {/if}
+    {if: $perm_laporandistribusi}
+    <a class="dash-card green" href="{?=url([ADMIN,'logistik_non_medis','laporandistribusi'])?>">
         <div class="dash-icon"><i class="fa fa-money"></i></div>
         <div class="dash-value">Rp {?=number_format($dash_cost_bulan,0,',','.')?}</div>
         <div class="dash-label">Cost Unit Bulan Ini</div>
         <div class="dash-sub">Total distribusi terverifikasi</div>
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
-    <a class="dash-card purple" href="{?=url([ADMIN,'logistik_non_medis','asetregistrasi'])?}">
+    {/if}
+    {if: $perm_asetregistrasi}
+    <a class="dash-card purple" href="{?=url([ADMIN,'logistik_non_medis','asetregistrasi'])?>">
         <div class="dash-icon"><i class="fa fa-cubes"></i></div>
         <div class="dash-value">{?=$dash_total_aset?}</div>
         <div class="dash-label">Total Aset Aktif</div>
         <div class="dash-sub">Terdaftar dalam KIB</div>
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
-    <a class="dash-card orange" href="{?=url([ADMIN,'logistik_non_medis','pengadaanperencanaan'])?}">
+    {/if}
+    {if: $perm_pengadaanperencanaan}
+    <a class="dash-card orange" href="{?=url([ADMIN,'logistik_non_medis','pengadaanperencanaan'])?>">
         <div class="dash-icon"><i class="fa fa-calendar-check-o"></i></div>
         <div class="dash-value">{?=$dash_total_perencanaan?}</div>
         <div class="dash-label">Perencanaan Pembelian</div>
         <div class="dash-sub">Tahun {?=date('Y')?}</div>
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
-    <a class="dash-card teal" href="{?=url([ADMIN,'logistik_non_medis','pengadaanpo'])?}">
+    {/if}
+    {if: $perm_pengadaanpo}
+    <a class="dash-card teal" href="{?=url([ADMIN,'logistik_non_medis','pengadaanpo'])?>">
         <div class="dash-icon"><i class="fa fa-file-text-o"></i></div>
         <div class="dash-value">{?=$dash_total_po?}</div>
         <div class="dash-label">Purchase Order</div>
         <div class="dash-sub">Aktif bulan ini</div>
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
+    {/if}
 
 </div>
 <!-- ===== END DASHBOARD CARDS ===== -->
 
 <ul class="nav nav-tabs" role="tablist" style="margin-bottom: 20px;">
-<li role="presentation" class="active"><a href="#master-data" aria-controls="master-data" role="tab" data-toggle="tab"><i class="fa fa-database"></i> Master Data</a></li>
-<li role="presentation" ><a href="#pengadaan" aria-controls="pengadaan" role="tab" data-toggle="tab"><i class="fa fa-shopping-cart"></i> Pengadaan</a></li>
-<li role="presentation" ><a href="#manajemen-gudang" aria-controls="manajemen-gudang" role="tab" data-toggle="tab"><i class="fa fa-home"></i> Manajemen Gudang</a></li>
-<li role="presentation" ><a href="#distribusi" aria-controls="distribusi" role="tab" data-toggle="tab"><i class="fa fa-share-alt"></i> Distribusi</a></li>
-<li role="presentation" ><a href="#aset" aria-controls="aset" role="tab" data-toggle="tab"><i class="fa fa-cubes"></i> Aset</a></li>
-<li role="presentation" ><a href="#laporan-audit" aria-controls="laporan-audit" role="tab" data-toggle="tab"><i class="fa fa-line-chart"></i> Laporan & Audit</a></li>
+{if: $has_master}<li role="presentation" class="{?=($first_active_tab=='master-data')?'active':''?>"><a href="#master-data" aria-controls="master-data" role="tab" data-toggle="tab"><i class="fa fa-database"></i> Master Data</a></li>{/if}
+{if: $has_pengadaan}<li role="presentation" class="{?=($first_active_tab=='pengadaan')?'active':''?>"><a href="#pengadaan" aria-controls="pengadaan" role="tab" data-toggle="tab"><i class="fa fa-shopping-cart"></i> Pengadaan</a></li>{/if}
+{if: $has_gudang}<li role="presentation" class="{?=($first_active_tab=='manajemen-gudang')?'active':''?>"><a href="#manajemen-gudang" aria-controls="manajemen-gudang" role="tab" data-toggle="tab"><i class="fa fa-home"></i> Manajemen Gudang</a></li>{/if}
+{if: $has_distribusi}<li role="presentation" class="{?=($first_active_tab=='distribusi')?'active':''?>"><a href="#distribusi" aria-controls="distribusi" role="tab" data-toggle="tab"><i class="fa fa-share-alt"></i> Distribusi</a></li>{/if}
+{if: $has_aset}<li role="presentation" class="{?=($first_active_tab=='aset')?'active':''?>"><a href="#aset" aria-controls="aset" role="tab" data-toggle="tab"><i class="fa fa-cubes"></i> Aset</a></li>{/if}
+{if: $has_laporan}<li role="presentation" class="{?=($first_active_tab=='laporan-audit')?'active':''?>"><a href="#laporan-audit" aria-controls="laporan-audit" role="tab" data-toggle="tab"><i class="fa fa-line-chart"></i> Laporan &amp; Audit</a></li>{/if}
 </ul>
 <div class="tab-content">
 
-<div role="tabpanel" class="tab-pane active" id="master-data">
+{if: $has_master}
+<div role="tabpanel" class="tab-pane {?=($first_active_tab=='master-data')?'active':''?}" id="master-data">
     <div class="row">
         <div class="col-md-12">
             <h4 style="display:none;"><i class="fa fa-database"></i> Master Data</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
+                {if: $perm_masterkategori}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','masterKategoriAset'])?}" class="panel-body text-center" style="background-color: #fcfcfc;">
@@ -156,69 +168,79 @@
                         </a>
                     </div>
                 </li>
+                {/if}
                 
+                {if: $perm_masterbarang}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','masterbarang'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-cubes"></i>
-                                <div class="desc">Manajemen Data Barang & Katalog</div>
+                                <div class="desc">Manajemen Data Barang &amp; Katalog</div>
                             </div>
                             <h4><b>Data Barang</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
                 
+                {if: $perm_mastervendor}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','mastervendor'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-users"></i>
-                                <div class="desc">Manajemen Data Vendor & Supplier</div>
+                                <div class="desc">Manajemen Data Vendor &amp; Supplier</div>
                             </div>
                             <h4><b>Data Vendor</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
                 
+                {if: $perm_masterunit}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','masterunit'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-building"></i>
-                                <div class="desc">Manajemen Data Unit & Departemen</div>
+                                <div class="desc">Manajemen Data Unit &amp; Departemen</div>
                             </div>
                             <h4><b>Data Unit</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
 
-
-
+                {if: $perm_mastersatuan}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','mastersatuan'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-balance-scale"></i>
-                                <div class="desc">Manajemen Satuan & Konversi</div>
+                                <div class="desc">Manajemen Satuan &amp; Konversi</div>
                             </div>
                             <h4><b>Satuan</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
 
+                {if: $perm_masterkategori}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','masterkategori'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-tags"></i>
-                                <div class="desc">Manajemen Kategori & Klasifikasi</div>
+                                <div class="desc">Manajemen Kategori &amp; Klasifikasi</div>
                             </div>
                             <h4><b>Kategori</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
 
+                {if: $perm_masterrekanan}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','masterrekanan'])?}" class="panel-body text-center">
@@ -230,6 +252,7 @@
                         </a>
                     </div>
                 </li>
+                {/if}
 
                 {if: $hakakses_access}
                 <li class="module">
@@ -237,7 +260,7 @@
                         <a href="{?=url([ADMIN,'logistik_non_medis','hakakses'])?}" class="panel-body text-center">
                             <div class="panel-thumb text-danger">
                                 <i class="fa fa-shield"></i>
-                                <div class="desc">Pengaturan Role & Izin Menu</div>
+                                <div class="desc">Pengaturan Role &amp; Izin Menu</div>
                             </div>
                             <h4 class="text-danger"><b>Hak Akses</b></h4>
                         </a>
@@ -245,13 +268,14 @@
                 </li>
                 {/if}
 
-
-
             </ul>
         </div>
     </div>
 </div>
-<div role="tabpanel" class="tab-pane " id="pengadaan">
+{/if}
+
+{if: $has_pengadaan}
+<div role="tabpanel" class="tab-pane {?=($first_active_tab=='pengadaan')?'active':''?}" id="pengadaan">
     <div class="row">
         <div class="col-md-12">
             <h4 style="display:none;"><i class="fa fa-shopping-cart"></i> Pengadaan</h4>
@@ -281,18 +305,21 @@
             </style>
             <ul class="modules" style="padding:0;margin:0;">
                 
+                {if: $perm_pengadaanperencanaan}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','rencanapembelian'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-calendar-check-o"></i>
-                                <div class="desc">Rutin, Non-Rutin & Aset</div>
+                                <div class="desc">Rutin, Non-Rutin &amp; Aset</div>
                             </div>
                             <h4><b>Perencanaan Pembelian</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
 
+                {if: $perm_pengadaanvendor}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','pengadaanvendor'])?}" class="panel-body text-center">
@@ -304,7 +331,9 @@
                         </a>
                     </div>
                 </li>
+                {/if}
 
+                {if: $perm_pengadaanpo}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','pengadaanpo'])?}" class="panel-body text-center">
@@ -316,13 +345,9 @@
                         </a>
                     </div>
                 </li>
+                {/if}
 
-
-
-
-
-
-
+                {if: $perm_pengadaankontrak}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','pengadaankontrak'])?}" class="panel-body text-center">
@@ -334,18 +359,23 @@
                         </a>
                     </div>
                 </li>
+                {/if}
 
             </ul>
         </div>
     </div>
 </div>
-<div role="tabpanel" class="tab-pane " id="manajemen-gudang">
+{/if}
+
+{if: $has_gudang}
+<div role="tabpanel" class="tab-pane {?=($first_active_tab=='manajemen-gudang')?'active':''?}" id="manajemen-gudang">
     <div class="row">
         <div class="col-md-12">
             <h4 style="display:none;"><i class="fa fa-home"></i> Manajemen Gudang</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
                 
+                {if: $perm_gudangpenerimaan}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','gudangpenerimaan'])?}" class="panel-body text-center">
@@ -357,7 +387,9 @@
                         </a>
                     </div>
                 </li>
+                {/if}
                 
+                {if: $perm_gudangstok}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','gudangstok'])?}" class="panel-body text-center">
@@ -369,19 +401,23 @@
                         </a>
                     </div>
                 </li>
+                {/if}
 
+                {if: $perm_gudangopname}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','gudangopname'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-list-alt"></i>
-                                <div class="desc">Stock Opname & Inventarisasi</div>
+                                <div class="desc">Stock Opname &amp; Inventarisasi</div>
                             </div>
                             <h4><b>Stock Opname</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
 
+                {if: $perm_gudangmetode}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','gudangmetode'])?}" class="panel-body text-center">
@@ -393,7 +429,9 @@
                         </a>
                     </div>
                 </li>
+                {/if}
 
+                {if: $perm_gudangrusak}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','gudangrusak'])?}" class="panel-body text-center">
@@ -405,7 +443,9 @@
                         </a>
                     </div>
                 </li>
+                {/if}
 
+                {if: $perm_gudangmutasi}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','gudangmutasi'])?}" class="panel-body text-center">
@@ -417,17 +457,22 @@
                         </a>
                     </div>
                 </li>
+                {/if}
 
             </ul>
         </div>
     </div>
 </div>
-<div role="tabpanel" class="tab-pane " id="distribusi">
+{/if}
+
+{if: $has_distribusi}
+<div role="tabpanel" class="tab-pane {?=($first_active_tab=='distribusi')?'active':''?}" id="distribusi">
     <div class="row">
         <div class="col-md-12">
             <h4 style="display:none;"><i class="fa fa-share-alt"></i> Distribusi</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
+                {if: $perm_distribusisppb}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','distribusibhp'])?}" class="panel-body text-center">
@@ -439,6 +484,9 @@
                         </a>
                     </div>
                 </li>
+                {/if}
+
+                {if: $perm_distribusiretur}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','distribusiretur'])?}" class="panel-body text-center">
@@ -450,29 +498,37 @@
                         </a>
                     </div>
                 </li>
+                {/if}
 
             </ul>
         </div>
     </div>
 </div>
-<div role="tabpanel" class="tab-pane " id="aset">
+{/if}
+
+{if: $has_aset}
+<div role="tabpanel" class="tab-pane {?=($first_active_tab=='aset')?'active':''?}" id="aset">
     <div class="row">
         <div class="col-md-12">
             <h4 style="display:none;"><i class="fa fa-cubes"></i> Aset</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
 
+                {if: $perm_asetregistrasi}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','asetregistrasi'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-plus-circle"></i>
-                                <div class="desc">Registrasi & Pencatatan Aset</div>
+                                <div class="desc">Registrasi &amp; Pencatatan Aset</div>
                             </div>
                             <h4><b>Registrasi Aset</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
+
+                {if: $perm_asetkib}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','asetkib'])?}" class="panel-body text-center">
@@ -484,6 +540,9 @@
                         </a>
                     </div>
                 </li>
+                {/if}
+
+                {if: $perm_asetpenyusutan}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','asetpenyusutan'])?}" class="panel-body text-center">
@@ -495,85 +554,107 @@
                         </a>
                     </div>
                 </li>
+                {/if}
+
+                {if: $perm_asetpemeliharaan}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','asetpemeliharaan'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-wrench"></i>
-                                <div class="desc">Jadwal & Riwayat Pemeliharaan</div>
+                                <div class="desc">Jadwal &amp; Riwayat Pemeliharaan</div>
                             </div>
                             <h4><b>Pemeliharaan</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
+
+                {if: $perm_asetmutasi}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','asetmutasi'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-exchange"></i>
-                                <div class="desc">Mutasi & Pemindahan Aset</div>
+                                <div class="desc">Mutasi &amp; Pemindahan Aset</div>
                             </div>
                             <h4><b>Mutasi</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
+
+                {if: $perm_asetpenghapusan}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','asetpenghapusan'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-trash-o"></i>
-                                <div class="desc">Penghapusan & Usulan Scrapping</div>
+                                <div class="desc">Penghapusan &amp; Usulan Scrapping</div>
                             </div>
                             <h4><b>Penghapusan</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
+
+                {if: $perm_asetsensus}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','asetsensus'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-qrcode"></i>
-                                <div class="desc">Sensus & Stock Opname Aset</div>
+                                <div class="desc">Sensus &amp; Stock Opname Aset</div>
                             </div>
-                            <h4><b>Sensus & Verifikasi</b></h4>
+                            <h4><b>Sensus &amp; Verifikasi</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
+
             </ul>
         </div>
     </div>
 </div>
-<div role="tabpanel" class="tab-pane " id="laporan-audit">
+{/if}
+
+{if: $has_laporan}
+<div role="tabpanel" class="tab-pane {?=($first_active_tab=='laporan-audit')?'active':''?}" id="laporan-audit">
     <div class="row">
         <div class="col-md-12">
-            <h4 style="display:none;"><i class="fa fa-line-chart"></i> Laporan & Audit</h4>
+            <h4 style="display:none;"><i class="fa fa-line-chart"></i> Laporan &amp; Audit</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
                 
+                {if: $perm_laporanstokmutasi}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','laporanstokmutasi'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-exchange"></i>
-                                <div class="desc">Laporan Stok & Mutasi Real-Time</div>
+                                <div class="desc">Laporan Stok &amp; Mutasi Real-Time</div>
                             </div>
-                            <h4><b>Stok & Mutasi</b></h4>
+                            <h4><b>Stok &amp; Mutasi</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
                 
+                {if: $perm_laporanpengadaan}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','laporanpengadaan'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-shopping-cart"></i>
-                                <div class="desc">Laporan Pengadaan & PO</div>
+                                <div class="desc">Laporan Pengadaan &amp; PO</div>
                             </div>
                             <h4><b>Pengadaan</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
                 
+                {if: $perm_laporandistribusi}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','laporandistribusi'])?}" class="panel-body text-center">
@@ -585,7 +666,9 @@
                         </a>
                     </div>
                 </li>
+                {/if}
 
+                {if: $perm_laporancostunit}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','laporancostunit'])?}" class="panel-body text-center">
@@ -597,48 +680,56 @@
                         </a>
                     </div>
                 </li>
+                {/if}
 
+                {if: $perm_laporanaset}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','laporanaset'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-cubes"></i>
-                                <div class="desc">Laporan Inventaris & Nilai Aset</div>
+                                <div class="desc">Laporan Inventaris &amp; Nilai Aset</div>
                             </div>
                             <h4><b>Laporan Aset</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
 
+                {if: $perm_laporandashboardkpi}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','laporandashboardkpi'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-dashboard"></i>
-                                <div class="desc">Dashboard Analisis & KPI Logistik</div>
+                                <div class="desc">Dashboard Analisis &amp; KPI Logistik</div>
                             </div>
-                            <h4><b>Dashboard & KPI</b></h4>
+                            <h4><b>Dashboard &amp; KPI</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
 
-
+                {if: $perm_laporaneksporcetak}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','laporaneksporcetak'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-print"></i>
-                                <div class="desc">Ekspor & Cetak Laporan PDF/Excel</div>
+                                <div class="desc">Ekspor &amp; Cetak Laporan PDF/Excel</div>
                             </div>
-                            <h4><b>Ekspor & Cetak</b></h4>
+                            <h4><b>Ekspor &amp; Cetak</b></h4>
                         </a>
                     </div>
                 </li>
+                {/if}
 
             </ul>
         </div>
     </div>
 </div>
+{/if}
+
 </div>
 
       </div>
@@ -653,8 +744,6 @@
       $(".modules li.module").filter(function() {
         $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
       });
-      // Sembunyikan judul kategori jika semua isinya tersembunyi (opsional)
-      // Ini bisa dikembangkan nanti jika diperlukan.
     });
   });
 </script>

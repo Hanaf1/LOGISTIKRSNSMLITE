@@ -493,18 +493,45 @@ class Admin extends AdminModule
     $has_aset = count(array_intersect(['asetregistrasi', 'asetkib', 'asetpenyusutan', 'asetpemeliharaan', 'asetmutasi', 'asetpenghapusan', 'asetsensus'], $permissions)) > 0;
     $has_laporan = count(array_intersect(['laporanstokmutasi', 'laporanpengadaan', 'laporandistribusi', 'laporanaset', 'laporandashboardkpi', 'laporaneksporcetak'], $permissions)) > 0;
 
+    // Tentukan tab pertama yang aktif berdasarkan permission user
+    $first_active_tab = 'distribusi';
+    if ($has_master) $first_active_tab = 'master-data';
+    elseif ($has_pengadaan) $first_active_tab = 'pengadaan';
+    elseif ($has_gudang) $first_active_tab = 'manajemen-gudang';
+    elseif ($has_distribusi) $first_active_tab = 'distribusi';
+    elseif ($has_aset) $first_active_tab = 'aset';
+    elseif ($has_laporan) $first_active_tab = 'laporan-audit';
+
+    // Individual permission flags untuk setiap menu item
+    $perm_flags = [];
+    $all_perm_keys = [
+        'masterbarang', 'mastervendor', 'masterunit', 'masterlokasi', 'mastersatuan',
+        'masterkategori', 'masterrekanan', 'mastercoa',
+        'pengadaanperencanaan', 'pengadaanvendor', 'pengadaanpo', 'pengadaankontrak',
+        'gudangpenerimaan', 'gudanglokasi', 'gudangstok', 'gudangopname',
+        'gudangmetode', 'gudangrusak', 'gudangmutasi',
+        'distribusisppb', 'distribusiverifikasi', 'distribusipacking',
+        'distribusiserahterima', 'distribusitracking', 'distribusiretur', 'distribusikuota',
+        'asetregistrasi', 'asetkib', 'asetpenyusutan', 'asetpemeliharaan',
+        'asetmutasi', 'asetpenghapusan', 'asetsensus',
+        'laporanstokmutasi', 'laporanpengadaan', 'laporandistribusi',
+        'laporanaset', 'laporandashboardkpi', 'laporaneksporcetak'
+    ];
+    foreach ($all_perm_keys as $pk) {
+        $perm_flags['perm_' . $pk] = in_array($pk, $permissions);
+    }
+    $perm_flags['perm_laporancostunit'] = in_array('laporandistribusi', $permissions);
+
     $count_verif = count($this->db('rsns_custom_logistik_non_medis_sppb')->where('status', 'Disetujui Unit')->group('no_sppb')->toArray());
     $count_packing = count($this->db('rsns_custom_logistik_non_medis_sppb')->where('status', 'Terverifikasi')->orWhere('status', 'Picking')->orWhere('status', 'Packing')->group('no_sppb')->toArray());
 
-    // Nilai default dashboard agar template lama tetap kompatibel meskipun
-    // tabel statistik tertentu belum tersedia pada database instalasi lama.
     $dash_permintaan_minggu = 0;
     $dash_cost_bulan = 0;
     $dash_total_aset = 0;
     $dash_total_perencanaan = 0;
     $dash_total_po = 0;
 
-    return $this->draw('manage.html', [
+    return $this->draw('manage.html', array_merge([
         'count_verif' => $count_verif,
         'count_packing' => $count_packing,
         'dash_permintaan_minggu' => $dash_permintaan_minggu,
@@ -519,8 +546,9 @@ class Admin extends AdminModule
         'has_gudang' => $has_gudang,
         'has_distribusi' => $has_distribusi,
         'has_aset' => $has_aset,
-        'has_laporan' => $has_laporan
-    ]);
+        'has_laporan' => $has_laporan,
+        'first_active_tab' => $first_active_tab
+    ], $perm_flags));
   }
 
   // --- MASTER DATA ---
