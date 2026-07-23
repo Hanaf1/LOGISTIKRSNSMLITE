@@ -5644,8 +5644,9 @@ $(document).ready(function() {
           ");
       }
 
-      // Ensure enum is updated
-      $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` MODIFY `status` enum('Draft','Diajukan','Disetujui Ka. Unit','Disetujui Ka. Sie','Disetujui Unit','Terverifikasi','Picking','Packing','Ready','Dikirim','Diterima','Selesai','Ditolak') NOT NULL DEFAULT 'Draft'");
+      // Pertahankan seluruh status yang mungkin sudah dipakai database lama
+      // agar ALTER ENUM tidak memotong nilai existing (mis. Proses/Dibatalkan).
+      $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` MODIFY `status` enum('Draft','Diajukan','Disetujui Ka. Unit','Disetujui Ka. Sie','Disetujui Unit','Proses','Terverifikasi','Picking','Packing','Ready','Dikirim','Diterima','Selesai','Ditolak','Dibatalkan') NOT NULL DEFAULT 'Draft'");
   }
 
   private function _initPacking()
