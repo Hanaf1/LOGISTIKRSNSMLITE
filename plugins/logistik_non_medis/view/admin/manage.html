@@ -231,6 +231,20 @@
                     </div>
                 </li>
 
+                {if: $hakakses_access}
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','hakakses'])?}" class="panel-body text-center">
+                            <div class="panel-thumb text-danger">
+                                <i class="fa fa-shield"></i>
+                                <div class="desc">Pengaturan Role & Izin Menu</div>
+                            </div>
+                            <h4 class="text-danger"><b>Hak Akses</b></h4>
+                        </a>
+                    </div>
+                </li>
+                {/if}
+
 
 
             </ul>
