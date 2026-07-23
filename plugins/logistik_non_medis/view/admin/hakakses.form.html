@@ -1,0 +1,63 @@
+<form id="form-hakakses-edit" method="POST">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Sunting Akses Logistik: <strong>{$user.fullname}</strong> ({$user.username})</h4>
+    </div>
+    <div class="modal-body">
+        <input type="hidden" name="username" value="{$user.username}">
+        
+        <div class="form-group">
+            <label for="role">Role Logistik</label>
+            <select name="role" id="role-select" class="form-control" required>
+                {loop: $roles}
+                    <option value="{$key}" {if: $user.logistik_role == $key}selected{/if}>{$value}</option>
+                {/loop}
+            </select>
+        </div>
+
+        <div class="form-group" id="unit-group">
+            <label for="kode_unit">Unit Kerja Terkait</label>
+            <select name="kode_unit" id="kode_unit-select" class="form-control select2" style="width: 100%;">
+                <option value="">-- Semua Unit / Logistik Staff --</option>
+                {loop: $units}
+                    <option value="{$value.kode_unit}" {if: $user.logistik_kode_unit == $value.kode_unit}selected{/if}>{$value.kode_unit} - {$value.nama_unit}</option>
+                {/loop}
+            </select>
+            <p class="help-block"><small>* Khusus role <strong>Unit</strong>, mereka wajib terhubung ke salah satu unit kerja di atas untuk memfilter data permintaan mereka.</small></p>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
+        <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan Perubahan</button>
+    </div>
+</form>
+
+<script>
+$(document).ready(function() {
+    $('.select2').select2({ width: '100%' });
+
+    // Conditional requirement: if Role is Unit, make sure unit select is recommended.
+    $('#role-select').change(function() {
+        if ($(this).val() == 'unit') {
+            $('#kode_unit-select').attr('required', true);
+        } else {
+            $('#kode_unit-select').attr('required', false);
+        }
+    }).change();
+
+    $('#form-hakakses-edit').submit(function(e) {
+        e.preventDefault();
+        var formData = $(this).serialize();
+        $.post('{?=url(ADMIN."/logistik_non_medis/savehakakses")?}', formData, function(data) {
+            var res = JSON.parse(data);
+            if (res.status == 'success') {
+                $('#modal-hakakses').modal('hide');
+                alert(res.message);
+                location.reload();
+            } else {
+                alert(res.message);
+            }
+        });
+    });
+});
+</script>

@@ -25,6 +25,8 @@
                                     <option value="">-- Semua Status --</option>
                                     <option value="Draft">Draft</option>
                                     <option value="Diajukan">Diajukan</option>
+                                    <option value="Disetujui Ka. Unit">Disetujui Ka. Unit</option>
+                                    <option value="Disetujui Ka. Sie">Disetujui Ka. Sie</option>
                                     <option value="Disetujui Unit">Disetujui Unit</option>
                                     <option value="Terverifikasi">Terverifikasi</option>
                                     <option value="Selesai">Selesai</option>
@@ -240,8 +242,9 @@ function hapusSPPB(no_sppb) {
     }
 }
 
-function approveUnit(no_sppb) {
-    if(confirm('Setujui permintaan ini (Kepala Unit)?')) {
+function approveUnit(no_sppb, label) {
+    if(!label) label = 'Penyetuju';
+    if(confirm('Setujui permintaan ini (' + label + ')?')) {
         $.post('{?=url(ADMIN."/logistik_non_medis/approvesppb")?}', {no_sppb: no_sppb}, function(data) {
             var res = JSON.parse(data);
             if(res.status == 'success') {
@@ -252,6 +255,24 @@ function approveUnit(no_sppb) {
             }
         });
     }
+}
+
+function rejectUnit(no_sppb) {
+    var alasan = prompt('Masukkan alasan penolakan permintaan ini:');
+    if (alasan === null) return;
+    if (alasan.trim() === '') {
+        alert('Alasan penolakan tidak boleh kosong!');
+        return;
+    }
+    $.post('{?=url(ADMIN."/logistik_non_medis/rejectsppb")?}', {no_sppb: no_sppb, alasan_penolakan: alasan}, function(data) {
+        var res = JSON.parse(data);
+        if(res.status == 'success') {
+            loadDisplay();
+            if($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
+        } else {
+            alert(res.message);
+        }
+    });
 }
 
 function verifikasiLogistik(no_sppb) {

@@ -6,97 +6,500 @@ use Systems\AdminModule;
 
 class Admin extends AdminModule
 {
-  // Sementara dinonaktifkan: alur BHP mingguan tidak memakai batas kuota unit.
-  private $kuotaAktif = false;
+
+  public function init()
+  {
+      $this->_initUserRoles();
+      $this->_checkAccessControl();
+  }
+
+  private function _initUserRoles()
+  {
+      $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_user_roles` (
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `username` varchar(100) NOT NULL,
+        `role` varchar(50) NOT NULL,
+        `kode_unit` varchar(50) DEFAULT NULL,
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `username` (`username`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
+
+      $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_role_permissions` (
+        `role` varchar(50) NOT NULL,
+        `permissions` text DEFAULT NULL,
+        PRIMARY KEY (`role`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
+
+      // Check if roles exist
+      $check = $this->db('rsns_custom_logistik_non_medis_role_permissions')->count();
+      if ($check == 0) {
+          $default_roles = [
+              'admin' => 'manage,masterbarang,mastervendor,masterunit,masterlokasi,mastersatuan,masterkategori,masterrekanan,mastercoa,pengadaanperencanaan,pengadaanpr,pengadaanvendor,pengadaanpo,pengadaanekatalog,pengadaanpenerimaan,pengadaankontrak,gudangmanage,gudangpenerimaan,gudanglokasi,gudangstok,gudangopname,gudangmetode,gudangrusak,gudangmutasi,distribusisppb,distribusiverifikasi,distribusipacking,distribusiserahterima,distribusitracking,distribusiretur,distribusikuota,asetregistrasi,asetkib,asetpenyusutan,asetpemeliharaan,asetmutasi,asetpenghapusan,asetsensus,laporanstokmutasi,laporanpengadaan,laporandistribusi,laporanaset,laporandashboardkpi,laporaneksporcetak,hakakses',
+              'logistik' => 'manage,masterbarang,mastervendor,masterunit,masterlokasi,mastersatuan,masterkategori,masterrekanan,mastercoa,pengadaanperencanaan,pengadaanpr,pengadaanvendor,pengadaanpo,pengadaanekatalog,pengadaanpenerimaan,pengadaankontrak,gudangmanage,gudangpenerimaan,gudanglokasi,gudangstok,gudangopname,gudangmetode,gudangrusak,gudangmutasi,distribusisppb,distribusiverifikasi,distribusipacking,distribusiserahterima,distribusitracking,distribusiretur,distribusikuota,asetregistrasi,asetkib,asetpenyusutan,asetpemeliharaan,asetmutasi,asetpenghapusan,asetsensus,laporanstokmutasi,laporanpengadaan,laporandistribusi,laporanaset,laporandashboardkpi,laporaneksporcetak',
+              'gudang' => 'manage,gudangmanage,gudangpenerimaan,gudanglokasi,gudangstok,gudangopname,gudangmetode,gudangrusak,gudangmutasi,distribusisppb,distribusiverifikasi,distribusipacking,distribusiserahterima,distribusitracking,distribusiretur',
+              'aset' => 'manage,asetregistrasi,asetkib,asetpenyusutan,asetpemeliharaan,asetmutasi,asetpenghapusan,asetsensus',
+              'unit' => 'manage,distribusisppb,distribusiretur,distribusikuota'
+          ];
+          foreach ($default_roles as $role => $permissions) {
+              $this->db('rsns_custom_logistik_non_medis_role_permissions')->save(['role' => $role, 'permissions' => $permissions]);
+          }
+      }
+
+      $roles_to_check = [
+          'kepala_unit' => 'manage,distribusisppb,distribusikuota',
+          'kepala_sie' => 'manage,distribusisppb,distribusikuota',
+          'kepala_bidang' => 'manage,distribusisppb,distribusikuota'
+      ];
+      foreach ($roles_to_check as $r => $perms) {
+          $exists = $this->db('rsns_custom_logistik_non_medis_role_permissions')->where('role', $r)->oneArray();
+          if (!$exists) {
+              $this->db('rsns_custom_logistik_non_medis_role_permissions')->save(['role' => $r, 'permissions' => $perms]);
+          }
+      }
+
+      // Check current user role assignment
+      $username = $this->core->getUserInfo('username', null, true);
+      if ($username) {
+          $exists = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+          if (!$exists) {
+              // If current user is an admin in mlite, assign them as admin in logistik
+              $mlite_role = $this->core->getUserInfo('role', null, true);
+              $role = ($mlite_role == 'admin') ? 'admin' : 'unit';
+              $this->db('rsns_custom_logistik_non_medis_user_roles')->save([
+                  'username' => $username,
+                  'role' => $role,
+                  'kode_unit' => null
+              ]);
+          }
+      }
+  }
+
+  private function _checkAccessControl()
+  {
+      if (parseURL(1) === 'logistik_non_medis') {
+          $method = parseURL(2);
+          if (empty($method)) {
+              $method = 'manage';
+          }
+
+          if (in_array($method, ['css', 'javascript'])) {
+              return;
+          }
+
+          $username = $this->core->getUserInfo('username', null, true);
+          if (!$username) {
+              return;
+          }
+
+          $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+          $role = $userRoleData['role'] ?? 'unit';
+
+          $permsData = $this->db('rsns_custom_logistik_non_medis_role_permissions')->where('role', $role)->oneArray();
+          $permissions = explode(',', $permsData['permissions'] ?? 'manage');
+
+          $permKey = $this->_getPermissionKeyForMethod($method);
+
+          if (!empty($permKey) && !in_array($permKey, $permissions)) {
+              if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                  header('Content-Type: application/json');
+                  echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak akses untuk tindakan ini!']);
+                  exit();
+              } else {
+                  $this->core->setNotify('failure', 'Akses Ditolak: Anda tidak memiliki hak akses ke menu tersebut.');
+                  redirect(url([ADMIN, 'logistik_non_medis', 'manage']));
+              }
+          }
+      }
+  }
+
+  private function _getPermissionKeyForMethod($method)
+  {
+      $method = strtolower($method);
+      if (strpos($method, 'masterbarang') !== false || strpos($method, 'ajaxmasterbarang') !== false) return 'masterbarang';
+      if (strpos($method, 'mastervendor') !== false) return 'mastervendor';
+      if (strpos($method, 'masterunit') !== false) return 'masterunit';
+      if (strpos($method, 'masterlokasi') !== false) return 'masterlokasi';
+      if (strpos($method, 'mastersatuan') !== false) return 'mastersatuan';
+      if (strpos($method, 'masterkategori') !== false) return 'masterkategori';
+      if (strpos($method, 'masterrekanan') !== false) return 'masterrekanan';
+      if (strpos($method, 'mastercoa') !== false) return 'mastercoa';
+      if (strpos($method, 'perencanaan') !== false) return 'pengadaanperencanaan';
+      if (strpos($method, 'pr') !== false) return 'pengadaanpr';
+      if (strpos($method, 'manajemenvendor') !== false) return 'pengadaanvendor';
+      if (strpos($method, 'po') !== false) return 'pengadaanpo';
+      if (strpos($method, 'ekatalog') !== false) return 'pengadaanekatalog';
+      if (strpos($method, 'pengadaanpenerimaan') !== false || strpos($method, 'printpenerimaan') !== false || strpos($method, 'printlabel') !== false) return 'pengadaanpenerimaan';
+      if (strpos($method, 'pengadaankontrak') !== false) return 'pengadaankontrak';
+      if (strpos($method, 'gudangmanage') !== false) return 'gudangmanage';
+      if (strpos($method, 'gudangpenerimaan') !== false) return 'gudangpenerimaan';
+      if (strpos($method, 'gudanglokasi') !== false || strpos($method, 'relokasi') !== false) return 'gudanglokasi';
+      if (strpos($method, 'gudangstok') !== false) return 'gudangstok';
+      if (strpos($method, 'gudangmutasi') !== false || strpos($method, 'printmutasi') !== false) return 'gudangmutasi';
+      if (strpos($method, 'gudangopname') !== false || strpos($method, 'printopname') !== false || strpos($method, 'printrekapopname') !== false) return 'gudangopname';
+      if (strpos($method, 'gudangmetode') !== false) return 'gudangmetode';
+      if (strpos($method, 'gudangrusak') !== false || strpos($method, 'printbap') !== false || strpos($method, 'suratretur') !== false) return 'gudangrusak';
+      if (strpos($method, 'sppb') !== false) return 'distribusisppb';
+      if (strpos($method, 'distribusiverifikasi') !== false) return 'distribusiverifikasi';
+      if (strpos($method, 'distribusipacking') !== false || strpos($method, 'packinglabel') !== false) return 'distribusipacking';
+      if (strpos($method, 'distribusiserahterima') !== false || strpos($method, 'printbast') !== false) return 'distribusiserahterima';
+      if (strpos($method, 'distribusitracking') !== false) return 'distribusitracking';
+      if (strpos($method, 'distribusiretur') !== false || strpos($method, 'retur') !== false) return 'distribusiretur';
+      if (strpos($method, 'distribusikuota') !== false || strpos($method, 'monitoringkuota') !== false) return 'distribusikuota';
+      if (strpos($method, 'asetregistrasi') !== false) return 'asetregistrasi';
+      if (strpos($method, 'asetkib') !== false || strpos($method, 'asetprintlabel') !== false) return 'asetkib';
+      if (strpos($method, 'asetpenyusutan') !== false) return 'asetpenyusutan';
+      if (strpos($method, 'asetpemeliharaan') !== false) return 'asetpemeliharaan';
+      if (strpos($method, 'asetmutasi') !== false || strpos($method, 'printasetmutasi') !== false) return 'asetmutasi';
+      if (strpos($method, 'asetpenghapusan') !== false) return 'asetpenghapusan';
+      if (strpos($method, 'asetsensus') !== false) return 'asetsensus';
+      if (strpos($method, 'laporanstokmutasi') !== false) return 'laporanstokmutasi';
+      if (strpos($method, 'laporanpengadaan') !== false) return 'laporanpengadaan';
+      if (strpos($method, 'laporandistribusi') !== false) return 'laporandistribusi';
+      if (strpos($method, 'laporanaset') !== false) return 'laporanaset';
+      if (strpos($method, 'laporandashboardkpi') !== false) return 'laporandashboardkpi';
+      if (strpos($method, 'laporaneksporcetak') !== false) return 'laporaneksporcetak';
+      if (strpos($method, 'hakakses') !== false) return 'hakakses';
+      return '';
+  }
 
   public function navigation()
   {
-    return [
-      'Dashboard'           => 'manage',
-      'Data Barang'         => 'masterbarang',
-      'Data Vendor'         => 'mastervendor',
-      'Data Unit'           => 'masterunit',
-      // // 'Lokasi Gudang'       => 'masterlokasi',
-      'Satuan Barang'       => 'mastersatuan',
-      'Kategori & Klasifikasi' => 'masterkategori',
-      'Data Rekanan Jasa'   => 'masterrekanan',
-      'Kode Akun (COA)'     => 'mastercoa',
-      'Perencanaan'         => 'pengadaanperencanaan',
+      $username = $this->core->getUserInfo('username', null, true);
+      $role = 'unit';
+      if ($username) {
+          $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+          if ($userRoleData) {
+              $role = $userRoleData['role'];
+          } else {
+              $mlite_role = $this->core->getUserInfo('role', null, true);
+              $role = ($mlite_role == 'admin') ? 'admin' : 'unit';
+          }
+      }
 
-      'Manajemen Vendor'    => 'pengadaanvendor',
-      'Purchase Order (PO)' => 'pengadaanpo',
-      'E-Katalog'           => 'pengadaanekatalog',
-      'Penerimaan'          => 'pengadaanpenerimaan',
-      'Manajemen Kontrak'   => 'pengadaankontrak',
-      '--- GUDANG ---'      => 'gudangmanage',
-      'Barang Masuk'        => 'gudangpenerimaan',
-      // 'Manajemen Lokasi'    => 'gudanglokasi',
-      'Pengelolaan Stok'    => 'gudangstok',
-      'Stock Opname'        => 'gudangopname',
-      'Metode FIFO / FEFO'  => 'gudangmetode',
-      'Barang Rusak'        => 'gudangrusak',
-      'Mutasi Antar Gudang' => 'gudangmutasi',
-      '--- DISTRIBUSI ---'  => '#',
-      'Permintaan BHP Mingguan' => 'distribusibhp',
-      'Retur Barang dari Unit' => 'distribusiretur',
-      '--- ASET ---'        => '#',
-      'Master Kategori Aset' => 'masterkategoriaset',
-      'Registrasi Aset'     => 'asetregistrasi',
-      'Kartu Inventaris (KIB)' => 'asetkib',
-      'Penyusutan Aset'     => 'asetpenyusutan',
-      'Pemeliharaan Aset'   => 'asetpemeliharaan',
-      'Mutasi Aset'         => 'asetmutasi',
-      'Penghapusan Aset'    => 'asetpenghapusan',
-      'Sensus & Verifikasi Aset' => 'asetsensus',
-      '--- LAPORAN & AUDIT ---' => '#',
-      'Laporan Stok & Mutasi' => 'laporanstokmutasi',
-      'Laporan Pengadaan'    => 'laporanpengadaan',
-      'Laporan Distribusi'  => 'laporandistribusi',
-      'Laporan Aset'        => 'laporanaset',
-      'Dashboard & KPI'     => 'laporandashboardkpi',
-      'Ekspor & Cetak Laporan' => 'laporaneksporcetak',
-    ];
+      $permsData = $this->db('rsns_custom_logistik_non_medis_role_permissions')->where('role', $role)->oneArray();
+      $permissions = explode(',', $permsData['permissions'] ?? 'manage');
+
+      $menus = [
+        'Dashboard'           => 'manage',
+        'Data Barang'         => 'masterbarang',
+        'Data Vendor'         => 'mastervendor',
+        'Data Unit'           => 'masterunit',
+        'Lokasi Gudang'       => 'masterlokasi',
+        'Satuan Barang'       => 'mastersatuan',
+        'Kategori & Klasifikasi' => 'masterkategori',
+        'Data Rekanan Jasa'   => 'masterrekanan',
+        'Kode Akun (COA)'     => 'mastercoa',
+        'Perencanaan'         => 'pengadaanperencanaan',
+        'Permintaan (PR)'     => 'pengadaanpr',
+        'Manajemen Vendor'    => 'pengadaanvendor',
+        'Purchase Order (PO)' => 'pengadaanpo',
+        'E-Katalog'           => 'pengadaanekatalog',
+        'Penerimaan'          => 'pengadaanpenerimaan',
+        'Manajemen Kontrak'   => 'pengadaankontrak',
+        '--- GUDANG ---'      => 'gudangmanage',
+        'Barang Masuk'        => 'gudangpenerimaan',
+        'Manajemen Lokasi'    => 'gudanglokasi',
+        'Pengelolaan Stok'    => 'gudangstok',
+        'Stock Opname'        => 'gudangopname',
+        'Metode FIFO / FEFO'  => 'gudangmetode',
+        'Barang Rusak'        => 'gudangrusak',
+        'Mutasi Antar Gudang' => 'gudangmutasi',
+        '--- DISTRIBUSI ---'  => '#',
+        'Permintaan Barang (SPPB)' => 'distribusisppb',
+        'Verifikasi & Approval' => 'distribusiverifikasi',
+        'Picking & Packing'   => 'distribusipacking',
+        'Serah Terima Barang' => 'distribusiserahterima',
+        'Tracking Pengiriman' => 'distribusitracking',
+        'Retur Barang dari Unit' => 'distribusiretur',
+        'Kuota & Alokasi Unit' => 'distribusikuota',
+        '--- ASET ---'        => '#',
+        'Registrasi Aset'     => 'asetregistrasi',
+        'Kartu Inventaris (KIB)' => 'asetkib',
+        'Penyusutan Aset'     => 'asetpenyusutan',
+        'Pemeliharaan Aset'   => 'asetpemeliharaan',
+        'Mutasi Aset'         => 'asetmutasi',
+        'Penghapusan Aset'    => 'asetpenghapusan',
+        'Sensus & Verifikasi Aset' => 'asetsensus',
+        '--- LAPORAN & AUDIT ---' => '#',
+        'Laporan Stok & Mutasi' => 'laporanstokmutasi',
+        'Laporan Pengadaan'    => 'laporanpengadaan',
+        'Laporan Distribusi'  => 'laporandistribusi',
+        'Laporan Aset'        => 'laporanaset',
+        'Dashboard & KPI'     => 'laporandashboardkpi',
+        'Ekspor & Cetak Laporan' => 'laporaneksporcetak',
+      ];
+
+      if (in_array('hakakses', $permissions)) {
+          $menus['Hak Akses'] = 'hakakses';
+      }
+
+      $filtered = [];
+      foreach ($menus as $title => $slug) {
+          if (strpos($title, '---') === 0) {
+              $filtered[$title] = $slug;
+              continue;
+          }
+
+          if (in_array($slug, $permissions)) {
+              $filtered[$title] = $slug;
+          }
+      }
+
+      $cleanNav = [];
+      $lastHeader = null;
+      foreach ($filtered as $title => $slug) {
+          if (strpos($title, '---') === 0) {
+              $lastHeader = $title;
+          } else {
+              if ($lastHeader !== null) {
+                  $cleanNav[$lastHeader] = $filtered[$lastHeader];
+                  $lastHeader = null;
+              }
+              $cleanNav[$title] = $slug;
+          }
+      }
+
+      return $cleanNav;
+  }
+
+  public function getHakakses()
+  {
+      $this->_addHeaderFiles();
+      $this->_initUserRoles();
+
+      $users = $this->db('mlite_users')->toArray();
+
+      foreach ($users as &$user) {
+          $roleData = $this->db('rsns_custom_logistik_non_medis_user_roles')
+                           ->where('username', $user['username'])
+                           ->oneArray();
+          $user['logistik_role'] = $roleData['role'] ?? 'unit';
+          $user['logistik_kode_unit'] = $roleData['kode_unit'] ?? null;
+
+          if (!empty($user['logistik_kode_unit'])) {
+              $unitInfo = $this->db('rsns_custom_logistik_non_medis_unit')
+                               ->where('kode_unit', $user['logistik_kode_unit'])
+                               ->oneArray();
+              $user['nama_unit'] = $unitInfo['nama_unit'] ?? 'Unit Tidak Ditemukan';
+          } else {
+              $user['nama_unit'] = 'Semua Unit / Logistik';
+          }
+      }
+
+      $roles = ['admin', 'logistik', 'gudang', 'aset', 'unit', 'kepala_unit', 'kepala_sie', 'kepala_bidang'];
+      $rolePermissions = [];
+      foreach ($roles as $r) {
+          $pData = $this->db('rsns_custom_logistik_non_medis_role_permissions')
+                        ->where('role', $r)
+                        ->oneArray();
+          $rolePermissions[$r] = explode(',', $pData['permissions'] ?? '');
+      }
+
+      $availableMenus = [
+        'masterbarang' => 'Data Barang',
+        'mastervendor' => 'Data Vendor',
+        'masterunit' => 'Data Unit',
+        'masterlokasi' => 'Lokasi Gudang',
+        'mastersatuan' => 'Satuan Barang',
+        'masterkategori' => 'Kategori & Klasifikasi',
+        'masterrekanan' => 'Data Rekanan Jasa',
+        'mastercoa' => 'Kode Akun (COA)',
+        'pengadaanperencanaan' => 'Perencanaan Pengadaan',
+        'pengadaanpr' => 'Permintaan (PR)',
+        'pengadaanvendor' => 'Manajemen Vendor',
+        'pengadaanpo' => 'Purchase Order (PO)',
+        'pengadaanekatalog' => 'E-Katalog',
+        'pengadaanpenerimaan' => 'Penerimaan Pengadaan',
+        'pengadaankontrak' => 'Manajemen Kontrak',
+        'gudangmanage' => 'Gudang Manage',
+        'gudangpenerimaan' => 'Barang Masuk Gudang',
+        'gudanglokasi' => 'Manajemen Lokasi',
+        'gudangstok' => 'Pengelolaan Stok',
+        'gudangopname' => 'Stock Opname',
+        'gudangmetode' => 'Metode FIFO/FEFO',
+        'gudangrusak' => 'Barang Rusak',
+        'gudangmutasi' => 'Mutasi Antar Gudang',
+        'distribusisppb' => 'Permintaan Barang (SPPB)',
+        'distribusiverifikasi' => 'Verifikasi & Approval',
+        'distribusipacking' => 'Picking & Packing',
+        'distribusiserahterima' => 'Serah Terima Barang',
+        'distribusitracking' => 'Tracking Pengiriman',
+        'distribusiretur' => 'Retur Barang dari Unit',
+        'distribusikuota' => 'Kuota & Alokasi Unit',
+        'asetregistrasi' => 'Registrasi Aset',
+        'asetkib' => 'Kartu Inventaris (KIB)',
+        'asetpenyusutan' => 'Penyusutan Aset',
+        'asetpemeliharaan' => 'Pemeliharaan Aset',
+        'asetmutasi' => 'Mutasi Aset',
+        'asetpenghapusan' => 'Penghapusan Aset',
+        'asetsensus' => 'Sensus & Verifikasi Aset',
+        'laporanstokmutasi' => 'Laporan Stok & Mutasi',
+        'laporanpengadaan' => 'Laporan Pengadaan',
+        'laporandistribusi' => 'Laporan Distribusi',
+        'laporanaset' => 'Laporan Aset',
+        'laporandashboardkpi' => 'Dashboard & KPI',
+        'laporaneksporcetak' => 'Ekspor & Cetak Laporan',
+        'hakakses' => 'Hak Akses Logistik'
+      ];
+
+      $matrix = [];
+      foreach ($availableMenus as $menuKey => $menuLabel) {
+          $roleItems = [];
+          foreach ($roles as $r) {
+              $hasPerm = in_array($menuKey, $rolePermissions[$r] ?? []);
+              $roleItems[] = [
+                  'role' => $r,
+                  'menuKey' => $menuKey,
+                  'checked' => $hasPerm,
+                  'isManage' => ($menuKey === 'manage')
+              ];
+          }
+          $matrix[] = [
+              'key' => $menuKey,
+              'label' => $menuLabel,
+              'roles' => $roleItems
+          ];
+      }
+
+      return $this->draw('hakakses.html', [
+          'users' => $users,
+          'rolePermissions' => $rolePermissions,
+          'availableMenus' => $availableMenus,
+          'roles' => $roles,
+          'matrix' => $matrix
+      ]);
+  }
+
+  public function anyFormHakakses()
+  {
+      $username = $_POST['username'] ?? '';
+      if (empty($username)) {
+          exit('User tidak ditemukan.');
+      }
+
+      $user = $this->db('mlite_users')->where('username', $username)->oneArray();
+      if (!$user) {
+          exit('User tidak ditemukan di sistem.');
+      }
+
+      $roleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+      $user['logistik_role'] = $roleData['role'] ?? 'unit';
+      $user['logistik_kode_unit'] = $roleData['kode_unit'] ?? '';
+
+      $units = $this->db('rsns_custom_logistik_non_medis_unit')->where('status', 'Aktif')->toArray();
+      $roles = ['admin' => 'Admin Logistik', 'logistik' => 'Staf Logistik', 'gudang' => 'Staf Gudang', 'aset' => 'Staf Aset', 'unit' => 'Unit', 'kepala_unit' => 'Kepala Unit', 'kepala_sie' => 'Kepala Sie', 'kepala_bidang' => 'Kepala Bidang'];
+
+      echo $this->draw('hakakses.form.html', [
+          'user' => $user,
+          'units' => $units,
+          'roles' => $roles
+      ]);
+      exit();
+  }
+
+  public function postSaveHakakses()
+  {
+      $username = $_POST['username'] ?? '';
+      $role = $_POST['role'] ?? 'unit';
+      $kode_unit = $_POST['kode_unit'] ?? null;
+      if (empty($kode_unit)) {
+          $kode_unit = null;
+      }
+
+      if (empty($username)) {
+          echo json_encode(['status' => 'error', 'message' => 'Username tidak valid!']);
+          exit();
+      }
+
+      $exists = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+      if ($exists) {
+          $res = $this->db('rsns_custom_logistik_non_medis_user_roles')
+                      ->where('username', $username)
+                      ->save([
+                          'role' => $role,
+                          'kode_unit' => $kode_unit
+                      ]);
+      } else {
+          $res = $this->db('rsns_custom_logistik_non_medis_user_roles')
+                      ->save([
+                          'username' => $username,
+                          'role' => $role,
+                          'kode_unit' => $kode_unit
+                      ]);
+      }
+
+      if ($res) {
+          echo json_encode(['status' => 'success', 'message' => 'Hak akses user berhasil disimpan.']);
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan hak akses user!']);
+      }
+      exit();
+  }
+
+  public function postSaveRolePermissions()
+  {
+      $permissions = $_POST['permissions'] ?? [];
+
+      $roles = ['admin', 'logistik', 'gudang', 'aset', 'unit', 'kepala_unit', 'kepala_sie', 'kepala_bidang'];
+      foreach ($roles as $r) {
+          $rolePerms = isset($permissions[$r]) ? implode(',', $permissions[$r]) : 'manage';
+
+          if (strpos($rolePerms, 'manage') === false) {
+              $rolePerms = 'manage,' . $rolePerms;
+          }
+
+          $exists = $this->db('rsns_custom_logistik_non_medis_role_permissions')->where('role', $r)->oneArray();
+          if ($exists) {
+              $this->db('rsns_custom_logistik_non_medis_role_permissions')
+                   ->where('role', $r)
+                   ->save(['permissions' => $rolePerms]);
+          } else {
+              $this->db('rsns_custom_logistik_non_medis_role_permissions')
+                   ->save(['role' => $r, 'permissions' => $rolePerms]);
+          }
+      }
+
+      $this->core->setNotify('success', 'Pengaturan izin role berhasil diperbarui.');
+      redirect(url([ADMIN, 'logistik_non_medis', 'hakakses']));
   }
 
   public function getManage()
   {
     $this->_addHeaderFiles();
     $this->_initSppb();
+    $this->_initPacking();
+    $this->_initKuota();
+    
+    $username = $this->core->getUserInfo('username', null, true);
+    $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+    $role = $userRoleData['role'] ?? 'unit';
+    
+    $permsData = $this->db('rsns_custom_logistik_non_medis_role_permissions')->where('role', $role)->oneArray();
+    $permissions = explode(',', $permsData['permissions'] ?? 'manage');
+    $hakakses_access = in_array('hakakses', $permissions);
+    
+    $has_master = count(array_intersect(['masterbarang', 'mastervendor', 'masterunit', 'masterlokasi', 'mastersatuan', 'masterkategori', 'masterrekanan', 'mastercoa'], $permissions)) > 0;
+    $has_pengadaan = count(array_intersect(['pengadaanperencanaan', 'pengadaanpr', 'pengadaanvendor', 'pengadaanpo', 'pengadaanekatalog', 'pengadaanpenerimaan', 'pengadaankontrak'], $permissions)) > 0;
+    $has_gudang = count(array_intersect(['gudangpenerimaan', 'gudanglokasi', 'gudangstok', 'gudangopname', 'gudangmetode', 'gudangrusak', 'gudangmutasi'], $permissions)) > 0;
+    $has_distribusi = count(array_intersect(['distribusisppb', 'distribusiverifikasi', 'distribusipacking', 'distribusiserahterima', 'distribusitracking', 'distribusiretur', 'distribusikuota'], $permissions)) > 0;
+    $has_aset = count(array_intersect(['asetregistrasi', 'asetkib', 'asetpenyusutan', 'asetpemeliharaan', 'asetmutasi', 'asetpenghapusan', 'asetsensus'], $permissions)) > 0;
+    $has_laporan = count(array_intersect(['laporanstokmutasi', 'laporanpengadaan', 'laporandistribusi', 'laporanaset', 'laporandashboardkpi', 'laporaneksporcetak'], $permissions)) > 0;
 
-    // === DASHBOARD SUMMARY CARDS ===
-    // 1. Total Permintaan (SPPB) minggu ini
-    $permintaan_minggu = $this->db()->pdo()->query(
-      "SELECT COUNT(DISTINCT no_sppb) FROM rsns_custom_logistik_non_medis_sppb WHERE YEARWEEK(tgl_sppb,1)=YEARWEEK(CURDATE(),1)"
-    )->fetchColumn() ?: 0;
+    $count_verif = count($this->db('rsns_custom_logistik_non_medis_sppb')->where('status', 'Disetujui Unit')->group('no_sppb')->toArray());
+    $count_packing = count($this->db('rsns_custom_logistik_non_medis_sppb')->where('status', 'Terverifikasi')->orWhere('status', 'Picking')->orWhere('status', 'Packing')->group('no_sppb')->toArray());
 
-    // 2. Total Cost Unit bulan ini (semua distribusi)
-    $cost_bulan = $this->db()->pdo()->query(
-      "SELECT IFNULL(SUM(subtotal_cost),0) FROM rsns_custom_logistik_non_medis_sppb WHERE MONTH(tgl_sppb)=MONTH(CURDATE()) AND YEAR(tgl_sppb)=YEAR(CURDATE())"
-    )->fetchColumn() ?: 0;
-
-    // 3. Total Aset aktif
-    $total_aset = $this->db()->pdo()->query(
-      "SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_aset WHERE status='Aktif'"
-    )->fetchColumn() ?: 0;
-
-    // 4. Total Perencanaan tahun ini
-    $total_perencanaan = $this->db()->pdo()->query(
-      "SELECT COUNT(DISTINCT kode_perencanaan) FROM rsns_custom_logistik_non_medis_perencanaan WHERE tahun=YEAR(CURDATE())"
-    )->fetchColumn() ?: 0;
-
-    // 5. Total PO aktif bulan ini
-    $total_po = $this->db()->pdo()->query(
-      "SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_po WHERE MONTH(tgl_po)=MONTH(CURDATE()) AND YEAR(tgl_po)=YEAR(CURDATE()) AND status NOT IN ('Dibatalkan')"
-    )->fetchColumn() ?: 0;
-
-    $this->tpl->set('dash_permintaan_minggu', $permintaan_minggu);
-    $this->tpl->set('dash_cost_bulan', $cost_bulan);
-    $this->tpl->set('dash_total_aset', $total_aset);
-    $this->tpl->set('dash_total_perencanaan', $total_perencanaan);
-    $this->tpl->set('dash_total_po', $total_po);
-
-
-    return $this->draw('manage.html');
+    return $this->draw('manage.html', [
+        'count_verif' => $count_verif,
+        'count_packing' => $count_packing,
+        'permissions' => $permissions,
+        'hakakses_access' => $hakakses_access,
+        'has_master' => $has_master,
+        'has_pengadaan' => $has_pengadaan,
+        'has_gudang' => $has_gudang,
+        'has_distribusi' => $has_distribusi,
+        'has_aset' => $has_aset,
+        'has_laporan' => $has_laporan
+    ]);
   }
 
   // --- MASTER DATA ---
@@ -105,10 +508,12 @@ class Admin extends AdminModule
   {
       $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_master_barang` (
         `kode_item` varchar(50) NOT NULL,
+        `barcode` varchar(100) DEFAULT NULL,
         `nama_barang` varchar(200) NOT NULL,
         `deskripsi` text DEFAULT NULL,
         `spesifikasi` text DEFAULT NULL,
-        `kode_kategori` varchar(50) DEFAULT NULL,
+        `kategori` varchar(100) DEFAULT NULL,
+        `sub_kategori` varchar(100) DEFAULT NULL,
         `satuan_dasar` varchar(50) NOT NULL,
         `satuan_konversi` varchar(50) DEFAULT NULL,
         `harga_referensi` double NOT NULL DEFAULT 0,
@@ -117,6 +522,7 @@ class Admin extends AdminModule
         `safety_stock` double NOT NULL DEFAULT 0,
         `foto` varchar(255) DEFAULT NULL,
         `dokumen` varchar(255) DEFAULT NULL,
+        `default_kode_lokasi` varchar(50) DEFAULT NULL,
         `status` enum('Aktif','Tidak Aktif') NOT NULL DEFAULT 'Aktif',
         PRIMARY KEY (`kode_item`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
@@ -162,54 +568,46 @@ class Admin extends AdminModule
   public function getMasterBarang()
   {
     $this->_initDataBarang();
-    $this->_initKategori();
     $this->_addHeaderFiles();
-    $kategori = $this->db('rsns_custom_logistik_non_medis_kategori')->asc('nama_kategori')->toArray();
-    return $this->draw('master.barang.html', ['kategori' => $kategori]);
+    return $this->draw('master.barang.html');
   }
 
   public function anyDisplayMasterBarang()
   {
       $this->_initDataBarang();
-      $this->_initKategori();
-      $perpage = 20;
-      $halaman = max(1, (int)($_POST['halaman'] ?? 1));
-      $cari = trim($_POST['cari'] ?? '');
-      $kategori = trim($_POST['kategori'] ?? '');
-      $where = [];
-      $params = [];
-      if ($cari !== '') {
-          $where[] = '(b.nama_barang LIKE ? OR b.kode_item LIKE ?)';
-          $params[] = '%' . $cari . '%';
-          $params[] = '%' . $cari . '%';
+      $perpage = 10;
+      $halaman = isset($_POST['halaman']) ? (int)$_POST['halaman'] : 1;
+      $cari = isset($_POST['cari']) ? $_POST['cari'] : '';
+      
+      $_offset = ($halaman - 1) * $perpage;
+      
+      $query = $this->db('rsns_custom_logistik_non_medis_master_barang');
+      if(!empty($cari)) {
+          $query->where('kode_item', 'LIKE', '%'.$cari.'%')
+                ->orLike('nama_barang', '%'.$cari.'%')
+                ->orLike('barcode', '%'.$cari.'%');
       }
-      if ($kategori !== '') {
-          $where[] = 'b.kode_kategori = ?';
-          $params[] = $kategori;
+      
+      $all_data = $query->toArray();
+      $jumlah_data = count($all_data);
+      $jml_halaman = ceil($jumlah_data / $perpage);
+      
+      $rows = $this->db('rsns_custom_logistik_non_medis_master_barang');
+      if(!empty($cari)) {
+          $rows->where('kode_item', 'LIKE', '%'.$cari.'%')
+                ->orLike('nama_barang', '%'.$cari.'%')
+                ->orLike('barcode', '%'.$cari.'%');
       }
-      $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
-      $pdo = $this->db()->pdo();
-      $count = $pdo->prepare('SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_master_barang b' . $whereSql);
-      $count->execute($params);
-      $jumlah_data = (int)$count->fetchColumn();
-      $jml_halaman = max(1, (int)ceil($jumlah_data / $perpage));
-      $halaman = min($halaman, $jml_halaman);
-      $offset = ($halaman - 1) * $perpage;
-      $sql = "SELECT b.*, COALESCE(k.nama_kategori, b.kode_kategori, '-') AS nama_kategori
-              FROM rsns_custom_logistik_non_medis_master_barang b
-              LEFT JOIN rsns_custom_logistik_non_medis_kategori k ON k.kode_kategori=b.kode_kategori"
-              . $whereSql . ' ORDER BY b.kode_item DESC LIMIT ' . $perpage . ' OFFSET ' . $offset;
-      $statement = $pdo->prepare($sql);
-      $statement->execute($params);
-      $rows = $statement->fetchAll(\PDO::FETCH_ASSOC);
+      $rows = $rows->desc('kode_item')
+                    ->offset($_offset)
+                    ->limit($perpage)
+                    ->toArray();
 
       echo $this->draw('master.barang.display.html', [
           'barang' => $rows,
           'halaman' => $halaman,
           'jumlah_data' => $jumlah_data,
           'jml_halaman' => $jml_halaman,
-          'cari' => $cari,
-          'kategori' => $kategori,
           'admin_mode' => $this->settings->get('settings.admin_mode')
       ]);
       exit();
@@ -237,10 +635,12 @@ class Admin extends AdminModule
       } else {
           $barang = [
               'kode_item' => $this->_generateKodeBarang(),
+              'barcode' => '',
               'nama_barang' => '',
               'deskripsi' => '',
               'spesifikasi' => '',
-              'kode_kategori' => '',
+              'kategori' => '',
+              'sub_kategori' => '',
               'satuan_dasar' => '',
               'satuan_konversi' => '',
               'harga_referensi' => '',
@@ -249,6 +649,7 @@ class Admin extends AdminModule
               'safety_stock' => 0,
               'foto' => '',
               'dokumen' => '',
+              'default_kode_lokasi' => '',
               'status' => 'Aktif'
           ];
           echo $this->draw('master.barang.form.html', ['barang' => $barang, 'mode' => 'add', 'kategori' => $kategori, 'satuan' => $satuan, 'lokasi' => $lokasi]);
@@ -259,29 +660,26 @@ class Admin extends AdminModule
   public function postSaveMasterBarang()
   {
       $kode_item = $_POST['kode_item'] ?? '';
-      if(empty($kode_item) || $kode_item == '(Otomatis)') {
-          $prefix = 'BRG' . date('mY');
-          $last = $this->db('rsns_custom_logistik_non_medis_master_barang')->select('kode_item')->like('kode_item', $prefix.'%')->desc('kode_item')->oneArray();
-          if($last) {
-              $last_num = (int) substr($last['kode_item'], -4);
-              $kode_item = $prefix . sprintf('%04d', $last_num + 1);
-          } else {
-              $kode_item = $prefix . '0001';
-          }
+      if(empty($kode_item)) {
+          echo json_encode(['status' => 'error', 'message' => 'Kode Item wajib diisi!']);
+          exit();
       }
 
       $data = [
           'kode_item' => $kode_item,
+          'barcode' => $_POST['barcode'] ?? '',
           'nama_barang' => $_POST['nama_barang'] ?? '',
           'deskripsi' => $_POST['deskripsi'] ?? '',
           'spesifikasi' => $_POST['spesifikasi'] ?? '',
-          'kode_kategori' => $_POST['kode_kategori'] ?? '',
+          'kategori' => $_POST['kategori'] ?? '',
+          'sub_kategori' => $_POST['sub_kategori'] ?? '',
           'satuan_dasar' => $_POST['satuan_dasar'] ?? '',
           'satuan_konversi' => $_POST['satuan_konversi'] ?? '',
           'harga_referensi' => str_replace(['Rp.', '.'], '', $_POST['harga_referensi'] ?? 0),
           'stok_min' => $_POST['stok_min'] ?? 0,
           'stok_max' => $_POST['stok_max'] ?? 0,
           'safety_stock' => $_POST['safety_stock'] ?? 0,
+          'default_kode_lokasi' => $_POST['default_kode_lokasi'] ?? NULL,
           'status' => $_POST['status'] ?? 'Aktif'
       ];
 
@@ -292,7 +690,7 @@ class Admin extends AdminModule
       $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
       $hostname = $cek_hostname['hostname'] ?? 'Unknown';
       $log_lokasi = ''.$hostname.' | '.$ip.'';
-      $logdata = ''.$data['kode_item'].' | '.$data['nama_barang'].' | '.$data['deskripsi'].' | '.$data['spesifikasi'].' | '.$data['kode_kategori'].' | '.$data['satuan_dasar'].' | '.$data['satuan_konversi'].' | '.$data['harga_referensi'].' | '.$data['status'].' | '.$user.'';
+      $logdata = ''.$data['kode_item'].' | '.$data['barcode'].' | '.$data['nama_barang'].' | '.$data['deskripsi'].' | '.$data['spesifikasi'].' | '.$data['kategori'].' | '.$data['sub_kategori'].' | '.$data['satuan_dasar'].' | '.$data['satuan_konversi'].' | '.$data['harga_referensi'].' | '.$data['status'].' | '.$user.'';
 
       $this->db('mlite_tracksql')->save([
           'log_id' => NULL,
@@ -380,19 +778,15 @@ class Admin extends AdminModule
           $log_lokasi = ''.$hostname.' | '.$ip.'';
           $logdata = ''.$cek['kode_item'].' | '.$cek['nama_barang'].' | '.$user.'';
 
-          try {
-              $this->db('mlite_tracksql')->save([
-                  'log_id' => NULL,
-                  'log_modul' => 'logistik_non_medis_master_barang',
-                  'log_waktu' => $tanggal_log,
-                  'log_location' => $log_lokasi,
-                  'log_data' => $logdata,
-                  'log_status' => 'D',
-                  'log_username' => $user
-              ]);
-          } catch (\Throwable $e) {
-              // Ignore table not found or other errors
-          }
+          $this->db('mlite_tracksql')->save([
+              'log_id' => NULL,
+              'log_modul' => 'logistik_non_medis_master_barang',
+              'log_waktu' => $tanggal_log,
+              'log_location' => $log_lokasi,
+              'log_data' => $logdata,
+              'log_status' => 'D',
+              'log_username' => $user
+          ]);
 
           $upload_dir = UPLOADS . '/logistik_non_medis';
           if(!empty($cek['foto']) && file_exists($upload_dir . '/foto/' . $cek['foto'])) {
@@ -455,134 +849,6 @@ class Admin extends AdminModule
       return $prefix . $next_num;
   }
 
-  
-  public function getExportMasterBarang()
-  {
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Data_Barang.csv');
-      $output = fopen('php://output', 'w');
-      fputcsv($output, ['Kode Item', 'Nama Barang', 'Kode Kategori', 'Satuan Dasar', 'Harga Referensi (HPS)', 'Stok Minimal', 'Stok Maksimal', 'Safety Stock', 'Status'], ';');
-      
-      $data = $this->db('rsns_custom_logistik_non_medis_master_barang')->toArray();
-      foreach($data as $row) {
-          fputcsv($output, [
-              $row['kode_item'],
-              $row['nama_barang'],
-              $row['kode_kategori'],
-              $row['satuan_dasar'],
-              $row['harga_referensi'],
-              $row['stok_min'],
-              $row['stok_max'],
-              $row['safety_stock'],
-              $row['status']
-          ], ';');
-      }
-      fclose($output);
-      exit();
-  }
-
-  public function anyDownloadTemplateMasterBarang()
-  {
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Template_Import_Barang.csv');
-      $output = fopen('php://output', 'w');
-      fputcsv($output, ['Kode Item', 'Nama Barang', 'Kode Kategori', 'Satuan Dasar', 'Harga Referensi (HPS)', 'Stok Minimal', 'Stok Maksimal', 'Safety Stock', 'Status'], ';');
-      fclose($output);
-      exit();
-  }
-
-  public function postImportMasterBarang()
-  {
-      header('Content-Type: application/json; charset=utf-8');
-      $reply = function ($status, $pesan, array $extra = []) {
-          echo json_encode(array_merge(['status' => $status, 'pesan' => $pesan], $extra));
-          exit();
-      };
-      if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-          $reply('error', 'File tidak ditemukan atau gagal diunggah.');
-      }
-      if (strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION)) !== 'csv') {
-          $reply('error', 'File harus berformat CSV.');
-      }
-      if ($_FILES['file']['size'] > 10 * 1024 * 1024) {
-          $reply('error', 'Ukuran file maksimal 10 MB.');
-      }
-
-      $this->_initDataBarang();
-      $file = @fopen($_FILES['file']['tmp_name'], 'r');
-      if (!$file) $reply('error', 'File CSV tidak dapat dibaca.');
-      $header = fgetcsv($file, 20000, ';');
-      if (!$header || count($header) < 2) {
-          fclose($file);
-          $reply('error', 'Header CSV tidak ditemukan. Unduh template terbaru lalu isi kembali datanya.');
-      }
-      $normalize = function ($value) {
-          $value = preg_replace('/^\xEF\xBB\xBF/', '', (string)$value);
-          return strtolower(trim(preg_replace('/\s+/', ' ', $value)));
-      };
-      $columns = [];
-      foreach ($header as $index => $name) $columns[$normalize($name)] = $index;
-      $hasCode = array_key_exists('kode item', $columns);
-      if (!array_key_exists('nama barang', $columns) || !array_key_exists('satuan dasar', $columns)) {
-          fclose($file);
-          $reply('error', 'Kolom wajib tidak lengkap. Gunakan: Kode Item; Nama Barang; Kode Kategori; Satuan Dasar; Harga Referensi (HPS); Stok Minimal; Stok Maksimal; Safety Stock; Status.');
-      }
-      $number = function ($value) {
-          $value = trim(str_ireplace(['rp', ' '], '', (string)$value));
-          if ($value === '') return 0;
-          if (strpos($value, ',') !== false && strpos($value, '.') !== false) {
-              $value = str_replace('.', '', $value);
-              $value = str_replace(',', '.', $value);
-          } elseif (strpos($value, ',') !== false) {
-              $value = str_replace(',', '.', $value);
-          } elseif (substr_count($value, '.') > 1 || preg_match('/^\d{1,3}(\.\d{3})+$/', $value)) {
-              $value = str_replace('.', '', $value);
-          }
-          return is_numeric($value) ? (float)$value : 0;
-      };
-      $field = function (array $row, $name, $default = '') use ($columns) {
-          return isset($columns[$name], $row[$columns[$name]]) ? trim((string)$row[$columns[$name]]) : $default;
-      };
-      $pdo = $this->db()->pdo();
-      $insert = $pdo->prepare("INSERT INTO rsns_custom_logistik_non_medis_master_barang
-          (kode_item,nama_barang,kode_kategori,satuan_dasar,harga_referensi,stok_min,stok_max,safety_stock,status)
-          VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE nama_barang=VALUES(nama_barang),kode_kategori=VALUES(kode_kategori),satuan_dasar=VALUES(satuan_dasar),harga_referensi=VALUES(harga_referensi),stok_min=VALUES(stok_min),stok_max=VALUES(stok_max),safety_stock=VALUES(safety_stock),status=VALUES(status)");
-      $sukses = 0; $gagal = 0; $baris = 1; $errors = [];
-      try {
-          $pdo->beginTransaction();
-          while (($row = fgetcsv($file, 20000, ';')) !== false) {
-              $baris++;
-              if (!array_filter($row, function ($value) { return trim((string)$value) !== ''; })) continue;
-              $nama = $field($row, 'nama barang');
-              $kode = $hasCode ? $field($row, 'kode item') : '';
-              if ($nama === '') { $gagal++; $errors[] = "Baris $baris: Nama Barang wajib diisi."; continue; }
-              if ($kode === '') $kode = $this->_generateKodeBarang();
-              $kategori = $field($row, 'kode kategori');
-              $satuan = $field($row, 'satuan dasar');
-              if ($satuan === '') { $gagal++; $errors[] = "Baris $baris: Satuan Dasar wajib diisi."; continue; }
-              $status = strtolower($field($row, 'status', 'Aktif')) === 'tidak aktif' ? 'Tidak Aktif' : 'Aktif';
-              $insert->execute([
-                  $kode, $nama, $kategori ?: null, $satuan,
-                  $number($field($row, 'harga referensi (hps)')),
-                  $number($field($row, 'stok minimal')),
-                  $number($field($row, 'stok maksimal')),
-                  $number($field($row, 'safety stock')),
-                  $status
-              ]);
-              $sukses++;
-          }
-          fclose($file);
-          $pdo->commit();
-      } catch (\Throwable $e) {
-          if (is_resource($file)) fclose($file);
-          if ($pdo->inTransaction()) $pdo->rollBack();
-          $reply('error', 'Import gagal diproses. Tidak ada data yang disimpan.', ['errors' => array_slice($errors, 0, 10)]);
-      }
-      $pesan = "Berhasil mengimpor $sukses barang" . ($gagal ? "; $gagal baris dilewati." : '.');
-      $reply('success', $pesan, ['errors' => array_slice($errors, 0, 10)]);
-  }
-
-
   public function getMasterVendor()
   {
     $this->_initVendor();
@@ -624,7 +890,6 @@ class Admin extends AdminModule
           'halaman' => $halaman,
           'jumlah_data' => $jumlah_data,
           'jml_halaman' => $jml_halaman,
-          '_offset' => $_offset,
           'admin_mode' => $this->settings->get('settings.admin_mode')
       ]);
       exit();
@@ -848,7 +1113,7 @@ class Admin extends AdminModule
         `status` enum('Draft','Diajukan','Disetujui','Ditolak') NOT NULL DEFAULT 'Draft',
         `tgl_input` datetime DEFAULT NULL,
         `user_input` varchar(100) DEFAULT NULL,
-        PRIMARY KEY (`kode_kategori`)
+        PRIMARY KEY (`id`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
   }
 
@@ -868,7 +1133,8 @@ class Admin extends AdminModule
         `gedung` varchar(100) DEFAULT NULL,
         `lantai` varchar(50) DEFAULT NULL,
         `lokasi_detail` text DEFAULT NULL,
-
+        `kuota_periode` double NOT NULL DEFAULT 0,
+        `kode_cost_center` varchar(50) DEFAULT NULL,
         `status` enum('Aktif','Tidak Aktif') NOT NULL DEFAULT 'Aktif',
         PRIMARY KEY (`id`),
         UNIQUE KEY `kode_unit` (`kode_unit`)
@@ -931,7 +1197,7 @@ class Admin extends AdminModule
                 ->orLike('pj_unit', '%'.$cari.'%');
       }
       
-      $rows = $query->asc('nama_unit')->asc('kode_unit')->toArray();
+      $rows = $query->desc('id')->toArray();
       $jumlah_data = count($rows);
       $jml_halaman = ceil($jumlah_data / $perpage);
       
@@ -964,6 +1230,8 @@ class Admin extends AdminModule
               'gedung' => '',
               'lantai' => '',
               'lokasi_detail' => '',
+              'kuota_periode' => '0',
+              'kode_cost_center' => '',
               'status' => 'Aktif'
           ];
           echo $this->draw('master.unit.form.html', ['unit' => $unit, 'mode' => 'add', 'units' => $units]);
@@ -975,7 +1243,8 @@ class Admin extends AdminModule
   {
       $kode_unit = $_POST['kode_unit'] ?? '';
       if(empty($kode_unit)) {
-          $kode_unit = $this->_generateKodeUnit();
+          echo json_encode(['status' => 'error', 'message' => 'Kode Unit wajib diisi!']);
+          exit();
       }
 
       $data = [
@@ -986,6 +1255,8 @@ class Admin extends AdminModule
           'gedung' => $_POST['gedung'] ?? '',
           'lantai' => $_POST['lantai'] ?? '',
           'lokasi_detail' => $_POST['lokasi_detail'] ?? '',
+          'kuota_periode' => $_POST['kuota_periode'] ?? 0,
+          'kode_cost_center' => $_POST['kode_cost_center'] ?? '',
           'status' => $_POST['status'] ?? 'Aktif'
       ];
 
@@ -1024,7 +1295,7 @@ class Admin extends AdminModule
 
   public function postHapusMasterUnit()
   {
-      $id = (int)($_POST['id'] ?? 0);
+      $id = $_POST['id'] ?? '';
       $cek = $this->db('rsns_custom_logistik_non_medis_unit')->where('id', $id)->oneArray();
       if($cek) {
           // Logging
@@ -1050,103 +1321,6 @@ class Admin extends AdminModule
       }
       exit();
   }
-  public function getExportMasterUnit()
-  {
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Data_Unit.csv');
-      $output = fopen('php://output', 'w');
-      fputcsv($output, ['Kode Unit', 'Nama Unit', 'PJ Unit', 'Gedung', 'Lantai', 'Lokasi Detail', 'Status'], ';');
-      
-      $data = $this->db('rsns_custom_logistik_non_medis_unit')->toArray();
-      foreach($data as $row) {
-          fputcsv($output, [
-              $row['kode_unit'],
-              $row['nama_unit'],
-              $row['pj_unit'],
-              $row['gedung'],
-              $row['lantai'],
-              $row['lokasi_detail'],
-              $row['status']
-          ], ';');
-      }
-      fclose($output);
-      exit();
-  }
-
-  public function anyDownloadTemplateMasterUnit()
-  {
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Template_Import_Unit.csv');
-      $output = fopen('php://output', 'w');
-      fputcsv($output, ['Nama Unit', 'PJ Unit', 'Gedung', 'Lantai', 'Lokasi Detail', 'Status'], ';');
-      
-      $units = [
-          'AROFAH', 'AULA (MARKETING&ADMIN)', 'Bendahara', 'CSSD', 'Farmasi', 'FISIOTERAPI', 'GIZI', 'ICU', 'IGD', 'IPRS',
-          'KASIR', 'Laboratorium', 'MADINAH 2', 'Madinah 3', 'Madinah 4', 'MARWA', 'Multazam', 'MUSDALIFAH (PICUNICU)', 'OK (Kamar Operasi)', 'PENDAFTARAN',
-          'Poliklinik', 'PPI', 'Radiologi', 'VK (Kamar Bersalin)'
-      ];
-      foreach($units as $u) {
-          fputcsv($output, [$u, 'x', '-', '-', '-', 'Aktif'], ';');
-      }
-      fclose($output);
-      exit();
-  }
-
-  public function postImportMasterUnit()
-  {
-      if(isset($_FILES['file']) && $_FILES['file']['error'] == 0) {
-          $filename = $_FILES['file']['name'];
-          $ext = pathinfo($filename, PATHINFO_EXTENSION);
-          
-          if(strtolower($ext) != 'csv') {
-              echo json_encode(['status' => 'error', 'pesan' => 'File harus berupa CSV!']);
-              exit();
-          }
-          
-          $file = fopen($_FILES['file']['tmp_name'], "r");
-          $is_header = true;
-          $sukses = 0;
-          $gagal = 0;
-          
-          while (($data = fgetcsv($file, 10000, ";")) !== FALSE) {
-              if($is_header) {
-                  $is_header = false;
-                  continue; // Skip header
-              }
-              
-              if(count($data) < 1) continue; 
-              
-              $nama = trim($data[0] ?? '');
-              
-              if(empty($nama)) {
-                  $gagal++;
-                  continue;
-              }
-              
-              $kode = $this->_generateKodeUnit();
-              
-              $record = [
-                  'kode_unit' => $kode,
-                  'nama_unit' => $nama,
-                  'pj_unit' => trim($data[1] ?? 'x'),
-                  'gedung' => trim($data[2] ?? '-'),
-                  'lantai' => trim($data[3] ?? '-'),
-                  'lokasi_detail' => trim($data[4] ?? '-'),
-                  'status' => trim($data[5] ?? 'Aktif')
-              ];
-              
-              $this->db('rsns_custom_logistik_non_medis_unit')->save($record);
-              $sukses++;
-          }
-          
-          fclose($file);
-          echo json_encode(['status' => 'success', 'pesan' => "Import selesai. Berhasil: $sukses, Gagal: $gagal baris data."]);
-          exit();
-      }
-      
-      echo json_encode(['status' => 'error', 'pesan' => 'File tidak ditemukan atau terjadi kesalahan saat upload!']);
-      exit();
-  }
 
   private function _initLokasi()
   {
@@ -1167,7 +1341,7 @@ class Admin extends AdminModule
         `denah_digital` varchar(255) DEFAULT NULL,
         `is_fragile` tinyint(1) NOT NULL DEFAULT 0,
         `status` enum('Aktif','Tidak Aktif') NOT NULL DEFAULT 'Aktif',
-        PRIMARY KEY (`kode_kategori`),
+        PRIMARY KEY (`id`),
         UNIQUE KEY `kode_lokasi` (`kode_lokasi`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
@@ -1222,7 +1396,7 @@ class Admin extends AdminModule
                 ->orLike('kode_zona', '%'.$cari.'%');
       }
       
-      $rows = $query->desc('kode_kategori')->toArray();
+      $rows = $query->desc('id')->toArray();
       $jumlah_data = count($rows);
       $jml_halaman = ceil($jumlah_data / $perpage);
       
@@ -1345,8 +1519,8 @@ class Admin extends AdminModule
 
   public function postHapusMasterLokasi()
   {
-      $kode_kategori = $_POST['kode_kategori'] ?? '';
-      $cek = $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('kode_kategori', $kode_kategori)->oneArray();
+      $id = $_POST['id'] ?? '';
+      $cek = $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('id', $id)->oneArray();
       if($cek) {
           // Logging
           $user = $this->core->getUserInfo('username', null, true);
@@ -1371,7 +1545,7 @@ class Admin extends AdminModule
           if(!empty($cek['denah_digital']) && file_exists($upload_dir . '/' . $cek['denah_digital'])) {
               unlink($upload_dir . '/' . $cek['denah_digital']);
           }
-          $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('kode_kategori', $kode_kategori)->delete();
+          $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('id', $id)->delete();
       }
       exit();
   }
@@ -1401,8 +1575,8 @@ class Admin extends AdminModule
   {
       $this->_initSatuan();
       $perpage = 10;
-      $halaman = max(1, (int)($_POST['halaman'] ?? 1));
-      $cari = trim($_POST['cari'] ?? '');
+      $halaman = isset($_POST['halaman']) ? (int)$_POST['halaman'] : 1;
+      $cari = isset($_POST['cari']) ? $_POST['cari'] : '';
       
       $_offset = ($halaman - 1) * $perpage;
       
@@ -1414,16 +1588,14 @@ class Admin extends AdminModule
       
       $all_data = $query->toArray();
       $jumlah_data = count($all_data);
-      $jml_halaman = max(1, (int)ceil($jumlah_data / $perpage));
-      $halaman = min($halaman, $jml_halaman);
-      $_offset = ($halaman - 1) * $perpage;
+      $jml_halaman = ceil($jumlah_data / $perpage);
       
       $rows = $this->db('rsns_custom_logistik_non_medis_satuan');
       if(!empty($cari)) {
           $rows->where('kode_satuan', 'LIKE', '%'.$cari.'%')
                 ->orLike('nama_satuan', '%'.$cari.'%');
       }
-      $rows = $rows->asc('nama_satuan')
+      $rows = $rows->desc('id')
                     ->offset($_offset)
                     ->limit($perpage)
                     ->toArray();
@@ -1506,9 +1678,9 @@ class Admin extends AdminModule
 
   public function postHapusMasterSatuan()
   {
-      $kode_kategori = $_POST['kode_kategori'] ?? '';
-      if($kode_kategori) {
-          $cek = $this->db('rsns_custom_logistik_non_medis_satuan')->where('kode_kategori', $kode_kategori)->oneArray();
+      $id = $_POST['id'] ?? '';
+      if($id) {
+          $cek = $this->db('rsns_custom_logistik_non_medis_satuan')->where('id', $id)->oneArray();
           if($cek) {
               // Logging
               $user = $this->core->getUserInfo('username', null, true);
@@ -1529,110 +1701,8 @@ class Admin extends AdminModule
                   'log_username' => $user
               ]);
 
-              $this->db('rsns_custom_logistik_non_medis_satuan')->where('kode_kategori', $kode_kategori)->delete();
+              $this->db('rsns_custom_logistik_non_medis_satuan')->where('id', $id)->delete();
           }
-      }
-      exit();
-  }
-
-  public function anyExportMasterSatuan()
-  {
-      $satuans = $this->db('rsns_custom_logistik_non_medis_satuan')->desc('kode_kategori')->toArray();
-      
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Data_Satuan_'.date('Y-m-d').'.csv');
-      $output = fopen('php://output', 'w');
-      
-      fputcsv($output, ['Kode Satuan', 'Nama Satuan', 'Satuan Dasar', 'Nilai Konversi'], ';');
-      
-      foreach ($satuans as $row) {
-          fputcsv($output, [
-              $row['kode_satuan'],
-              $row['nama_satuan'],
-              $row['satuan_dasar'],
-              $row['nilai_konversi']
-          ], ';');
-      }
-      fclose($output);
-      exit();
-  }
-
-  public function anyDownloadTemplateMasterSatuan()
-  {
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Template_Import_Satuan.csv');
-      $output = fopen('php://output', 'w');
-      fputcsv($output, ['Kode Satuan', 'Nama Satuan', 'Satuan Dasar', 'Nilai Konversi'], ';');
-      $examples = [
-          ['KG', 'Kilogram', 'Kilogram', '1'],
-          ['BOTOL', 'Botol', 'Botol', '1'],
-          ['PACK', 'Pack', 'Pack', '1'],
-          ['BOX', 'Box', 'Box', '1'],
-          ['LBR', 'Lembar', 'Lembar', '1'],
-          ['RIM', 'Rim', 'Lembar', '500'],
-          ['PCS', 'Pcs', 'Pcs', '1']
-      ];
-      foreach ($examples as $ex) {
-          fputcsv($output, $ex, ';');
-      }
-      fclose($output);
-      exit();
-  }
-
-  public function postImportMasterSatuan()
-  {
-      if(isset($_FILES['file']) && $_FILES['file']['error'] == 0) {
-          $filename = $_FILES['file']['name'];
-          $ext = pathinfo($filename, PATHINFO_EXTENSION);
-          
-          if(strtolower($ext) != 'csv') {
-              echo json_encode(['status' => 'error', 'pesan' => 'File harus berupa CSV!']);
-              exit();
-          }
-          
-          $file = fopen($_FILES['file']['tmp_name'], "r");
-          $is_header = true;
-          $sukses = 0;
-          $gagal = 0;
-          
-          while (($data = fgetcsv($file, 10000, ";")) !== FALSE) {
-              if($is_header) {
-                  $is_header = false;
-                  continue; // Skip header
-              }
-              
-              if(count($data) < 2) continue; // Pastikan ada kode dan nama
-              
-              $kode = trim($data[0]);
-              $nama = trim($data[1]);
-              
-              if(empty($kode) || empty($nama)) {
-                  $gagal++;
-                  continue;
-              }
-              
-              $record = [
-                  'nama_satuan' => $nama,
-                  'satuan_dasar' => isset($data[2]) ? trim($data[2]) : '',
-                  'nilai_konversi' => isset($data[3]) && is_numeric(trim($data[3])) ? trim($data[3]) : 1
-              ];
-              
-              // Cek apakah kode sudah ada
-              $cek = $this->db('rsns_custom_logistik_non_medis_satuan')->where('kode_satuan', $kode)->oneArray();
-              
-              if($cek) {
-                  $this->db('rsns_custom_logistik_non_medis_satuan')->where('kode_satuan', $kode)->update($record);
-              } else {
-                  $record['kode_satuan'] = $kode;
-                  $this->db('rsns_custom_logistik_non_medis_satuan')->save($record);
-              }
-              $sukses++;
-          }
-          fclose($file);
-          
-          echo json_encode(['status' => 'success', 'pesan' => "Berhasil import $sukses data satuan. Gagal: $gagal"]);
-      } else {
-          echo json_encode(['status' => 'error', 'pesan' => 'File tidak ditemukan atau terjadi kesalahan saat upload.']);
       }
       exit();
   }
@@ -1641,26 +1711,25 @@ class Admin extends AdminModule
   private function _initKategori()
   {
       $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_kategori` (
-        `id` int(11) NOT NULL AUTO_INCREMENT UNIQUE,
-          `kode_kategori` varchar(50) NOT NULL,
-          `nama_kategori` varchar(200) NOT NULL,
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `nama_kategori` varchar(200) NOT NULL,
         `deskripsi` text DEFAULT NULL,
-        PRIMARY KEY (`kode_kategori`)
+        PRIMARY KEY (`id`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
       $default_categories = [
-          ['nama_kategori' => 'Alat HK', 'deskripsi' => 'Alat housekeeping: pel, sapu, kemoceng, sikat, ember, keset, gayung'],
-          ['nama_kategori' => 'Alat Tulis Kantor', 'deskripsi' => 'ATK: pulpen, pensil, staples, ordner, map, lem, lakban, dll.'],
-          ['nama_kategori' => 'Cetakan & Form', 'deskripsi' => 'Formulir cetak RS, blanko, resep, kwitansi, label, register'],
-          ['nama_kategori' => 'Elektronik & IT', 'deskripsi' => 'Baterai, lampu, tinta printer, kabel, UPS, mouse'],
-          ['nama_kategori' => 'flowchart', 'deskripsi' => 'flowchart icu & picu nicu'],
-          ['nama_kategori' => 'Fotocopy', 'deskripsi' => 'Fototcopy'],
-          ['nama_kategori' => 'Jenis Kertas', 'deskripsi' => 'Kertas HVS, A4, F4, kertas potong, kwarto, kertas thermal, buffalo'],
-          ['nama_kategori' => 'Linen & Seragam', 'deskripsi' => 'Sprei, selimut non-medis, gorden, seragam petugas'],
-          ['nama_kategori' => 'Liquid', 'deskripsi' => 'Cairan: karbol sereh, karbol, heviklir, detergen liquid, softener, pencuci piring, pembersih lantai'],
-          ['nama_kategori' => 'Plastik', 'deskripsi' => 'Kantong plastik sampah hitam, kuning, kresek, plastik laundry'],
-          ['nama_kategori' => 'Rumah Tangga & Kebersihan', 'deskripsi' => 'Tisu, handuk, botol semprot, spons, kapur barus, dll.'],
-          ['nama_kategori' => 'Tinta', 'deskripsi' => 'tinta printer, tinta stample']
+          ['nama_kategori' => 'ATK & Percetakan', 'deskripsi' => 'Kertas, buku, alat tulis, formulir rekam medis, dan kebutuhan cetak.'],
+          ['nama_kategori' => 'Rumah Tangga & Kebersihan', 'deskripsi' => 'Sabun, deterjen, tissue, alat pel, dan perlengkapan sanitasi.'],
+          ['nama_kategori' => 'Elektronik & IT', 'deskripsi' => 'Komputer, printer, tinta, perangkat jaringan, dan peralatan elektronik.'],
+          ['nama_kategori' => 'Bahan Bakar & Pelumas', 'deskripsi' => 'Solar genset, bensin, oli mesin, dan pelumas peralatan.'],
+          ['nama_kategori' => 'Kendaraan & Suku Cadang', 'deskripsi' => 'Ban, filter, aki, dan suku cadang armada ambulans/operasional.'],
+          ['nama_kategori' => 'Perlengkapan Kantor', 'deskripsi' => 'Meja, kursi, lemari arsip, dan furnitur kantor lainnya.'],
+          ['nama_kategori' => 'Linen & Perlengkapan Pasien', 'deskripsi' => 'Sprei, sarung bantal, selimut, handuk, dan kain gorden.'],
+          ['nama_kategori' => 'Alat Listrik & Penerangan', 'deskripsi' => 'Lampu, kabel, saklar, baterai, dan komponen kelistrikan.'],
+          ['nama_kategori' => 'Bahan Bangunan & Pemeliharaan', 'deskripsi' => 'Cat, semen, kunci pintu, kran air, dan material pemeliharaan gedung.'],
+          ['nama_kategori' => 'Gas Medis & Oksigen', 'deskripsi' => 'Tabung O2, N2O, CO2, serta regulator dan aksesoris gas medis.'],
+          ['nama_kategori' => 'Bahan Makanan & Gizi', 'deskripsi' => 'Beras, minyak goreng, bumbu dapur, dan bahan makanan kering.'],
+          ['nama_kategori' => 'Seragam & Atribut Karyawan', 'deskripsi' => 'Baju dinas, sepatu kerja, name tag, dan atribut seragam lainnya.']
       ];
 
       foreach ($default_categories as $cat) {
@@ -1704,7 +1773,7 @@ class Admin extends AdminModule
           $rows->where('nama_kategori', 'LIKE', '%'.$cari.'%')
                 ->orLike('deskripsi', '%'.$cari.'%');
       }
-      $rows = $rows->desc('kode_kategori')
+      $rows = $rows->desc('id')
                     ->offset($_offset)
                     ->limit($perpage)
                     ->toArray();
@@ -1783,9 +1852,9 @@ class Admin extends AdminModule
 
   public function postHapusMasterKategori()
   {
-      $kode_kategori = $_POST['kode_kategori'] ?? '';
-      if($kode_kategori) {
-          $cek = $this->db('rsns_custom_logistik_non_medis_kategori')->where('kode_kategori', $kode_kategori)->oneArray();
+      $id = $_POST['id'] ?? '';
+      if($id) {
+          $cek = $this->db('rsns_custom_logistik_non_medis_kategori')->where('id', $id)->oneArray();
           if($cek) {
               // Logging
               $user = $this->core->getUserInfo('username', null, true);
@@ -1806,123 +1875,8 @@ class Admin extends AdminModule
                   'log_username' => $user
               ]);
 
-              $this->db('rsns_custom_logistik_non_medis_kategori')->where('kode_kategori', $kode_kategori)->delete();
+              $this->db('rsns_custom_logistik_non_medis_kategori')->where('id', $id)->delete();
           }
-      }
-      exit();
-  }
-
-
-  // ==========================================
-  // MASTER KATEGORI ASET
-  // ==========================================
-  public function getMasterKategoriAset()
-  {
-      $this->_initKategori();
-      $this->_addHeaderFiles();
-      return $this->draw('master_kategori_aset.html', [
-          'title' => 'Master Kategori Aset',
-      ]);
-  }
-
-  public function anyDisplayMasterKategoriAset()
-  {
-      try {
-          $cari = $_GET['cari'] ?? '';
-          $offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
-          $limit = 10;
-          
-          $query = $this->db('rsns_custom_logistik_non_medis_kategori_aset');
-          $query_count = $this->db('rsns_custom_logistik_non_medis_kategori_aset');
-          
-          if ($cari) {
-              $query->where(function($q) use ($cari) {
-                  $q->like('kode_kategori', '%'.$cari.'%')->orLike('nama_kategori', '%'.$cari.'%');
-              });
-              $query_count->where(function($q) use ($cari) {
-                  $q->like('kode_kategori', '%'.$cari.'%')->orLike('nama_kategori', '%'.$cari.'%');
-              });
-          }
-          
-          $total = $query_count->count();
-          $rows = $query->offset($offset)->limit($limit)->toArray();
-          
-          ob_clean(); // Ensure no PHP warnings/notices corrupt the JSON
-          echo json_encode([
-              'total' => $total,
-              'rows' => $rows
-          ]);
-      } catch (\Throwable $e) {
-          ob_clean();
-          echo json_encode([
-              'error' => true,
-              'message' => $e->getMessage(),
-              'file' => $e->getFile(),
-              'line' => $e->getLine()
-          ]);
-      }
-      exit();
-  }
-
-  public function anyFormMasterKategoriAset()
-  {
-      $kode_kategori = $_GET['kode'] ?? '';
-      $data = [];
-      if ($kode_kategori) {
-          $data = $this->db('rsns_custom_logistik_non_medis_kategori_aset')->where('kode_kategori', $kode_kategori)->oneArray();
-      }
-      
-      ob_clean();
-      echo json_encode($data);
-      exit();
-  }
-
-  public function postSaveMasterKategoriAset()
-  {
-      $kode_kategori = $_POST['kode_kategori'] ?? '';
-      $nama_kategori = $_POST['nama_kategori'] ?? '';
-      $kib_default = $_POST['kib_default'] ?? '';
-      $umur_manfaat_default = $_POST['umur_manfaat_default'] ?? 0;
-      $kode_coa = $_POST['kode_coa'] ?? '';
-      $status_aktif = $_POST['status_aktif'] ?? 'Aktif';
-      
-      if (!$kode_kategori || !$nama_kategori) {
-          echo json_encode(['status' => 'error', 'message' => 'Kode dan Nama Kategori harus diisi']);
-          exit();
-      }
-      
-      $cek = $this->db('rsns_custom_logistik_non_medis_kategori_aset')->where('kode_kategori', $kode_kategori)->oneArray();
-      
-      $data = [
-          'kode_kategori' => $kode_kategori,
-          'nama_kategori' => $nama_kategori,
-          'kib_default' => $kib_default ? $kib_default : NULL,
-          'umur_manfaat_default' => $umur_manfaat_default,
-          'kode_coa' => $kode_coa,
-          'status_aktif' => $status_aktif
-      ];
-      
-      if ($cek) {
-          $query = $this->db('rsns_custom_logistik_non_medis_kategori_aset')->where('kode_kategori', $kode_kategori)->update($data);
-      } else {
-          $query = $this->db('rsns_custom_logistik_non_medis_kategori_aset')->save($data);
-      }
-      
-      if ($query) {
-          ob_clean();
-          echo json_encode(['status' => 'success']);
-      } else {
-          ob_clean();
-          echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data']);
-      }
-      exit();
-  }
-
-  public function postHapusMasterKategoriAset()
-  {
-      $kode_kategori = $_POST['kode_kategori'] ?? '';
-      if ($kode_kategori) {
-          $this->db('rsns_custom_logistik_non_medis_kategori_aset')->where('kode_kategori', $kode_kategori)->delete();
       }
       exit();
   }
@@ -1982,7 +1936,7 @@ class Admin extends AdminModule
         `petugas_logistik` varchar(100) DEFAULT NULL,
         `tgl_acc` datetime DEFAULT NULL,
         `user_input` varchar(100) DEFAULT NULL,
-        PRIMARY KEY (`kode_kategori`)
+        PRIMARY KEY (`id`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
       $upload_dir = UPLOADS . '/logistik_non_medis/pr';
@@ -2009,7 +1963,7 @@ class Admin extends AdminModule
         `file_lampiran` varchar(255) DEFAULT NULL,
         `keterangan` text DEFAULT NULL,
         `user_input` varchar(100) DEFAULT NULL,
-        PRIMARY KEY (`kode_kategori`)
+        PRIMARY KEY (`id`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
       $upload_dir = UPLOADS . '/logistik_non_medis/vendor_docs';
@@ -2463,7 +2417,7 @@ $(document).ready(function() {
 
   public function anyDetailPerencanaan()
   {
-      $kode_kategori = $_POST['kode_kategori'] ?? '';
+      $id = $_POST['id'] ?? '';
       $sql = "
           SELECT p.*,
                  u.nama_unit,
@@ -2664,28 +2618,23 @@ $(document).ready(function() {
   {
       $id = $_POST['id'] ?? '';
       if($id) {
-          $cek = $this->db('rsns_custom_logistik_non_medis_perencanaan')->where('kode_perencanaan', $id)->oneArray();
+          $cek = $this->db('rsns_custom_logistik_non_medis_perencanaan')->where('id', $id)->oneArray();
           if($cek) {
-              try {
-                  $this->db()->pdo()->exec("DELETE FROM rsns_custom_logistik_non_medis_perencanaan_detail WHERE kode_perencanaan = '$id'");
-                  $this->db()->pdo()->exec("DELETE FROM rsns_custom_logistik_non_medis_perencanaan WHERE kode_perencanaan = '$id'");
-                  
-                  // Logging
-                  $user = $this->core->getUserInfo('username', null, true);
-                  $ip = $_SERVER['REMOTE_ADDR'];
-                  $hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray()['hostname'] ?? 'Unknown';
-                  $this->db('mlite_tracksql')->save([
-                      'log_id' => NULL,
-                      'log_modul' => 'logistik_non_medis_perencanaan',
-                      'log_waktu' => date('Y-m-d H:i:s'),
-                      'log_location' => $hostname . ' | ' . $ip,
-                      'log_data' => 'Delete Perencanaan: ' . $cek['kode_perencanaan'],
-                      'log_status' => 'D',
-                      'log_username' => $user
-                  ]);
-              } catch (\Exception $e) {
-                  // Do nothing or log
-              }
+              $this->db('rsns_custom_logistik_non_medis_perencanaan')->where('id', $id)->delete();
+              
+              // Logging
+              $user = $this->core->getUserInfo('username', null, true);
+              $ip = $_SERVER['REMOTE_ADDR'];
+              $hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray()['hostname'] ?? 'Unknown';
+              $this->db('mlite_tracksql')->save([
+                  'log_id' => NULL,
+                  'log_modul' => 'logistik_non_medis_perencanaan',
+                  'log_waktu' => date('Y-m-d H:i:s'),
+                  'log_location' => $hostname . ' | ' . $ip,
+                  'log_data' => 'Delete Perencanaan: ' . $cek['kode_perencanaan'] . ' (ID: ' . $id . ')',
+                  'log_status' => 'D',
+                  'log_username' => $user
+              ]);
           }
       }
       exit();
@@ -3078,7 +3027,7 @@ $(document).ready(function() {
           $query->where('kode_vendor', $kode_vendor);
       }
       
-      $rows = $query->desc('tgl_record')->desc('kode_kategori')->toArray();
+      $rows = $query->desc('tgl_record')->desc('id')->toArray();
 
       foreach($rows as &$row) {
           $row['nilai_nominal_formatted'] = number_format((float)$row['nilai_nominal'], 0, ',', '.');
@@ -3234,11 +3183,11 @@ $(document).ready(function() {
 
   public function postHapusVendorManajemen()
   {
-      $kode_kategori = $_POST['kode_kategori'] ?? '';
-      if($kode_kategori) {
-          $data = $this->db('rsns_custom_logistik_non_medis_vendor_evaluasi')->where('kode_kategori', $kode_kategori)->oneArray();
+      $id = $_POST['id'] ?? '';
+      if($id) {
+          $data = $this->db('rsns_custom_logistik_non_medis_vendor_evaluasi')->where('id', $id)->oneArray();
           if($data) {
-              $this->db('rsns_custom_logistik_non_medis_vendor_evaluasi')->where('kode_kategori', $kode_kategori)->delete();
+              $this->db('rsns_custom_logistik_non_medis_vendor_evaluasi')->where('id', $id)->delete();
               
               // Logging Feature
               $user = $this->core->getUserInfo('username', null, true);
@@ -3286,10 +3235,8 @@ $(document).ready(function() {
         UNIQUE KEY `no_po` (`no_po`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
-       $columns = [
-           'sumber_tipe' => "VARCHAR(20) NULL AFTER kode_vendor",
-           'no_rencana' => "VARCHAR(50) NULL AFTER sumber_tipe",
-           'total_nilai' => "DOUBLE NOT NULL DEFAULT 0 AFTER kode_vendor",
+      $columns = [
+          'total_nilai' => "DOUBLE NOT NULL DEFAULT 0 AFTER kode_vendor",
           'diskon' => "DOUBLE NOT NULL DEFAULT 0 AFTER total_nilai",
           'ppn' => "DOUBLE NOT NULL DEFAULT 0 AFTER diskon",
           'grand_total' => "DOUBLE NOT NULL DEFAULT 0 AFTER ppn",
@@ -3303,11 +3250,9 @@ $(document).ready(function() {
 
       foreach ($columns as $col => $def) {
           try {
-              @$this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_po` ADD `$col` $def");
-          } catch (\Throwable $e) {
+              $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_po` ADD `$col` $def");
+          } catch (\Exception $e) {
               // Column probably already exists
-          } catch (\PDOException $e) {
-              // Ignore
           }
       }
       
@@ -3339,10 +3284,7 @@ $(document).ready(function() {
   {
     $this->_initPo();
     $this->_addHeaderFiles();
-    return $this->draw('pengadaan.po.html', [
-        'sumber_tipe' => $_GET['sumber_tipe'] ?? '',
-        'no_rencana' => $_GET['no_rencana'] ?? ''
-    ]);
+    return $this->draw('pengadaan.po.html');
   }
 
   public function anyDisplaypengadaanpo()
@@ -3395,13 +3337,14 @@ $(document).ready(function() {
       exit();
   }
 
-  public function anyLoadperencanaanforpo()
+  public function anyLoadprforpo()
   {
-      $this->_initPerencanaan();
+      $this->_initPR();
       $kode_vendor = $_POST['kode_vendor'] ?? '';
       
-      // Mengambil Perencanaan yang Disetujui
-      $prs = $this->db('rsns_custom_logistik_non_medis_perencanaan')->where('status', 'Disetujui')->toArray();
+      // Mengambil PR yang Disetujui
+      // Nanti mungkin tambahkan logika filter by 'Di-PO-kan'
+      $prs = $this->db('rsns_custom_logistik_non_medis_pr')->where('status', 'Disetujui')->toArray();
       
       $barang = [];
       $b_query = $this->db('rsns_custom_logistik_non_medis_master_barang')->toArray();
@@ -3411,8 +3354,6 @@ $(document).ready(function() {
       }
 
       foreach($prs as &$pr) {
-          $pr['no_pr'] = $pr['kode_perencanaan'];
-          $pr['jumlah'] = (float)$pr['total_qty'];
           $pr['nama_barang'] = $barang[$pr['kode_item']] ?? $pr['kode_item'];
           $pr['harga_referensi'] = $barang_harga[$pr['kode_item']] ?? 0;
       }
@@ -3444,60 +3385,11 @@ $(document).ready(function() {
               'barang_map' => $barang
           ]);
       } else {
-          $sumber_tipe = $_POST['sumber_tipe'] ?? '';
-          $no_rencana = $_POST['no_rencana'] ?? '';
-          $items = [];
-          $kode_vendor = '';
-
-          if ($sumber_tipe === 'rutin' && $no_rencana !== '') {
-              $rencana = $this->db('rsns_custom_logistik_non_medis_rencana_rutin')->where('no_rencana', $no_rencana)->oneArray();
-              if (!$rencana || $rencana['status'] !== 'Disetujui') {
-                  echo '<div class="alert alert-warning">Rencana rutin harus berstatus Disetujui sebelum dibuatkan PO.</div>';
-                  exit();
-              }
-
-              $kode_vendor = $rencana['kode_vendor'] ?? '';
-              $details = $this->db('rsns_custom_logistik_non_medis_rencana_rutin_detail')->where('no_rencana', $no_rencana)->toArray();
-              $qty_terpesan = [];
-              $po_rencana = $this->db('rsns_custom_logistik_non_medis_po')
-                  ->where('sumber_tipe', 'rutin')
-                  ->where('no_rencana', $no_rencana)
-                  ->toArray();
-              foreach ($po_rencana as $po) {
-                  if (($po['status'] ?? '') === 'Dibatalkan') {
-                      continue;
-                  }
-                  foreach (json_decode($po['detail_items'] ?? '[]', true) ?: [] as $po_item) {
-                      $kode_item = $po_item['kode_item'] ?? '';
-                      $qty_terpesan[$kode_item] = ($qty_terpesan[$kode_item] ?? 0) + (float) ($po_item['qty_pesan'] ?? 0);
-                  }
-              }
-              foreach ($details as $detail) {
-                  $sisa = max(0, (float) $detail['qty_rencana'] - (float) ($qty_terpesan[$detail['kode_item']] ?? 0));
-                  if ($sisa > 0) {
-                      $items[] = [
-                          'kode_item' => $detail['kode_item'],
-                          'qty_pesan' => $sisa,
-                          'harga_satuan' => (float) $detail['estimasi_harga'],
-                          'sumber_tipe' => 'rutin',
-                          'no_rencana' => $no_rencana
-                      ];
-                  }
-              }
-
-              if (empty($items)) {
-                  echo '<div class="alert alert-info"><i class="fa fa-info-circle"></i> Semua item pada rencana ini sudah masuk ke PO aktif.</div>';
-                  exit();
-              }
-          }
-
           $data = [
               'id' => '',
               'no_po' => 'AUTO',
               'tgl_po' => date('Y-m-d'),
-              'kode_vendor' => $kode_vendor,
-              'sumber_tipe' => $sumber_tipe,
-              'no_rencana' => $no_rencana,
+              'kode_vendor' => '',
               'total_nilai' => 0,
               'diskon' => 0,
               'ppn' => 0,
@@ -3505,7 +3397,7 @@ $(document).ready(function() {
               'status' => 'Draft',
               'tgl_kirim' => '',
               'catatan' => '',
-              'items' => $items
+              'items' => []
           ];
           echo $this->draw('pengadaan.po.form.html', [
               'data' => $data, 
@@ -3519,12 +3411,12 @@ $(document).ready(function() {
 
   public function postSavepengadaanpo()
   {
+      file_put_contents(BASE_DIR . '/tmp/debug_po_save.txt', print_r($_POST, true));
       ob_start();
       $this->_initPo();
       $this->_initHostnameTable();
       $this->db()->pdo()->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
       try {
-          $id = $_POST['id'] ?? '';
           $kode_vendor = $_POST['kode_vendor'] ?? '';
           if(empty($kode_vendor)) {
               throw new \Exception('Vendor wajib dipilih!');
@@ -3537,13 +3429,11 @@ $(document).ready(function() {
               throw new \Exception('Detail PR/Item PO wajib ditambahkan!');
           }
 
+          $id = $_POST['id'] ?? '';
           if(empty($id)) {
               $no_po = $this->_generateNoPO($kode_vendor);
           } else {
               $existing = $this->db('rsns_custom_logistik_non_medis_po')->where('id', $id)->oneArray();
-              if (!$existing) {
-                  throw new \Exception('PO yang akan diubah tidak ditemukan.');
-              }
               $no_po = $existing['no_po'];
           }
 
@@ -3551,8 +3441,6 @@ $(document).ready(function() {
               'no_po' => $no_po,
               'tgl_po' => $_POST['tgl_po'] ?? date('Y-m-d'),
               'kode_vendor' => $kode_vendor,
-              'sumber_tipe' => $_POST['sumber_tipe'] ?? null,
-              'no_rencana' => $_POST['no_rencana'] ?? null,
               'total_nilai' => (float)($_POST['total_nilai'] ?? 0),
               'diskon' => (float)($_POST['diskon'] ?? 0),
               'ppn' => (float)($_POST['ppn'] ?? 0),
@@ -3601,7 +3489,7 @@ $(document).ready(function() {
           } else {
               throw new \Exception('Gagal menyimpan ke database.');
           }
-      } catch (\Throwable $e) {
+      } catch (\Exception $e) {
           ob_clean();
           echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
       }
@@ -3614,48 +3502,43 @@ $(document).ready(function() {
       $id = $_POST['id'] ?? '';
       $status = $_POST['status'] ?? ''; 
       
-      try {
-          if($id && $status) {
-              $data = ['status' => $status];
-              if($status == 'Terkirim') {
-                  $data['tgl_kirim'] = date('Y-m-d H:i:s');
-              }
-              $query = $this->db('rsns_custom_logistik_non_medis_po')->where('id', $id)->update($data);
-              if($query) {
-                  $user = $this->core->getUserInfo('username', null, true);
-                  $this->db('mlite_tracksql')->save([
-                      'log_id' => NULL,
-                      'log_modul' => 'logistik_non_medis_po_status',
-                      'log_waktu' => date('Y-m-d H:i:s'),
-                      'log_location' => $_SERVER['REMOTE_ADDR'],
-                      'log_data' => "PO ID $id ubah status ke $status",
-                      'log_status' => 'U',
-                      'log_username' => $user
-                  ]);
-                  
-                  if($status == 'Dibatalkan') {
-                      $po = $this->db('rsns_custom_logistik_non_medis_po')->where('id', $id)->oneArray();
-                      if($po) {
-                          $items = json_decode($po['detail_items'], true) ?: [];
-                          foreach($items as $item) {
-                              if(!empty($item['id_pr'])) {
-                                  try {
-                                      $this->db('rsns_custom_logistik_non_medis_pr')->where('id', $item['id_pr'])->update(['status' => 'Disetujui']);
-                                  } catch (\Exception $e) {}
-                              }
+      if($id && $status) {
+          $data = ['status' => $status];
+          if($status == 'Terkirim') {
+              $data['tgl_kirim'] = date('Y-m-d H:i:s');
+          }
+          $query = $this->db('rsns_custom_logistik_non_medis_po')->where('id', $id)->update($data);
+          if($query) {
+               $user = $this->core->getUserInfo('username', null, true);
+               $this->db('mlite_tracksql')->save([
+                  'log_id' => NULL,
+                  'log_modul' => 'logistik_non_medis_po_status',
+                  'log_waktu' => date('Y-m-d H:i:s'),
+                  'log_location' => $_SERVER['REMOTE_ADDR'],
+                  'log_data' => "PO ID $id ubah status ke $status",
+                  'log_status' => 'U',
+                  'log_username' => $user
+              ]);
+              
+              // If cancelled, revert PR status
+              if($status == 'Dibatalkan') {
+                  $po = $this->db('rsns_custom_logistik_non_medis_po')->where('id', $id)->oneArray();
+                  if($po) {
+                      $items = json_decode($po['detail_items'], true) ?: [];
+                      foreach($items as $item) {
+                          if(!empty($item['id_pr'])) {
+                              $this->db('rsns_custom_logistik_non_medis_pr')->where('id', $item['id_pr'])->update(['status' => 'Disetujui']);
                           }
                       }
                   }
-
-                  echo json_encode(['status' => 'success']);
-              } else {
-                  echo json_encode(['status' => 'error', 'message' => 'Gagal mengubah status PO atau status tidak berubah']);
               }
+
+              echo json_encode(['status' => 'success']);
           } else {
-              echo json_encode(['status' => 'error', 'message' => 'Parameter tidak lengkap']);
+              echo json_encode(['status' => 'error', 'message' => 'Gagal mengubah status PO']);
           }
-      } catch (\Throwable $e) {
-          echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap']);
       }
       exit();
   }
@@ -3740,7 +3623,7 @@ $(document).ready(function() {
         `status` varchar(50) DEFAULT 'Master',
         `link_produk` text DEFAULT NULL,
         `last_sync` datetime DEFAULT NULL,
-        PRIMARY KEY (`kode_kategori`),
+        PRIMARY KEY (`id`),
         KEY `no_po` (`no_po`),
         KEY `kode_produk_lkpp` (`kode_produk_lkpp`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
@@ -3911,18 +3794,6 @@ $(document).ready(function() {
         PRIMARY KEY (`id`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
-      // Add missing columns if not exist
-      try {
-          $columns = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_penerimaan`")->fetchAll(\PDO::FETCH_ASSOC);
-          $existing_cols = array_column($columns, 'Field');
-          if (!in_array('nama_barang', $existing_cols)) {
-              $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_penerimaan` ADD COLUMN `nama_barang` VARCHAR(255) NULL AFTER kode_item");
-          }
-          if (!in_array('qty_po', $existing_cols)) {
-              $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_penerimaan` ADD COLUMN `qty_po` DOUBLE NOT NULL DEFAULT 0 AFTER nama_barang");
-          }
-      } catch(\Throwable $e) {}
-
       $upload_dir = UPLOADS . '/logistik_non_medis/penerimaan';
       if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
   }
@@ -3951,13 +3822,6 @@ $(document).ready(function() {
       if(!$cek_metode) {
           $this->db('rsns_custom_logistik_non_medis_pengaturan')->save(['nama_pengaturan' => 'metode_stok', 'nilai' => 'FIFO']);
       }
-
-      $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_stok` (
-        `kode_item` varchar(50) NOT NULL,
-        `kode_lokasi` varchar(50) NOT NULL,
-        `stok_akhir` double NOT NULL DEFAULT 0,
-        PRIMARY KEY (`kode_item`,`kode_lokasi`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
       // Migration: Move data from old stok table to stok_batch if stok_batch is empty but old stok has data
       $count_batch = $this->db('rsns_custom_logistik_non_medis_stok_batch')->count();
@@ -3990,7 +3854,7 @@ $(document).ready(function() {
         `stok_akhir` double NOT NULL DEFAULT 0,
         `harga` double NOT NULL DEFAULT 0,
         `user_input` varchar(100) DEFAULT NULL,
-        PRIMARY KEY (`kode_kategori`)
+        PRIMARY KEY (`id`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
       // Migration for existing tables
@@ -4033,7 +3897,7 @@ $(document).ready(function() {
         `batch_no` varchar(100) DEFAULT '-',
         `qty` double NOT NULL DEFAULT 0,
         `satuan` varchar(50) DEFAULT NULL,
-        PRIMARY KEY (`kode_kategori`),
+        PRIMARY KEY (`id`),
         KEY `no_mutasi` (`no_mutasi`),
         KEY `kode_item` (`kode_item`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
@@ -4111,17 +3975,11 @@ $(document).ready(function() {
                     ->limit($perpage)
                     ->toArray();
 
-      $jml_halaman_arr = [];
-      for ($i = 1; $i <= $jml_halaman; $i++) {
-          $jml_halaman_arr[] = $i;
-      }
-
       echo $this->draw('pengadaan.penerimaan.display.html', [
           'penerimaan' => $rows,
           'halaman' => $halaman,
           'jumlah_data' => $jumlah_data,
-          'jml_halaman' => $jml_halaman,
-          'jml_halaman_arr' => $jml_halaman_arr
+          'jml_halaman' => $jml_halaman
       ]);
       exit();
   }
@@ -4214,10 +4072,12 @@ $(document).ready(function() {
           $loc_map = [];
           foreach($barang_rows as $b) {
               $barang_map[$b['kode_item']] = $b['nama_barang'];
+              $loc_map[$b['kode_item']] = $b['default_kode_lokasi'];
           }
 
           foreach($items as &$item) {
               $item['nama_barang'] = $barang_map[$item['kode_item']] ?? $item['kode_item'];
+              $item['default_kode_lokasi'] = $loc_map[$item['kode_item']] ?? '';
               $item['qty_po'] = $item['qty_pesan'] ?? 0;
               $item['qty_terima'] = $item['qty_po'];
               $item['qty_tolak'] = 0;
@@ -4242,8 +4102,8 @@ $(document).ready(function() {
       $no_po = $_POST['no_po'] ?? '';
 
       $item = $this->db('rsns_custom_logistik_non_medis_master_barang')
-                   ->where('kode_item', $barcode)
-                   
+                   ->where('barcode', $barcode)
+                   ->orWhere('kode_item', $barcode)
                    ->oneArray();
 
       if($item) {
@@ -4272,6 +4132,10 @@ $(document).ready(function() {
           if($in_po) {
               // Get location name for better UX
               $loc_name = '-';
+              if(!empty($item['default_kode_lokasi'])) {
+                  $loc = $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('kode_lokasi', $item['default_kode_lokasi'])->oneArray();
+                  $loc_name = $loc ? $loc['nama_lokasi'] : $item['default_kode_lokasi'];
+              }
 
               echo json_encode([
                   'status' => 'success',
@@ -4279,6 +4143,7 @@ $(document).ready(function() {
                   'nama_barang' => $item['nama_barang'],
                   'qty_po' => $qty_po,
                   'harga' => $harga,
+                  'default_kode_lokasi' => $item['default_kode_lokasi'],
                   'nama_lokasi' => $loc_name
               ]);
           } else {
@@ -4292,17 +4157,12 @@ $(document).ready(function() {
 
   public function postSavePenerimaan()
   {
-      ob_start();
-      try {
-          $this->_initPenerimaan();
-          $this->_initPo();
-          $this->_initHostnameTable();
-
-          $no_penerimaan = $_POST['no_penerimaan'] ?? '';
-          $status = $_POST['status'] ?? 'Draft';
-          $kode_lokasi = $_POST['kode_lokasi'] ?? '-';
-          
-          $items = [];
+      $this->_initHostnameTable();
+      $no_penerimaan = $_POST['no_penerimaan'] ?? '';
+      $status = $_POST['status'] ?? 'Draft';
+      $kode_lokasi = $_POST['kode_lokasi'] ?? 'Gudang Utama'; 
+      
+      $items = [];
       if(isset($_POST['kode_item']) && is_array($_POST['kode_item'])) {
           foreach($_POST['kode_item'] as $key => $kode_item) {
               $items[] = [
@@ -4325,8 +4185,8 @@ $(document).ready(function() {
           'tgl_penerimaan' => $_POST['tgl_penerimaan'] ?? date('Y-m-d'),
           'no_po' => $_POST['no_po'] ?? '',
           'kode_vendor' => $_POST['kode_vendor'] ?? '',
-          'no_faktur' => '',
-          'no_surat_jalan' => '',
+          'no_faktur' => $_POST['no_faktur'] ?? '',
+          'no_surat_jalan' => $_POST['no_surat_jalan'] ?? '',
           'kode_lokasi' => $kode_lokasi,
           'status' => $status,
           'user_input' => $this->core->getUserInfo('username', null, true)
@@ -4366,13 +4226,14 @@ $(document).ready(function() {
           foreach($_POST['kode_item'] as $key => $kode_item) {
               $data = array_merge($header, [
                   'kode_item' => $kode_item,
-                  'nama_barang' => $_POST['nama_barang'][$key] ?? '',
-                  'qty_po' => $_POST['qty_po'][$key] ?? 0,
                   'qty_terima' => $_POST['qty_terima'][$key] ?? 0,
                   'qty_tolak' => $_POST['qty_tolak'][$key] ?? 0,
+                  'batch_no' => $_POST['batch_no'][$key] ?? '',
+                  'tgl_expired' => $_POST['tgl_expired'][$key] ?? NULL,
                   'harga' => $_POST['harga'][$key] ?? 0,
                   'keterangan' => $_POST['keterangan_item'][$key] ?? ''
               ]);
+              if(empty($data['tgl_expired'])) $data['tgl_expired'] = NULL;
               
               if($this->db('rsns_custom_logistik_non_medis_penerimaan')->save($data)) {
                   $success_count++;
@@ -4388,13 +4249,14 @@ $(document).ready(function() {
                       $qty_terima = $_POST['qty_terima'][$key] ?? 0;
                       if($qty_terima > 0) {
                           $harga_item = $_POST['harga'][$key] ?? 0;
-                          $this->_updateStok($kode_item, $kode_lokasi, $qty_terima, 'Masuk', $no_penerimaan, $harga_item, '-', NULL);
+                          $batch_no = $_POST['batch_no'][$key] ?? '-';
+                          $tgl_expired = $_POST['tgl_expired'][$key] ?? NULL;
+                          $this->_updateStok($kode_item, $kode_lokasi, $qty_terima, 'Masuk', $no_penerimaan, $harga_item, $batch_no, $tgl_expired);
                       }
                   }
-               }
-               $this->_updatePOStatus($header['no_po']);
-               $this->_syncRencanaDariPO($header['no_po']);
-           }
+              }
+              $this->_updatePOStatus($header['no_po']);
+          }
           
           // Logging
           $user = $this->core->getUserInfo('username', null, true);
@@ -4412,11 +4274,7 @@ $(document).ready(function() {
 
           echo json_encode(['status' => 'success']);
       } else {
-          echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data. Tidak ada item yang berhasil disimpan.']);
-      }
-      } catch (\Throwable $e) {
-          ob_clean();
-          echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+          echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data']);
       }
       exit();
   }
@@ -4647,14 +4505,17 @@ $(document).ready(function() {
       
       $received_qty = [];
       foreach($receipts as $rcp) {
-          $kode_item = $rcp['kode_item'] ?? '';
-          $received_qty[$kode_item] = ($received_qty[$kode_item] ?? 0) + (float) ($rcp['qty_terima'] ?? 0);
+          $items = json_decode($rcp['detail_items'], true);
+          foreach($items as $item) {
+              if(!isset($received_qty[$item['kode_item']])) $received_qty[$item['kode_item']] = 0;
+              $received_qty[$item['kode_item']] += $item['qty_terima'];
+          }
       }
       
       $all_received = true;
       $any_received = false;
       foreach($po_items as $item) {
-          $target = (float) ($item['qty_pesan'] ?? 0);
+          $target = $item['jumlah'];
           $actual = $received_qty[$item['kode_item']] ?? 0;
           if($actual < $target) $all_received = false;
           if($actual > 0) $any_received = true;
@@ -4766,21 +4627,14 @@ $(document).ready(function() {
       $no_po = $_POST['no_po'] ?? '';
       $no_penerimaan = $_POST['no_penerimaan'] ?? '';
       
-      // Get kode_vendor from PO
-      $kode_vendor = '';
-      if(!empty($no_po)) {
-          $po_data = $this->db('rsns_custom_logistik_non_medis_po')->where('no_po', $no_po)->oneArray();
-          if($po_data) $kode_vendor = $po_data['kode_vendor'];
-      }
-      
       $penerimaan = [
           'no_penerimaan' => $no_penerimaan ?: $this->_generateNoPenerimaan(),
           'tgl_penerimaan' => date('Y-m-d'),
           'no_po' => $no_po,
-          'kode_vendor' => $kode_vendor,
+          'kode_vendor' => '',
           'no_faktur' => '',
           'no_surat_jalan' => '',
-          'kode_lokasi' => '-',
+          'kode_lokasi' => '',
           'status' => 'Draft',
           'detail_items' => []
       ];
@@ -4788,22 +4642,6 @@ $(document).ready(function() {
       if (!empty($no_penerimaan)) {
           $rows = $this->db('rsns_custom_logistik_non_medis_penerimaan')->where('no_penerimaan', $no_penerimaan)->toArray();
           if ($rows) {
-              // Build barang map for fallback nama_barang lookup
-              $barang_rows = $this->db('rsns_custom_logistik_non_medis_master_barang')->toArray();
-              $barang_map = [];
-              foreach($barang_rows as $b) { $barang_map[$b['kode_item']] = $b['nama_barang']; }
-              // Also get qty_po from PO detail_items
-              $po_items_map = [];
-              $po_data = $this->db('rsns_custom_logistik_non_medis_po')->where('no_po', $rows[0]['no_po'] ?? '')->oneArray();
-              if($po_data && !empty($po_data['detail_items'])) {
-                  $pi = json_decode($po_data['detail_items'], true);
-                  if(is_array($pi)) foreach($pi as $p) { $po_items_map[$p['kode_item']] = $p['qty_pesan'] ?? 0; }
-              }
-              foreach($rows as &$row) {
-                  if(empty($row['nama_barang'])) $row['nama_barang'] = $barang_map[$row['kode_item']] ?? $row['kode_item'];
-                  if(empty($row['qty_po']) || $row['qty_po'] == 0) $row['qty_po'] = $po_items_map[$row['kode_item']] ?? 0;
-              }
-              unset($row);
               $penerimaan = array_merge($penerimaan, $rows[0]);
               $penerimaan['detail_items'] = $rows;
           }
@@ -4926,8 +4764,7 @@ $(document).ready(function() {
   {
       $this->_initStok();
       $this->_addHeaderFiles();
-      $kategori = $this->db('rsns_custom_logistik_non_medis_kategori')->toArray();
-      return $this->draw('gudang.stok.html', ['kategori' => $kategori]);
+      return $this->draw('gudang.stok.html');
   }
 
   public function anyDisplayGudangStok()
@@ -4936,7 +4773,7 @@ $(document).ready(function() {
       $perpage = 20;
       $halaman = isset($_POST['halaman']) ? (int)$_POST['halaman'] : 1;
       $cari = isset($_POST['cari']) ? $_POST['cari'] : '';
-      $kategori = isset($_POST['kategori']) ? $_POST['kategori'] : '';
+      $lokasi = isset($_POST['lokasi']) ? $_POST['lokasi'] : '';
       
       $_offset = ($halaman - 1) * $perpage;
       
@@ -4944,8 +4781,8 @@ $(document).ready(function() {
       if(!empty($cari)) {
           $where .= " AND (b.nama_barang LIKE '%$cari%' OR b.kode_item LIKE '%$cari%')";
       }
-      if(!empty($kategori)) {
-          $where .= " AND b.kode_kategori = '$kategori'";
+      if(!empty($lokasi)) {
+          $where .= " AND sb.kode_lokasi = '$lokasi'";
       }
 
       // Main aggregate query
@@ -4957,14 +4794,15 @@ $(document).ready(function() {
                     b.stok_max, 
                     b.safety_stock,
                     SUM(sb.stok) as stok_akhir, 
-                    COALESCE(k.nama_kategori, '-') as nama_kategori,
+                    COALESCE(sb.kode_lokasi, '-') as kode_lokasi,
+                    COALESCE(l.nama_lokasi, 'Belum Ada Stok') as nama_lokasi,
                     GROUP_CONCAT(CONCAT('<b>Batch:</b> ', sb.batch_no, ' | <b>Stok:</b> ', sb.stok, ' <br><small>Exp: ', COALESCE(sb.tgl_expired, '-'), '</small>') SEPARATOR '<hr style=\"margin:5px 0; border-color:#455a64;\">') as batch_detail,
                     MIN(sb.tgl_expired) as near_expired
                 FROM rsns_custom_logistik_non_medis_master_barang b
-                LEFT JOIN rsns_custom_logistik_non_medis_kategori k ON b.kode_kategori = k.kode_kategori
                 LEFT JOIN rsns_custom_logistik_non_medis_stok_batch sb ON b.kode_item = sb.kode_item
+                LEFT JOIN rsns_custom_logistik_non_medis_lokasi_gudang l ON sb.kode_lokasi = l.kode_lokasi
                 $where
-                GROUP BY b.kode_item";
+                GROUP BY b.kode_item, sb.kode_lokasi";
       
       $rows_all = $this->db()->pdo()->query($query)->fetchAll();
       $jumlah_data = count($rows_all);
@@ -4989,12 +4827,10 @@ $(document).ready(function() {
           'stok' => $rows,
           'halaman' => $halaman,
           'jumlah_data' => $jumlah_data,
-          'jml_halaman' => $jml_halaman,
-          'halaman_array' => range(1, max(1, $jml_halaman))
+          'jml_halaman' => $jml_halaman
       ]);
       exit();
   }
-
 
 
   public function getGudangMutasi()
@@ -5003,159 +4839,12 @@ $(document).ready(function() {
       $this->_addHeaderFiles();
       $items = $this->db('rsns_custom_logistik_non_medis_master_barang')->toArray();
       $lokasi = $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->toArray();
-      $kategori = $this->db('rsns_custom_logistik_non_medis_kategori')->toArray();
       $kode_item = $_GET['kode_item'] ?? '';
       return $this->draw('gudang.mutasi.html', [
           'items' => $items, 
           'lokasi' => $lokasi,
-          'kategori' => $kategori,
           'selected_item' => $kode_item
       ]);
-  }
-
-
-  public function anyExportMutasi()
-  {
-      $kategori = $_GET['kategori'] ?? '';
-      $bulan = $_GET['bulan'] ?? '';
-      $tahun = $_GET['tahun'] ?? '';
-      
-      $where = "WHERE 1=1";
-      if (!empty($kategori)) {
-          $where .= " AND b.kode_kategori = '$kategori'";
-      }
-      if (!empty($bulan) && !empty($tahun)) {
-          $where .= " AND MONTH(m.tgl_mutasi) = '$bulan' AND YEAR(m.tgl_mutasi) = '$tahun'";
-      }
-
-      $query = "SELECT m.no_mutasi, m.tgl_mutasi, b.nama_barang, d.jenis_mutasi, d.qty, d.keterangan 
-                FROM rsns_custom_logistik_non_medis_mutasi m
-                JOIN rsns_custom_logistik_non_medis_mutasi_detail d ON m.no_mutasi = d.no_mutasi
-                LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON d.kode_item = b.kode_item
-                $where
-                ORDER BY m.tgl_mutasi DESC";
-                
-      $rows = $this->db()->pdo()->query($query)->fetchAll(\PDO::FETCH_ASSOC);
-
-      header("Content-type: application/vnd-ms-excel");
-      header("Content-Disposition: attachment; filename=Data_Mutasi_Stok.xls");
-
-      echo "<table border='1'>";
-      echo "<tr>";
-      echo "<th>No. Mutasi</th>";
-      echo "<th>Tanggal</th>";
-      echo "<th>Barang</th>";
-      echo "<th>Jenis Mutasi</th>";
-      echo "<th>Qty</th>";
-      echo "<th>Catatan</th>";
-      echo "</tr>";
-
-      foreach($rows as $row) {
-          echo "<tr>";
-          echo "<td>".$row['no_mutasi']."</td>";
-          echo "<td>".$row['tgl_mutasi']."</td>";
-          echo "<td>".$row['nama_barang']."</td>";
-          echo "<td>".$row['jenis_mutasi']."</td>";
-          echo "<td>".$row['qty']."</td>";
-          echo "<td>".$row['keterangan']."</td>";
-          echo "</tr>";
-      }
-      echo "</table>";
-      exit();
-  }
-
-  public function anyDownloadTemplateMutasi()
-  {
-      header("Content-type: application/vnd-ms-excel");
-      header("Content-Disposition: attachment; filename=Template_Import_Mutasi.xls");
-
-      echo "<table border='1'>";
-      echo "<tr>";
-      echo "<th>Tanggal (YYYY-MM-DD)</th>";
-      echo "<th>Kode Barang</th>";
-      echo "<th>Jenis Mutasi (Masuk/Keluar/Penyesuaian)</th>";
-      echo "<th>Qty</th>";
-      echo "<th>Catatan</th>";
-      echo "</tr>";
-      echo "<tr>";
-      echo "<td>2024-01-01</td>";
-      echo "<td>BRG001</td>";
-      echo "<td>Masuk</td>";
-      echo "<td>10</td>";
-      echo "<td>Stok awal</td>";
-      echo "</tr>";
-      echo "</table>";
-      exit();
-  }
-
-  public function postImportMutasi()
-  {
-      if(isset($_FILES["file"]["name"])) {
-          $path = $_FILES["file"]["tmp_name"];
-          require_once BASE_DIR . '/systems/SpreadsheetReader.php';
-          $reader = new \SpreadsheetReader($path);
-          
-          $count = 0;
-          $user = $this->core->getUserInfo('username', null, true);
-          
-          // Group by date to create header mutasi
-          // However, for simplicity, we can create 1 no_mutasi per row
-          
-          foreach ($reader as $key => $row) {
-              if($key == 0) continue; // Skip header
-              
-              $tgl_mutasi = $row[0] ?? date('Y-m-d');
-              $kode_item = $row[1] ?? '';
-              $jenis_mutasi = $row[2] ?? 'Penyesuaian';
-              $qty = (float)($row[3] ?? 0);
-              $keterangan = $row[4] ?? '';
-              
-              if(empty($kode_item)) continue;
-              
-              $no_mutasi = $this->_generateNoMutasi();
-              
-              $data = [
-                  'no_mutasi' => $no_mutasi,
-                  'tgl_mutasi' => $tgl_mutasi,
-                  'keterangan' => 'Import massal',
-                  'status' => 'Diterima',
-                  'user_input' => $user,
-                  'tgl_input' => date('Y-m-d H:i:s')
-              ];
-              $this->db('rsns_custom_logistik_non_medis_mutasi')->save($data);
-              
-              $this->db('rsns_custom_logistik_non_medis_mutasi_detail')->save([
-                  'no_mutasi' => $no_mutasi,
-                  'kode_item' => $kode_item,
-                  'jenis_mutasi' => $jenis_mutasi,
-                  'batch_no' => '-',
-                  'qty' => $qty,
-                  'satuan' => '',
-                  'keterangan' => $keterangan
-              ]);
-              
-              // Adjust stock
-              $batch = $this->db('rsns_custom_logistik_non_medis_stok_batch')->where('kode_item', $kode_item)->where('kode_lokasi', '-')->oneArray();
-              if ($batch) {
-                  $current_stok = (float)$batch['stok'];
-                  $new_stok = $current_stok;
-                  if ($jenis_mutasi == 'Masuk') $new_stok += $qty;
-                  elseif ($jenis_mutasi == 'Keluar') $new_stok -= $qty;
-                  elseif ($jenis_mutasi == 'Penyesuaian') $new_stok = $qty;
-                  $this->db('rsns_custom_logistik_non_medis_stok_batch')->where('kode_item', $kode_item)->where('kode_lokasi', '-')->update(['stok' => $new_stok]);
-              } else {
-                  $new_stok = $qty;
-                  if ($jenis_mutasi == 'Keluar') $new_stok = 0 - $qty;
-                  $query_insert = "INSERT INTO rsns_custom_logistik_non_medis_stok_batch (kode_item, kode_lokasi, batch_no, stok) VALUES ('$kode_item', '-', '-', $new_stok)";
-                  $this->db()->pdo()->exec($query_insert);
-              }
-              $count++;
-          }
-          echo json_encode(['status' => 'success', 'message' => "$count baris data mutasi berhasil diimport!"]);
-      } else {
-          echo json_encode(['status' => 'error', 'message' => 'File tidak ditemukan!']);
-      }
-      exit();
   }
 
   public function anyDisplayMutasi()
@@ -5169,25 +4858,21 @@ $(document).ready(function() {
       
       $where = "";
       if(!empty($cari)) {
-          $where = " WHERE no_mutasi LIKE '%$cari%' OR keterangan LIKE '%$cari%' ";
+          $where = " WHERE no_mutasi LIKE '%$cari%' OR kode_lokasi_asal LIKE '%$cari%' OR kode_lokasi_tujuan LIKE '%$cari%' ";
       }
 
-      $query = "SELECT * 
-                FROM rsns_custom_logistik_non_medis_mutasi 
-                $where
-                ORDER BY tgl_input DESC";
-                
-      $all_data = $this->db()->pdo()->query($query)->fetchAll();
+      $query_all = "SELECT * FROM rsns_custom_logistik_non_medis_mutasi $where";
+      $all_data = $this->db()->pdo()->query($query_all)->fetchAll();
       $jumlah_data = count($all_data);
       $jml_halaman = ceil($jumlah_data / $perpage);
       
-      $query .= " LIMIT $_offset, $perpage";
+      $query = "SELECT m.*, l1.nama_lokasi as asal, l2.nama_lokasi as tujuan 
+                FROM rsns_custom_logistik_non_medis_mutasi m
+                LEFT JOIN rsns_custom_logistik_non_medis_lokasi_gudang l1 ON m.kode_lokasi_asal = l1.kode_lokasi
+                LEFT JOIN rsns_custom_logistik_non_medis_lokasi_gudang l2 ON m.kode_lokasi_tujuan = l2.kode_lokasi
+                $where
+                ORDER BY m.tgl_input DESC LIMIT $_offset, $perpage";
       $rows = $this->db()->pdo()->query($query)->fetchAll(\PDO::FETCH_ASSOC);
-      
-      foreach ($rows as &$row) {
-          $count_query = "SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_mutasi_detail WHERE no_mutasi = '".$row['no_mutasi']."'";
-          $row['jumlah_item'] = $this->db()->pdo()->query($count_query)->fetchColumn();
-      }
 
       echo $this->draw('gudang.mutasi.display.html', [
           'mutasi' => $rows,
@@ -5202,8 +4887,10 @@ $(document).ready(function() {
   public function anyFormMutasi()
   {
       $this->_initMutasi();
+      $this->_initLokasi();
+      $lokasi = $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('status', 'Aktif')->toArray();
       $mode = $_POST['mode'] ?? 'add';
-      
+
       if ($mode == 'edit' && isset($_POST['no_mutasi'])){
           $no_mutasi = $_POST['no_mutasi'];
           $mutasi = $this->db('rsns_custom_logistik_non_medis_mutasi')->where('no_mutasi', $no_mutasi)->oneArray();
@@ -5215,23 +4902,38 @@ $(document).ready(function() {
                           ->where('no_mutasi', $no_mutasi)
                           ->toArray();
           $mutasi['details'] = $details;
-          echo $this->draw('gudang.mutasi.form.html', ['mutasi' => $mutasi, 'mode' => 'edit']);
+          echo $this->draw('gudang.mutasi.form.html', ['mutasi' => $mutasi, 'mode' => 'edit', 'lokasi' => $lokasi]);
       } else {
           $mutasi = [
               'no_mutasi' => $this->_generateNoMutasi(),
               'tgl_mutasi' => date('Y-m-d'),
+              'kode_lokasi_asal' => '',
+              'kode_lokasi_tujuan' => '',
               'keterangan' => '',
               'status' => 'Draft',
               'details' => []
           ];
-          echo $this->draw('gudang.mutasi.form.html', ['mutasi' => $mutasi, 'mode' => 'add']);
+          echo $this->draw('gudang.mutasi.form.html', ['mutasi' => $mutasi, 'mode' => 'add', 'lokasi' => $lokasi]);
       }
       exit();
   }
 
   public function anyLoadItemsForMutasi()
   {
-      // Deprecated, using select2 ajax
+      $kode_lokasi = $_POST['kode_lokasi'] ?? '';
+      if(empty($kode_lokasi)) {
+          echo json_encode(['status' => 'error', 'message' => 'Lokasi asal harus dipilih']);
+          exit();
+      }
+
+      $query = "SELECT sb.*, b.nama_barang, b.satuan_dasar
+                FROM rsns_custom_logistik_non_medis_stok_batch sb
+                JOIN rsns_custom_logistik_non_medis_master_barang b ON sb.kode_item = b.kode_item
+                WHERE sb.kode_lokasi = '$kode_lokasi' AND sb.stok > 0
+                ORDER BY b.nama_barang ASC";
+      $items = $this->db()->pdo()->query($query)->fetchAll(\PDO::FETCH_ASSOC);
+
+      echo json_encode(['status' => 'success', 'items' => $items]);
       exit();
   }
 
@@ -5245,71 +4947,50 @@ $(document).ready(function() {
           echo json_encode(['status' => 'error', 'message' => 'Data sudah diproses dan tidak dapat diubah!']);
           exit();
       }
-      
-      $data = [
-          'tgl_mutasi' => $_POST['tgl_mutasi'] ?? date('Y-m-d'),
-          'keterangan' => $_POST['keterangan'] ?? ''
-      ];
 
       if(!$cek) {
-          $data['no_mutasi'] = $no_mutasi;
-          $data['status'] = 'Diterima'; // Langsung terapkan stok
-          $data['user_input'] = $user;
-          $data['tgl_input'] = date('Y-m-d H:i:s');
+          $data = [
+              'no_mutasi' => $no_mutasi,
+              'tgl_mutasi' => $_POST['tgl_mutasi'] ?? date('Y-m-d'),
+              'kode_lokasi_asal' => $_POST['kode_lokasi_asal'] ?? '',
+              'kode_lokasi_tujuan' => $_POST['kode_lokasi_tujuan'] ?? '',
+              'keterangan' => $_POST['keterangan'] ?? '',
+              'status' => 'Draft',
+              'user_input' => $user,
+              'tgl_input' => date('Y-m-d H:i:s')
+          ];
           $this->db('rsns_custom_logistik_non_medis_mutasi')->save($data);
       } else {
-          $data['status'] = 'Diterima';
-          $this->db('rsns_custom_logistik_non_medis_mutasi')->where('no_mutasi', $no_mutasi)->update($data);
+          $data_update = [
+              'tgl_mutasi' => $_POST['tgl_mutasi'] ?? date('Y-m-d'),
+              'kode_lokasi_tujuan' => $_POST['kode_lokasi_tujuan'] ?? '',
+              'keterangan' => $_POST['keterangan'] ?? ''
+          ];
+          // Only update origin if it's actually sent (not disabled)
+          if(isset($_POST['kode_lokasi_asal']) && !empty($_POST['kode_lokasi_asal'])) {
+              $data_update['kode_lokasi_asal'] = $_POST['kode_lokasi_asal'];
+          }
+          $this->db('rsns_custom_logistik_non_medis_mutasi')->where('no_mutasi', $no_mutasi)->update($data_update);
       }
-      
-      // Save Details and Update Stock
+
+      // Save Details
       $this->db('rsns_custom_logistik_non_medis_mutasi_detail')->where('no_mutasi', $no_mutasi)->delete();
-      
       if(isset($_POST['kode_item']) && is_array($_POST['kode_item'])) {
           foreach($_POST['kode_item'] as $key => $kode_item) {
-              $qty = (float)($_POST['qty'][$key] ?? 0);
-              $jenis_mutasi = $_POST['jenis_mutasi'][$key] ?? 'Penyesuaian';
-              $ket = $_POST['keterangan_item'][$key] ?? '';
-              
-              if(empty($kode_item)) continue;
-              
               $this->db('rsns_custom_logistik_non_medis_mutasi_detail')->save([
                   'no_mutasi' => $no_mutasi,
                   'kode_item' => $kode_item,
-                  'jenis_mutasi' => $jenis_mutasi,
-                  'batch_no' => '-',
-                  'qty' => $qty,
-                  'satuan' => '',
-                  'keterangan' => $ket
+                  'batch_no' => $_POST['batch_no'][$key] ?? '-',
+                  'qty' => $_POST['qty'][$key] ?? 0,
+                  'satuan' => $_POST['satuan'][$key] ?? ''
               ]);
-              
-              // Auto-adjust stock
-              $batch = $this->db('rsns_custom_logistik_non_medis_stok_batch')->where('kode_item', $kode_item)->where('kode_lokasi', '-')->oneArray();
-              if ($batch) {
-                  $current_stok = (float)$batch['stok'];
-                  $new_stok = $current_stok;
-                  if ($jenis_mutasi == 'Masuk') $new_stok += $qty;
-                  elseif ($jenis_mutasi == 'Keluar') $new_stok -= $qty;
-                  elseif ($jenis_mutasi == 'Penyesuaian') $new_stok = $qty;
-                  
-                  $this->db('rsns_custom_logistik_non_medis_stok_batch')->where('kode_item', $kode_item)->where('kode_lokasi', '-')->update(['stok' => $new_stok]);
-              } else {
-                  $new_stok = $qty;
-                  if ($jenis_mutasi == 'Keluar') $new_stok = 0 - $qty;
-                  
-                  // NOTE: using raw query to insert into stok_batch to avoid MLITE save() bug if batch_no is missing in mapping
-                  $query_insert = "INSERT INTO rsns_custom_logistik_non_medis_stok_batch (kode_item, kode_lokasi, batch_no, stok) VALUES ('$kode_item', '-', '-', $new_stok)";
-                  $this->db()->pdo()->exec($query_insert);
-              }
           }
       }
 
-      echo json_encode(['status' => 'success', 'message' => 'Mutasi stok berhasil disimpan dan stok otomatis disesuaikan!']);
+      $this->_logAction('logistik_non_medis_mutasi', 'Simpan Mutasi: ' . $no_mutasi);
+      echo json_encode(['status' => 'success']);
       exit();
   }
-
-
-
 
   public function anyDetailMutasi()
   {
@@ -5904,19 +5585,22 @@ $(document).ready(function() {
         `id` int(11) NOT NULL AUTO_INCREMENT,
         `no_sppb` varchar(50) NOT NULL,
         `tgl_sppb` date NOT NULL,
-        `minggu_ke` tinyint(1) DEFAULT NULL,
         `kode_unit` varchar(50) NOT NULL,
         `kode_item` varchar(50) NOT NULL,
         `jumlah` double NOT NULL DEFAULT 0,
         `jumlah_disetujui` double NOT NULL DEFAULT 0,
         `satuan` varchar(50) DEFAULT NULL,
-        `status` enum('Draft','Diajukan','Disetujui Unit','Proses','Terverifikasi','Picking','Packing','Ready','Dikirim','Diterima','Selesai','Ditolak') NOT NULL DEFAULT 'Draft',
+        `status` enum('Draft','Diajukan','Disetujui Ka. Unit','Disetujui Ka. Sie','Disetujui Unit','Terverifikasi','Picking','Packing','Ready','Dikirim','Diterima','Selesai','Ditolak') NOT NULL DEFAULT 'Draft',
         `keterangan` text DEFAULT NULL,
-        `keterangan_item` text DEFAULT NULL,
         `alasan_penolakan` text DEFAULT NULL,
-        `keterangan_verifikasi` text DEFAULT NULL,
         `user_input` varchar(100) DEFAULT NULL,
         `tgl_input` datetime DEFAULT NULL,
+        `user_approve_ka_unit` varchar(100) DEFAULT NULL,
+        `tgl_approve_ka_unit` datetime DEFAULT NULL,
+        `user_approve_ka_sie` varchar(100) DEFAULT NULL,
+        `tgl_approve_ka_sie` datetime DEFAULT NULL,
+        `user_approve_ka_bidang` varchar(100) DEFAULT NULL,
+        `tgl_approve_ka_bidang` datetime DEFAULT NULL,
         `user_approve_unit` varchar(100) DEFAULT NULL,
         `tgl_approve_unit` datetime DEFAULT NULL,
         `user_verifikasi` varchar(100) DEFAULT NULL,
@@ -5937,29 +5621,20 @@ $(document).ready(function() {
           $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` ADD `alasan_penolakan` text DEFAULT NULL AFTER `keterangan` ");
       }
 
-      $check_keterangan_item = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_sppb` LIKE 'keterangan_item'")->fetch();
-      if (!$check_keterangan_item) {
-          $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` ADD `keterangan_item` text DEFAULT NULL AFTER `keterangan`");
+      $check_ka_unit = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_sppb` LIKE 'user_approve_ka_unit'")->fetch();
+      if (!$check_ka_unit) {
+          $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` 
+              ADD `user_approve_ka_unit` varchar(100) DEFAULT NULL AFTER `tgl_input`,
+              ADD `tgl_approve_ka_unit` datetime DEFAULT NULL AFTER `user_approve_ka_unit`,
+              ADD `user_approve_ka_sie` varchar(100) DEFAULT NULL AFTER `tgl_approve_ka_unit`,
+              ADD `tgl_approve_ka_sie` datetime DEFAULT NULL AFTER `user_approve_ka_sie`,
+              ADD `user_approve_ka_bidang` varchar(100) DEFAULT NULL AFTER `tgl_approve_ka_sie`,
+              ADD `tgl_approve_ka_bidang` datetime DEFAULT NULL AFTER `user_approve_ka_bidang`
+          ");
       }
 
-      $check_minggu = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_sppb` LIKE 'minggu_ke'")->fetch();
-      if (!$check_minggu) {
-          $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` ADD `minggu_ke` tinyint(1) DEFAULT NULL AFTER `tgl_sppb`");
-      }
-
-      $check_keterangan_verifikasi = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_sppb` LIKE 'keterangan_verifikasi'")->fetch();
-      if (!$check_keterangan_verifikasi) {
-          $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` ADD `keterangan_verifikasi` text DEFAULT NULL AFTER `alasan_penolakan`");
-      }
-
-      // Hindari ALTER TABLE setiap request karena warning SQL dapat merusak JSON/CSV download.
-      $status_column = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_sppb` LIKE 'status'")->fetch(\PDO::FETCH_ASSOC);
-      $status_type = strtolower($status_column['Type'] ?? '');
-      if (strpos($status_type, "'disetujui unit'") === false || strpos($status_type, "'proses'") === false || strpos($status_type, "'ditolak'") === false) {
-          $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` MODIFY `status` enum('Draft','Diajukan','Disetujui Unit','Proses','Terverifikasi','Picking','Packing','Ready','Dikirim','Diterima','Selesai','Ditolak') NOT NULL DEFAULT 'Draft'");
-      }
-      // Alur BHP kini sederhana: status gudang lama disatukan menjadi Proses.
-      $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET `status` = 'Proses' WHERE `status` IN ('Terverifikasi','Picking','Packing')");
+      // Ensure enum is updated
+      $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` MODIFY `status` enum('Draft','Diajukan','Disetujui Ka. Unit','Disetujui Ka. Sie','Disetujui Unit','Terverifikasi','Picking','Packing','Ready','Dikirim','Diterima','Selesai','Ditolak') NOT NULL DEFAULT 'Draft'");
   }
 
   private function _initPacking()
@@ -5994,7 +5669,6 @@ $(document).ready(function() {
         `penerima_nip` varchar(50) DEFAULT NULL,
         `foto_kondisi` varchar(255) DEFAULT NULL,
         `tanda_terima` longtext DEFAULT NULL,
-        `tanda_terima_file` varchar(255) DEFAULT NULL,
         `keterangan` text DEFAULT NULL,
         `arsip_bast` varchar(255) DEFAULT NULL,
         PRIMARY KEY (`id`),
@@ -6002,42 +5676,10 @@ $(document).ready(function() {
         KEY `no_sppb` (`no_sppb`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
-      $check_ttd_file = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_serah_terima` LIKE 'tanda_terima_file'")->fetch();
-      if (!$check_ttd_file) {
-          $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_serah_terima` ADD `tanda_terima_file` varchar(255) DEFAULT NULL AFTER `tanda_terima`");
-      }
-
       $upload_dir = UPLOADS . '/logistik_non_medis/serah_terima';
       if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
       if (!is_dir($upload_dir . '/foto')) mkdir($upload_dir . '/foto', 0777, true);
-      if (!is_dir($upload_dir . '/ttd')) mkdir($upload_dir . '/ttd', 0777, true);
       if (!is_dir($upload_dir . '/bast')) mkdir($upload_dir . '/bast', 0777, true);
-  }
-
-  private function _saveOptimizedSignature($base64, $no_serah_terima)
-  {
-      if (!function_exists('imagecreatefromstring') || !function_exists('imagepng')) return false;
-      if (!preg_match('#^data:image/(png|jpeg);base64,(.+)$#', $base64, $match)) return false;
-      $binary = base64_decode($match[2], true);
-      if ($binary === false || strlen($binary) > 3 * 1024 * 1024) return false;
-      $image_info = @getimagesizefromstring($binary);
-      if (!$image_info || $image_info[0] < 1 || $image_info[1] < 1 || ($image_info[0] * $image_info[1]) > 20000000) return false;
-      $image = @imagecreatefromstring($binary);
-      if (!$image) return false;
-      $source_width = imagesx($image);
-      $source_height = imagesy($image);
-      $width = min(520, $source_width);
-      $height = max(1, (int)round($source_height * ($width / max(1, $source_width))));
-      $target = imagecreatetruecolor($width, $height);
-      $white = imagecolorallocate($target, 255, 255, 255);
-      imagefill($target, 0, 0, $white);
-      imagecopyresampled($target, $image, 0, 0, 0, 0, $width, $height, $source_width, $source_height);
-      $filename = 'ttd_' . preg_replace('/[^A-Za-z0-9_-]/', '-', $no_serah_terima) . '_' . time() . '.png';
-      $path = UPLOADS . '/logistik_non_medis/serah_terima/ttd/' . $filename;
-      $saved = imagepng($target, $path, 7);
-      imagedestroy($target);
-      imagedestroy($image);
-      return $saved ? $filename : false;
   }
 
   private function _generateNoSerahTerima()
@@ -6096,109 +5738,6 @@ $(document).ready(function() {
       }
       
       return $prefix . $next_num;
-  }
-
-  private function _generateNoSPPBPeriode($kode_unit, $tahun, $bulan, $minggu)
-  {
-      $unit_slug = preg_replace('/[^A-Za-z0-9_-]/', '', $kode_unit);
-      $prefix = 'SPPB/' . sprintf('%04d%02d', $tahun, $bulan) . '/W' . $minggu . '/' . $unit_slug . '/';
-      $stmt = $this->db()->pdo()->prepare("SELECT no_sppb FROM rsns_custom_logistik_non_medis_sppb WHERE no_sppb LIKE ? ORDER BY no_sppb DESC LIMIT 1");
-      $stmt->execute([$prefix . '%']);
-      $last = $stmt->fetchColumn();
-      $next = $last ? ((int)substr($last, strrpos($last, '/') + 1) + 1) : 1;
-      return $prefix . str_pad($next, 4, '0', STR_PAD_LEFT);
-  }
-
-  private function _normalizeImportText($value)
-  {
-      $value = trim(preg_replace('/\s+/', ' ', (string)$value));
-      return function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
-  }
-
-  private function _detectCsvDelimiter($path)
-  {
-      $line = '';
-      $handle = fopen($path, 'r');
-      if ($handle) {
-          $line = (string)fgets($handle);
-          fclose($handle);
-      }
-      $counts = [';' => substr_count($line, ';'), ',' => substr_count($line, ','), "\t" => substr_count($line, "\t")];
-      arsort($counts);
-      return key($counts) ?: ';';
-  }
-
-  private function _xlsxColumnIndex($cell_reference)
-  {
-      if (!preg_match('/^([A-Z]+)/i', (string)$cell_reference, $match)) return 0;
-      $letters = strtoupper($match[1]);
-      $index = 0;
-      for ($i = 0; $i < strlen($letters); $i++) $index = ($index * 26) + (ord($letters[$i]) - 64);
-      return max(0, $index - 1);
-  }
-
-  private function _readXlsxRows($path, $max_rows = 20000)
-  {
-      if (!class_exists('ZipArchive')) throw new \RuntimeException('Ekstensi ZIP PHP belum aktif sehingga file XLSX tidak dapat dibaca.');
-      $zip = new \ZipArchive();
-      if ($zip->open($path) !== true) throw new \RuntimeException('File XLSX rusak atau tidak dapat dibuka.');
-
-      $sheet_path = '';
-      for ($i = 0; $i < $zip->numFiles; $i++) {
-          $name = $zip->getNameIndex($i);
-          if (preg_match('#^xl/worksheets/sheet\d+\.xml$#', $name)) { $sheet_path = $name; break; }
-      }
-      if (!$sheet_path) { $zip->close(); throw new \RuntimeException('Worksheet tidak ditemukan di dalam file XLSX.'); }
-
-      $shared = [];
-      $shared_xml = $zip->getFromName('xl/sharedStrings.xml');
-      if ($shared_xml !== false) {
-          $xml = @simplexml_load_string($shared_xml, 'SimpleXMLElement', LIBXML_NONET);
-          if ($xml) {
-              $nodes = $xml->xpath('//*[local-name()="si"]') ?: [];
-              foreach ($nodes as $node) {
-                  $parts = $node->xpath('.//*[local-name()="t"]') ?: [];
-                  $text = '';
-                  foreach ($parts as $part) $text .= (string)$part;
-                  $shared[] = $text;
-              }
-          }
-      }
-
-      $sheet_xml = $zip->getFromName($sheet_path);
-      $zip->close();
-      if ($sheet_xml === false) throw new \RuntimeException('Isi worksheet XLSX tidak dapat dibaca.');
-      $sheet = @simplexml_load_string($sheet_xml, 'SimpleXMLElement', LIBXML_NONET);
-      if (!$sheet) throw new \RuntimeException('Format XML pada file XLSX tidak valid.');
-
-      $result = [];
-      $row_nodes = $sheet->xpath('//*[local-name()="sheetData"]/*[local-name()="row"]') ?: [];
-      foreach ($row_nodes as $row_node) {
-          if (count($result) >= $max_rows) throw new \RuntimeException("File melebihi batas $max_rows baris.");
-          $row = [];
-          $cells = $row_node->xpath('./*[local-name()="c"]') ?: [];
-          foreach ($cells as $cell) {
-              $column = $this->_xlsxColumnIndex((string)$cell['r']);
-              $type = (string)$cell['t'];
-              $value_nodes = $cell->xpath('./*[local-name()="v"]') ?: [];
-              $value = isset($value_nodes[0]) ? (string)$value_nodes[0] : '';
-              if ($type === 's') {
-                  $value = $shared[(int)$value] ?? '';
-              } elseif ($type === 'inlineStr') {
-                  $parts = $cell->xpath('.//*[local-name()="t"]') ?: [];
-                  $value = '';
-                  foreach ($parts as $part) $value .= (string)$part;
-              }
-              $row[$column] = $value;
-          }
-          if ($row) {
-              $max_column = max(array_keys($row));
-              $normalized = array_fill(0, $max_column + 1, '');
-              foreach ($row as $column => $value) $normalized[$column] = $value;
-              $result[] = $normalized;
-          }
-      }
-      return $result;
   }
 
   private function _generateNoGudangRusak()
@@ -6448,443 +5987,6 @@ $(document).ready(function() {
       return $this->draw('distribusi.sppb.html');
   }
 
-  /** Workspace terpadu: satu pintu untuk seluruh siklus permintaan BHP mingguan. */
-  public function getDistribusiBhp()
-  {
-      $this->_initSppb();
-      $this->_initUnit();
-      $this->_initSerahTerima();
-      $this->_addHeaderFiles();
-      $this->core->addJS('https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js');
-      $units = $this->db('rsns_custom_logistik_non_medis_unit')->where('status', 'Aktif')->asc('nama_unit')->toArray();
-      return $this->draw('distribusi.bhp.html', ['units' => $units]);
-  }
-
-  public function anyDisplayDistribusiBhp()
-  {
-      $this->_initSppb();
-      $tab = trim($_POST['tab'] ?? 'semua');
-      $cari = trim($_POST['cari'] ?? '');
-      $halaman = max(1, (int)($_POST['halaman'] ?? 1));
-      $perpage = 15;
-      $bulan = (int)($_POST['bulan'] ?? 0);
-      $tahun = (int)($_POST['tahun'] ?? 0);
-      $minggu = (int)($_POST['minggu'] ?? 0);
-      $kode_unit = trim($_POST['kode_unit'] ?? '');
-      if ($bulan < 1 || $bulan > 12) $bulan = 0;
-      if ($tahun < 2020 || $tahun > 2100) $tahun = 0;
-      if ($minggu < 1 || $minggu > 4) $minggu = 0;
-      $tabStatus = [
-          'draft' => ['Draft'],
-          'diajukan' => ['Diajukan'],
-          'verifikasi' => ['Disetujui Unit'],
-          'proses' => ['Proses', 'Terverifikasi', 'Picking', 'Packing'],
-          'serahterima' => ['Ready'],
-          'selesai' => ['Selesai', 'Diterima', 'Ditolak']
-      ];
-      $baseWhere = [];
-      $baseParams = [];
-      if ($bulan) { $baseWhere[] = 'MONTH(s.tgl_sppb) = ?'; $baseParams[] = $bulan; }
-      if ($tahun) { $baseWhere[] = 'YEAR(s.tgl_sppb) = ?'; $baseParams[] = $tahun; }
-      if ($minggu) { $baseWhere[] = 's.minggu_ke = ?'; $baseParams[] = $minggu; }
-      if ($kode_unit !== '') { $baseWhere[] = 's.kode_unit = ?'; $baseParams[] = $kode_unit; }
-      $where = $baseWhere;
-      $params = $baseParams;
-      if (isset($tabStatus[$tab])) {
-          $where[] = 's.status IN (' . implode(',', array_fill(0, count($tabStatus[$tab]), '?')) . ')';
-          $params = array_merge($params, $tabStatus[$tab]);
-      }
-      if ($cari !== '') {
-          $where[] = '(s.no_sppb LIKE ? OR u.nama_unit LIKE ? OR b.nama_barang LIKE ?)';
-          $params[] = '%' . $cari . '%';
-          $params[] = '%' . $cari . '%';
-          $params[] = '%' . $cari . '%';
-      }
-      $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
-      $baseWhereSql = $baseWhere ? ' WHERE ' . implode(' AND ', $baseWhere) : '';
-      $pdo = $this->db()->pdo();
-      $countSql = "SELECT COUNT(DISTINCT s.no_sppb) FROM rsns_custom_logistik_non_medis_sppb s
-          LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=s.kode_unit
-          LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item" . $whereSql;
-      $countStmt = $pdo->prepare($countSql);
-      $countStmt->execute($params);
-      $jumlahData = (int)$countStmt->fetchColumn();
-      $jmlHalaman = max(1, (int)ceil($jumlahData / $perpage));
-      $halaman = min($halaman, $jmlHalaman);
-      $offset = ($halaman - 1) * $perpage;
-      $sql = "SELECT s.no_sppb, MIN(s.tgl_sppb) AS tgl_sppb, MAX(s.minggu_ke) AS minggu_ke, s.kode_unit,
-              COALESCE(u.nama_unit, s.kode_unit) AS nama_unit, COUNT(*) AS total_item,
-              SUM(s.jumlah) AS total_diminta, SUM(s.jumlah_disetujui) AS total_disetujui,
-              GROUP_CONCAT(DISTINCT s.status ORDER BY s.status SEPARATOR '|') AS statuses,
-              MAX(s.keterangan) AS keterangan, MAX(s.tgl_input) AS tgl_input
-              FROM rsns_custom_logistik_non_medis_sppb s
-              LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=s.kode_unit
-              LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item"
-              . $whereSql . " GROUP BY s.no_sppb, s.kode_unit, u.nama_unit
-              ORDER BY MAX(s.tgl_input) DESC, s.no_sppb DESC LIMIT $perpage OFFSET $offset";
-      $stmt = $pdo->prepare($sql);
-      $stmt->execute($params);
-      $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-      $priority = ['Ditolak'=>0, 'Draft'=>1, 'Diajukan'=>2, 'Disetujui Unit'=>3, 'Proses'=>4, 'Terverifikasi'=>4, 'Picking'=>4, 'Packing'=>4, 'Ready'=>5, 'Dikirim'=>6, 'Diterima'=>7, 'Selesai'=>8];
-      foreach ($rows as &$row) {
-          $states = array_values(array_filter(explode('|', $row['statuses'])));
-          usort($states, function ($a, $b) use ($priority) { return ($priority[$b] ?? 0) <=> ($priority[$a] ?? 0); });
-          $row['status_utama'] = count($states) === 1 ? $states[0] : 'Diproses Sebagian';
-          $row['status_proses'] = $states[0] ?? 'Draft';
-          $row['status_label'] = $row['status_utama'] === 'Ready' ? 'Siap Diambil' : $row['status_utama'];
-      }
-      $summary = ['diajukan'=>0, 'verifikasi'=>0, 'proses'=>0, 'serahterima'=>0, 'selesai'=>0];
-      $summaryStmt = $pdo->prepare("SELECT s.status, COUNT(DISTINCT s.no_sppb) AS total FROM rsns_custom_logistik_non_medis_sppb s" . $baseWhereSql . " GROUP BY s.status");
-      $summaryStmt->execute($baseParams);
-      $summaryRows = $summaryStmt->fetchAll(\PDO::FETCH_ASSOC);
-      foreach ($summaryRows as $summaryRow) {
-          if ($summaryRow['status'] === 'Diajukan') $summary['diajukan'] += (int)$summaryRow['total'];
-          elseif ($summaryRow['status'] === 'Disetujui Unit') $summary['verifikasi'] += (int)$summaryRow['total'];
-          elseif (in_array($summaryRow['status'], ['Proses','Terverifikasi','Picking','Packing'], true)) $summary['proses'] += (int)$summaryRow['total'];
-          elseif ($summaryRow['status'] === 'Ready') $summary['serahterima'] += (int)$summaryRow['total'];
-          elseif (in_array($summaryRow['status'], ['Selesai','Diterima'], true)) $summary['selesai'] += (int)$summaryRow['total'];
-      }
-      $pages = [];
-      if ($jmlHalaman > 1) {
-          $start = max(1, $halaman - 2);
-          $end = min($jmlHalaman, $halaman + 2);
-          for ($page = $start; $page <= $end; $page++) $pages[] = $page;
-      }
-      echo $this->draw('distribusi.bhp.display.html', [
-          'rows' => $rows, 'tab' => $tab, 'halaman' => $halaman, 'jml_halaman' => $jmlHalaman,
-          'jumlah_data' => $jumlahData, 'summary' => $summary, 'pages' => $pages
-      ]);
-      exit();
-  }
-
-  /** Detail item untuk popup pada workspace BHP, tanpa memindahkan pengguna dari antrean. */
-  public function anyDetailDistribusiBhp()
-  {
-      $this->_initSppb();
-      $no_sppb = trim($_POST['no_sppb'] ?? '');
-      if ($no_sppb === '') {
-          echo '<div class="alert alert-danger">Nomor permintaan tidak valid.</div>';
-          exit();
-      }
-      $pdo = $this->db()->pdo();
-      $headerStmt = $pdo->prepare("SELECT s.no_sppb, MIN(s.tgl_sppb) AS tgl_sppb, MAX(s.minggu_ke) AS minggu_ke,
-          COALESCE(u.nama_unit, s.kode_unit) AS nama_unit, MAX(s.keterangan) AS keterangan
-          FROM rsns_custom_logistik_non_medis_sppb s
-          LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=s.kode_unit
-          WHERE s.no_sppb=? GROUP BY s.no_sppb, s.kode_unit, u.nama_unit");
-      $headerStmt->execute([$no_sppb]);
-      $header = $headerStmt->fetch(\PDO::FETCH_ASSOC);
-      if (!$header) {
-          echo '<div class="alert alert-danger">Data permintaan tidak ditemukan.</div>';
-          exit();
-      }
-      $itemStmt = $pdo->prepare("SELECT s.kode_item, COALESCE(b.nama_barang, s.kode_item) AS nama_barang,
-          s.jumlah, s.jumlah_disetujui, COALESCE(NULLIF(s.satuan,''), b.satuan_dasar, '-') AS satuan,
-          s.status, s.keterangan_item, s.keterangan_verifikasi, s.alasan_penolakan
-          FROM rsns_custom_logistik_non_medis_sppb s
-          LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item
-          WHERE s.no_sppb=? ORDER BY b.nama_barang, s.kode_item");
-      $itemStmt->execute([$no_sppb]);
-      $items = $itemStmt->fetchAll(\PDO::FETCH_ASSOC);
-      foreach ($items as $index => &$item) $item['no'] = $index + 1;
-      unset($item);
-      echo $this->draw('distribusi.bhp.detail.html', ['header' => $header, 'items' => $items]);
-      exit();
-  }
-
-  /** Ekspor CSV permintaan BHP mengikuti filter yang sedang digunakan di workspace. */
-  public function getExportDistribusiBhp()
-  {
-      $this->_initSppb();
-      $tab = trim($_GET['tab'] ?? 'semua');
-      $cari = trim($_GET['cari'] ?? '');
-      $bulan = (int)($_GET['bulan'] ?? 0);
-      $tahun = (int)($_GET['tahun'] ?? 0);
-      $minggu = (int)($_GET['minggu'] ?? 0);
-      $kode_unit = trim($_GET['kode_unit'] ?? '');
-      if ($bulan < 1 || $bulan > 12) $bulan = 0;
-      if ($tahun < 2020 || $tahun > 2100) $tahun = 0;
-      if ($minggu < 1 || $minggu > 4) $minggu = 0;
-      $tabStatus = [
-          'draft' => ['Draft'], 'diajukan' => ['Diajukan'], 'verifikasi' => ['Disetujui Unit'],
-          'proses' => ['Proses', 'Terverifikasi', 'Picking', 'Packing'], 'serahterima' => ['Ready'],
-          'selesai' => ['Selesai', 'Diterima', 'Ditolak']
-      ];
-      $where = [];
-      $params = [];
-      if ($bulan) { $where[] = 'MONTH(s.tgl_sppb) = ?'; $params[] = $bulan; }
-      if ($tahun) { $where[] = 'YEAR(s.tgl_sppb) = ?'; $params[] = $tahun; }
-      if ($minggu) { $where[] = 's.minggu_ke = ?'; $params[] = $minggu; }
-      if ($kode_unit !== '') { $where[] = 's.kode_unit = ?'; $params[] = $kode_unit; }
-      if (isset($tabStatus[$tab])) {
-          $where[] = 's.status IN (' . implode(',', array_fill(0, count($tabStatus[$tab]), '?')) . ')';
-          $params = array_merge($params, $tabStatus[$tab]);
-      }
-      if ($cari !== '') {
-          $where[] = '(s.no_sppb LIKE ? OR u.nama_unit LIKE ? OR b.nama_barang LIKE ?)';
-          $params = array_merge($params, ['%' . $cari . '%', '%' . $cari . '%', '%' . $cari . '%']);
-      }
-      $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
-      $sql = "SELECT s.no_sppb, s.tgl_sppb, s.minggu_ke, COALESCE(u.nama_unit,s.kode_unit) AS nama_unit,
-          s.kode_item, COALESCE(b.nama_barang,s.kode_item) AS nama_barang, s.jumlah,
-          COALESCE(NULLIF(s.satuan,''),b.satuan_dasar,'') AS satuan, s.jumlah_disetujui, s.status,
-          s.keterangan, s.keterangan_item, s.keterangan_verifikasi
-          FROM rsns_custom_logistik_non_medis_sppb s
-          LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=s.kode_unit
-          LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item"
-          . $whereSql . ' ORDER BY s.tgl_sppb DESC, s.no_sppb, b.nama_barang';
-      $stmt = $this->db()->pdo()->prepare($sql);
-      $stmt->execute($params);
-      $filename = 'Permintaan_BHP_' . ($tahun ?: 'SemuaTahun') . ($bulan ? '-' . str_pad((string)$bulan, 2, '0', STR_PAD_LEFT) : '') . ($minggu ? '-Minggu' . $minggu : '') . '.csv';
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=' . $filename);
-      $output = fopen('php://output', 'w');
-      fwrite($output, "\xEF\xBB\xBF");
-      fputcsv($output, ['No. Permintaan', 'Tanggal', 'Minggu', 'Unit', 'Kode Barang', 'Nama Barang', 'Qty Minta', 'Satuan', 'Qty Disetujui', 'Status', 'Keterangan', 'Keterangan Item', 'Catatan Verifikasi'], ';');
-      while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
-          fputcsv($output, [$row['no_sppb'], $row['tgl_sppb'], $row['minggu_ke'], $row['nama_unit'], $row['kode_item'], $row['nama_barang'], $row['jumlah'], $row['satuan'], $row['jumlah_disetujui'], $row['status'], $row['keterangan'], $row['keterangan_item'], $row['keterangan_verifikasi']], ';');
-      }
-      fclose($output);
-      exit();
-  }
-
-  public function getDownloadTemplateSppbMingguan()
-  {
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Template_Import_SPPB_Mingguan.csv');
-      $output = fopen('php://output', 'w');
-      fwrite($output, "\xEF\xBB\xBF");
-      fputcsv($output, ['No', 'Ruang / Unit', 'Nama Barang', 'Jumlah'], ';');
-      fputcsv($output, [1, 'Kasir', 'Kertas potong (Kasir)', 8], ';');
-      fputcsv($output, [2, 'Kasir', 'Bolpoin', 4], ';');
-      fputcsv($output, [3, 'Bendahara', 'Kertas F4', 2], ';');
-      fclose($output);
-      exit();
-  }
-
-  public function postImportSppbMingguan()
-  {
-      @set_time_limit(120);
-      $this->_initSppb();
-      header('Content-Type: application/json; charset=utf-8');
-      $minggu = (int)($_POST['minggu_ke'] ?? 0);
-      $periode = trim($_POST['periode'] ?? '');
-      $status_import = trim($_POST['status_import'] ?? 'Diajukan');
-      $status_import_options = ['Draft', 'Diajukan', 'Disetujui Unit', 'Proses', 'Ready', 'Selesai'];
-      if (!in_array($status_import, $status_import_options, true)) $status_import = 'Diajukan';
-      if ($minggu < 1 || $minggu > 4 || !preg_match('/^(\d{4})-(\d{2})$/', $periode, $match)) {
-          echo json_encode(['status' => 'error', 'message' => 'Periode bulan/tahun dan minggu ke-1 sampai ke-4 wajib dipilih.']);
-          exit();
-      }
-      if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-          echo json_encode(['status' => 'error', 'message' => 'File CSV/XLSX belum dipilih atau gagal diunggah.']);
-          exit();
-      }
-
-      $extension = strtolower(pathinfo($_FILES['file']['name'] ?? '', PATHINFO_EXTENSION));
-      if (!in_array($extension, ['csv', 'xlsx'], true)) {
-          echo json_encode(['status' => 'error', 'message' => 'Format file harus CSV atau XLSX. File .' . ($extension ?: '?') . ' tidak didukung.']);
-          exit();
-      }
-      if ((int)($_FILES['file']['size'] ?? 0) > 10 * 1024 * 1024) {
-          echo json_encode(['status' => 'error', 'message' => 'Ukuran file terlalu besar. Maksimal 10 MB.']);
-          exit();
-      }
-
-      $tahun = (int)$match[1];
-      $bulan = (int)$match[2];
-      if ($bulan < 1 || $bulan > 12) {
-          echo json_encode(['status' => 'error', 'message' => 'Periode bulan tidak valid.']);
-          exit();
-      }
-      $tanggal = sprintf('%04d-%02d-%02d', $tahun, $bulan, [1 => 1, 2 => 8, 3 => 15, 4 => 22][$minggu]);
-      $path = $_FILES['file']['tmp_name'];
-      $file_rows = [];
-      try {
-          if ($extension === 'xlsx') {
-              $file_rows = $this->_readXlsxRows($path);
-          } else {
-              $delimiter = $this->_detectCsvDelimiter($path);
-              $handle = fopen($path, 'r');
-              if (!$handle) throw new \RuntimeException('File CSV tidak dapat dibaca.');
-              while (($csv_row = fgetcsv($handle, 0, $delimiter)) !== false) {
-                  $file_rows[] = $csv_row;
-                  if (count($file_rows) > 20000) { fclose($handle); throw new \RuntimeException('File melebihi batas 20.000 baris.'); }
-              }
-              fclose($handle);
-          }
-      } catch (\Exception $e) {
-          echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-          exit();
-      }
-      if (!$file_rows) {
-          echo json_encode(['status' => 'error', 'message' => 'File tidak berisi data yang dapat dibaca.']);
-          exit();
-      }
-
-      $units = [];
-      $unit_by_code = [];
-      foreach ($this->db('rsns_custom_logistik_non_medis_unit')->where('status', 'Aktif')->toArray() as $unit) {
-          $units[$this->_normalizeImportText($unit['nama_unit'])] = $unit;
-          $units[$this->_normalizeImportText($unit['kode_unit'])] = $unit;
-          $unit_by_code[$unit['kode_unit']] = $unit;
-      }
-      $barang = [];
-      foreach ($this->db('rsns_custom_logistik_non_medis_master_barang')->where('status', 'Aktif')->toArray() as $item) {
-          $barang[$this->_normalizeImportText($item['nama_barang'])] = $item;
-          $barang[$this->_normalizeImportText($item['kode_item'])] = $item;
-      }
-
-      $header = array_shift($file_rows);
-      if (!$header) {
-          echo json_encode(['status' => 'error', 'message' => 'Header file tidak ditemukan.']);
-          exit();
-      }
-      $header = array_map(function($value) { return $this->_normalizeImportText(str_replace("\xEF\xBB\xBF", '', $value)); }, $header);
-      $findColumn = function($aliases) use ($header) {
-          foreach ($aliases as $alias) {
-              $index = array_search($this->_normalizeImportText($alias), $header, true);
-              if ($index !== false) return $index;
-          }
-          return false;
-      };
-      $col_unit = $findColumn(['Ruang / Unit', 'Unit', 'Ruang']);
-      $col_barang = $findColumn(['Nama Barang', 'Barang', 'Kode Barang']);
-      $col_jumlah = $findColumn(['Jumlah', 'Qty', 'Kuantitas']);
-      if ($col_unit === false || $col_barang === false || $col_jumlah === false) {
-          echo json_encode(['status' => 'error', 'message' => 'Kolom wajib harus: No, Ruang / Unit, Nama Barang, Jumlah. Gunakan template terbaru.']);
-          exit();
-      }
-
-      $groups = [];
-      $errors = [];
-      $row_number = 1;
-      foreach ($file_rows as $row) {
-          $row_number++;
-          if (!array_filter($row, function($v) { return trim((string)$v) !== ''; })) continue;
-          $unit_key = $this->_normalizeImportText($row[$col_unit] ?? '');
-          $barang_key = $this->_normalizeImportText($row[$col_barang] ?? '');
-          if (!isset($barang[$barang_key])) {
-              // File operasional kadang menambahkan nama unit di belakang barang, mis. "Kertas (Kasir)".
-              $barang_tanpa_unit = $this->_normalizeImportText(preg_replace('/\s*\([^)]*\)\s*$/u', '', (string)($row[$col_barang] ?? '')));
-              if (isset($barang[$barang_tanpa_unit])) $barang_key = $barang_tanpa_unit;
-          }
-          $qty_raw = str_replace(',', '.', trim($row[$col_jumlah] ?? ''));
-          $qty = is_numeric($qty_raw) ? (float)$qty_raw : 0;
-          if (!isset($units[$unit_key])) {
-              $errors[] = "Baris $row_number: unit '" . ($row[$col_unit] ?? '') . "' tidak ditemukan.";
-              continue;
-          }
-          if (!isset($barang[$barang_key])) {
-              $errors[] = "Baris $row_number: barang '" . ($row[$col_barang] ?? '') . "' tidak ditemukan di master barang.";
-              continue;
-          }
-          if ($qty <= 0) {
-              $errors[] = "Baris $row_number: jumlah harus lebih dari 0.";
-              continue;
-          }
-          $unit = $units[$unit_key];
-          $item = $barang[$barang_key];
-          if (!isset($groups[$unit['kode_unit']][$item['kode_item']])) {
-              $groups[$unit['kode_unit']][$item['kode_item']] = ['kode_item' => $item['kode_item'], 'jumlah' => 0, 'satuan' => $item['satuan_dasar'] ?? ''];
-          }
-          $groups[$unit['kode_unit']][$item['kode_item']]['jumlah'] += $qty;
-      }
-
-      if (empty($groups)) {
-          echo json_encode(['status' => 'error', 'message' => 'Tidak ada baris valid untuk diimport.', 'errors' => array_slice($errors, 0, 10)]);
-          exit();
-      }
-
-      $pdo = $this->db()->pdo();
-      $pdo->beginTransaction();
-      $jumlah_sppb = 0;
-      $jumlah_item = 0;
-      $sppb_baru = 0;
-      $sppb_diperbarui = 0;
-      $item_diperbarui = 0;
-      try {
-          $stmt = $pdo->prepare("INSERT INTO rsns_custom_logistik_non_medis_sppb (no_sppb, tgl_sppb, minggu_ke, kode_unit, kode_item, jumlah, jumlah_disetujui, satuan, status, keterangan, user_input, tgl_input) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-          $existing_doc = $pdo->prepare("SELECT no_sppb,status FROM rsns_custom_logistik_non_medis_sppb WHERE kode_unit=? AND YEAR(tgl_sppb)=? AND MONTH(tgl_sppb)=? AND minggu_ke=? LIMIT 1");
-          $existing_item = $pdo->prepare("SELECT id FROM rsns_custom_logistik_non_medis_sppb WHERE no_sppb=? AND kode_item=? LIMIT 1");
-          $update_item = $pdo->prepare("UPDATE rsns_custom_logistik_non_medis_sppb SET jumlah=?,jumlah_disetujui=?,satuan=?,status=?,keterangan=?,user_input=?,tgl_input=? WHERE id=?");
-          $user = $this->core->getUserInfo('username', null, true);
-          foreach ($groups as $kode_unit => $items) {
-              $existing_doc->execute([$kode_unit, $tahun, $bulan, $minggu]);
-              $existing = $existing_doc->fetch(\PDO::FETCH_ASSOC);
-              if ($existing && $existing['status'] !== $status_import) {
-                  $nama_unit = $unit_by_code[$kode_unit]['nama_unit'] ?? $kode_unit;
-                  $errors[] = "Unit '$nama_unit' dilewati karena {$existing['no_sppb']} sudah berstatus {$existing['status']}; status import yang dipilih adalah $status_import.";
-                  continue;
-              }
-              $no_sppb = $existing ? $existing['no_sppb'] : $this->_generateNoSPPBPeriode($kode_unit, $tahun, $bulan, $minggu);
-              if ($existing) $sppb_diperbarui++; else $sppb_baru++;
-              foreach ($items as $item) {
-                  $now = date('Y-m-d H:i:s');
-                  $jumlah_disetujui = in_array($status_import, ['Proses', 'Ready', 'Selesai'], true) ? $item['jumlah'] : 0;
-                  $keterangan_import = $existing ? 'Import ulang BHP mingguan' : 'Import BHP mingguan';
-                  $existing_item->execute([$no_sppb, $item['kode_item']]);
-                  $existing_id = $existing_item->fetchColumn();
-                  if ($existing_id) {
-                      $update_item->execute([$item['jumlah'], $jumlah_disetujui, $item['satuan'], $status_import, $keterangan_import, $user, $now, $existing_id]);
-                      $item_diperbarui++;
-                  } else {
-                      $stmt->execute([$no_sppb, $tanggal, $minggu, $kode_unit, $item['kode_item'], $item['jumlah'], $jumlah_disetujui, $item['satuan'], $status_import, $keterangan_import, $user, $now]);
-                  }
-                  $jumlah_item++;
-              }
-              $jumlah_sppb++;
-          }
-          if ($jumlah_sppb === 0) {
-              $pdo->rollBack();
-              echo json_encode(['status' => 'error', 'message' => 'Tidak ada SPPB baru yang disimpan. Seluruh unit sudah pernah diimport atau tidak valid.', 'errors' => array_slice($errors, 0, 20)]);
-              exit();
-          }
-          $pdo->commit();
-          $status_label = $status_import === 'Ready' ? 'Siap Diambil' : $status_import;
-          $message = "$jumlah_sppb permintaan diproses ($sppb_baru baru, $sppb_diperbarui diperbarui) dengan $jumlah_item item; $item_diperbarui item lama diperbarui. Status awal: $status_label, minggu ke-$minggu.";
-          if ($errors) $message .= ' ' . count($errors) . ' baris dilewati.';
-          echo json_encode(['status' => 'success', 'message' => $message, 'errors' => array_slice($errors, 0, 20)]);
-      } catch (\Exception $e) {
-          if ($pdo->inTransaction()) $pdo->rollBack();
-          echo json_encode(['status' => 'error', 'message' => 'Import gagal: ' . $e->getMessage()]);
-      }
-      exit();
-  }
-
-
-  public function anyAjaxBarangSelect2()
-  {
-      $q = $_GET['q'] ?? '';
-      $page = !empty($_GET['page']) ? (int)$_GET['page'] : 1;
-      $per_page = 5;
-      $offset = ($page - 1) * $per_page;
-      
-      $where = "WHERE status = 'Aktif'";
-      if (!empty($q)) {
-          $where .= " AND (nama_barang LIKE '%$q%' OR kode_item LIKE '%$q%')";
-      }
-      
-      $query_count = "SELECT COUNT(*) as total FROM rsns_custom_logistik_non_medis_master_barang $where";
-      $total_count = $this->db()->pdo()->query($query_count)->fetchColumn();
-      
-      $query = "SELECT kode_item as id, CONCAT(kode_item, ' - ', nama_barang) as text 
-                FROM rsns_custom_logistik_non_medis_master_barang 
-                $where 
-                ORDER BY nama_barang ASC 
-                LIMIT $offset, $per_page";
-      $items = $this->db()->pdo()->query($query)->fetchAll(\PDO::FETCH_ASSOC);
-      
-      header('Content-Type: application/json');
-      echo json_encode([
-          'results' => $items,
-          'pagination' => [
-              'more' => ($page * $per_page) < $total_count
-          ]
-      ]);
-      exit();
-  }
-
   public function anyAjaxMasterBarang()
   {
       $cari = $_GET['q'] ?? '';
@@ -6907,9 +6009,14 @@ $(document).ready(function() {
       $status = isset($_POST['status']) ? $_POST['status'] : '';
       
       $_offset = ($halaman - 1) * $perpage;
+
+      $username = $this->core->getUserInfo('username', null, true);
+      $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+      $role = $userRoleData['role'] ?? 'unit';
+      $user_kode_unit = $userRoleData['kode_unit'] ?? null;
       
       $sql = "
-          SELECT s.no_sppb, s.tgl_sppb, s.minggu_ke, s.kode_unit, u.nama_unit, s.status, s.keterangan,
+          SELECT s.no_sppb, s.tgl_sppb, s.kode_unit, u.nama_unit, s.status, s.keterangan,
                  COUNT(s.kode_item) as jml_item,
                  GROUP_CONCAT(b.nama_barang SEPARATOR ', ') as daftar_barang
           FROM rsns_custom_logistik_non_medis_sppb s
@@ -6931,7 +6038,12 @@ $(document).ready(function() {
           $params[] = $status;
       }
 
-      $sql .= " GROUP BY s.no_sppb, s.tgl_sppb, s.minggu_ke, s.kode_unit, u.nama_unit, s.status, s.keterangan 
+      if (in_array($role, ['unit', 'kepala_unit', 'kepala_sie', 'kepala_bidang']) && !empty($user_kode_unit)) {
+          $sql .= " AND s.kode_unit = ? ";
+          $params[] = $user_kode_unit;
+      }
+
+      $sql .= " GROUP BY s.no_sppb, s.tgl_sppb, s.kode_unit, u.nama_unit, s.status, s.keterangan 
                 ORDER BY s.tgl_input DESC, s.no_sppb DESC ";
 
       $stmt = $this->db()->pdo()->prepare($sql);
@@ -6952,7 +6064,8 @@ $(document).ready(function() {
           'halaman' => $halaman,
           'jumlah_data' => $jumlah_data,
           'jml_halaman' => $jml_halaman,
-          'admin_mode' => $this->settings->get('settings.admin_mode')
+          'admin_mode' => $this->settings->get('settings.admin_mode'),
+          'role' => $role
       ]);
       exit();
   }
@@ -6961,30 +6074,30 @@ $(document).ready(function() {
   {
       $this->_initSppb();
       $this->_initLokasi();
-      $units = $this->db('rsns_custom_logistik_non_medis_unit')->where('status', 'Aktif')->asc('nama_unit')->toArray();
+
+      $username = $this->core->getUserInfo('username', null, true);
+      $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+      $role = $userRoleData['role'] ?? 'unit';
+      $user_kode_unit = $userRoleData['kode_unit'] ?? null;
+
+      $units = $this->db('rsns_custom_logistik_non_medis_unit')->toArray();
       $items = $this->db('rsns_custom_logistik_non_medis_master_barang')->where('status', 'Aktif')->toArray();
 
       if (isset($_POST['no_sppb'])) {
           $no_sppb = $_POST['no_sppb'];
           $rows = $this->db('rsns_custom_logistik_non_medis_sppb')->where('no_sppb', $no_sppb)->toArray();
-          if (!$rows) {
-              echo '<div class="alert alert-danger">Data SPPB tidak ditemukan.</div>';
-              exit();
-          }
           $sppb = $rows[0];
           $sppb['items'] = $rows;
-          echo $this->draw('distribusi.sppb.form.html', ['sppb' => $sppb, 'mode' => 'edit', 'units' => $units, 'items' => $items]);
+          echo $this->draw('distribusi.sppb.form.html', ['sppb' => $sppb, 'mode' => 'edit', 'units' => $units, 'items' => $items, 'role' => $role, 'user_kode_unit' => $user_kode_unit]);
       } else {
           $sppb = [
               'no_sppb' => '',
               'tgl_sppb' => date('Y-m-d'),
-              'kode_unit' => '',
+              'kode_unit' => ($role === 'unit' && !empty($user_kode_unit)) ? $user_kode_unit : '',
               'status' => 'Draft',
-              'sifat_permintaan' => 'Rutin',
-              'keterangan' => '',
               'items' => []
           ];
-          echo $this->draw('distribusi.sppb.form.html', ['sppb' => $sppb, 'mode' => 'add', 'units' => $units, 'items' => $items]);
+          echo $this->draw('distribusi.sppb.form.html', ['sppb' => $sppb, 'mode' => 'add', 'units' => $units, 'items' => $items, 'role' => $role, 'user_kode_unit' => $user_kode_unit]);
       }
       exit();
   }
@@ -7008,7 +6121,12 @@ $(document).ready(function() {
               foreach ($rows as $idx => &$row) { $row['index'] = $idx; }
               $sppb = $rows[0];
               $sppb['items'] = $rows;
-              echo $this->draw('distribusi.sppb.detail.html', ['sppb' => $sppb]);
+              
+              $username = $this->core->getUserInfo('username', null, true);
+              $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+              $role = $userRoleData['role'] ?? 'unit';
+
+              echo $this->draw('distribusi.sppb.detail.html', ['sppb' => $sppb, 'role' => $role]);
           }
       }
       exit();
@@ -7021,6 +6139,14 @@ $(document).ready(function() {
       $status = $_POST['status'] ?? 'Diajukan';
       $user = $this->core->getUserInfo('username', null, true);
 
+      $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $user)->oneArray();
+      $role = $userRoleData['role'] ?? 'unit';
+      $user_kode_unit = $userRoleData['kode_unit'] ?? null;
+
+      if ($role === 'unit' && !empty($user_kode_unit)) {
+          $kode_unit = $user_kode_unit; // enforce user's unit
+      }
+
       if (empty($no_sppb)) {
           $no_sppb = $this->_generateNoSPPB($kode_unit);
       }
@@ -7032,8 +6158,14 @@ $(document).ready(function() {
           exit();
       }
 
+      // Enforce that a unit user can only edit their own SPPB
+      if ($role === 'unit' && !empty($user_kode_unit) && $cek && $cek['kode_unit'] !== $user_kode_unit) {
+          echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak untuk mengubah permintaan unit lain!']);
+          exit();
+      }
+
       // Check Quota
-      if ($this->kuotaAktif && $status == 'Diajukan') {
+      if ($status == 'Diajukan') {
           $tgl_sppb = $_POST['tgl_sppb'] ?? date('Y-m-d');
           $tahun = date('Y', strtotime($tgl_sppb));
           $bulan = (int)date('m', strtotime($tgl_sppb));
@@ -7085,7 +6217,6 @@ $(document).ready(function() {
                   'satuan' => $_POST['satuan'][$key] ?? '',
                   'status' => $status,
                   'keterangan' => $_POST['keterangan_umum'] ?? '',
-                  'keterangan_item' => $_POST['keterangan_item'][$key] ?? '',
                   'user_input' => $user,
                   'tgl_input' => date('Y-m-d H:i:s')
               ];
@@ -7108,20 +6239,124 @@ $(document).ready(function() {
   {
       $no_sppb = $_POST['no_sppb'] ?? '';
       $user = $this->core->getUserInfo('username', null, true);
-      
+
+      $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $user)->oneArray();
+      $role = $userRoleData['role'] ?? 'unit';
+      $user_kode_unit = $userRoleData['kode_unit'] ?? null;
+
+      $cek = $this->db('rsns_custom_logistik_non_medis_sppb')->where('no_sppb', $no_sppb)->oneArray();
+      if (!$cek) {
+          echo json_encode(['status' => 'error', 'message' => 'Data permintaan tidak ditemukan.']);
+          exit();
+      }
+
+      $current_status = $cek['status'];
+      $now = date('Y-m-d H:i:s');
+      $update_data = [];
+      $log_msg = '';
+
+      if ($current_status === 'Diajukan') {
+          if (!in_array($role, ['kepala_unit', 'admin', 'logistik'])) {
+              echo json_encode(['status' => 'error', 'message' => 'Hanya Kepala Unit yang dapat menyetujui tahap ini.']);
+              exit();
+          }
+          if ($role === 'kepala_unit' && !empty($user_kode_unit) && $cek['kode_unit'] !== $user_kode_unit) {
+              echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak untuk menyetujui permintaan unit lain!']);
+              exit();
+          }
+          $update_data = [
+              'status' => 'Disetujui Ka. Unit',
+              'user_approve_ka_unit' => $user,
+              'tgl_approve_ka_unit' => $now
+          ];
+          $log_msg = 'Approve SPPB Ka. Unit: ' . $no_sppb;
+      } elseif ($current_status === 'Disetujui Ka. Unit') {
+          if (!in_array($role, ['kepala_sie', 'admin', 'logistik'])) {
+              echo json_encode(['status' => 'error', 'message' => 'Hanya Kepala Sie yang dapat menyetujui tahap ini.']);
+              exit();
+          }
+          if ($role === 'kepala_sie' && !empty($user_kode_unit) && $cek['kode_unit'] !== $user_kode_unit) {
+              echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak untuk menyetujui permintaan unit lain!']);
+              exit();
+          }
+          $update_data = [
+              'status' => 'Disetujui Ka. Sie',
+              'user_approve_ka_sie' => $user,
+              'tgl_approve_ka_sie' => $now
+          ];
+          $log_msg = 'Approve SPPB Ka. Sie: ' . $no_sppb;
+      } elseif ($current_status === 'Disetujui Ka. Sie' || $current_status === 'Disetujui Unit') {
+          if (!in_array($role, ['kepala_bidang', 'admin', 'logistik'])) {
+              echo json_encode(['status' => 'error', 'message' => 'Hanya Kepala Bidang yang dapat menyetujui tahap ini.']);
+              exit();
+          }
+          if ($role === 'kepala_bidang' && !empty($user_kode_unit) && $cek['kode_unit'] !== $user_kode_unit) {
+              echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak untuk menyetujui permintaan unit lain!']);
+              exit();
+          }
+          $update_data = [
+              'status' => 'Disetujui Unit',
+              'user_approve_ka_bidang' => $user,
+              'tgl_approve_ka_bidang' => $now,
+              'user_approve_unit' => $user,
+              'tgl_approve_unit' => $now
+          ];
+          $log_msg = 'Approve SPPB Ka. Bidang (Disetujui Unit): ' . $no_sppb;
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Status permintaan tidak dapat disetujui pada tahap ini.']);
+          exit();
+      }
+
       $update = $this->db('rsns_custom_logistik_non_medis_sppb')
                      ->where('no_sppb', $no_sppb)
-                     ->update([
-                         'status' => 'Disetujui Unit',
-                         'user_approve_unit' => $user,
-                         'tgl_approve_unit' => date('Y-m-d H:i:s')
-                     ]);
-      
+                     ->update($update_data);
+
       if ($update) {
-          $this->_logAction('logistik_non_medis_sppb', 'Approve SPPB Unit: ' . $no_sppb, 'U');
+          $this->_logAction('logistik_non_medis_sppb', $log_msg, 'U');
           echo json_encode(['status' => 'success']);
       } else {
           echo json_encode(['status' => 'error', 'message' => 'Gagal menyetujui permintaan.']);
+      }
+      exit();
+  }
+
+  public function postRejectSppb()
+  {
+      $no_sppb = $_POST['no_sppb'] ?? '';
+      $alasan = $_POST['alasan_penolakan'] ?? '';
+      $user = $this->core->getUserInfo('username', null, true);
+
+      $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $user)->oneArray();
+      $role = $userRoleData['role'] ?? 'unit';
+      $user_kode_unit = $userRoleData['kode_unit'] ?? null;
+
+      $cek = $this->db('rsns_custom_logistik_non_medis_sppb')->where('no_sppb', $no_sppb)->oneArray();
+      if (!$cek) {
+          echo json_encode(['status' => 'error', 'message' => 'Data tidak ditemukan!']);
+          exit();
+      }
+
+      if (in_array($role, ['kepala_unit', 'kepala_sie', 'kepala_bidang'])) {
+          if (!empty($user_kode_unit) && $cek['kode_unit'] !== $user_kode_unit) {
+              echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak untuk menolak permintaan unit lain!']);
+              exit();
+          }
+      }
+
+      $update = $this->db('rsns_custom_logistik_non_medis_sppb')
+                     ->where('no_sppb', $no_sppb)
+                     ->update([
+                         'status' => 'Ditolak',
+                         'alasan_penolakan' => $alasan,
+                         'user_approve_unit' => $user,
+                         'tgl_approve_unit' => date('Y-m-d H:i:s')
+                     ]);
+
+      if ($update) {
+          $this->_logAction('logistik_non_medis_sppb', 'Tolak SPPB Unit: ' . $no_sppb . ' | Alasan: ' . $alasan, 'U');
+          echo json_encode(['status' => 'success']);
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Gagal menolak permintaan.']);
       }
       exit();
   }
@@ -7134,7 +6369,7 @@ $(document).ready(function() {
       $update = $this->db('rsns_custom_logistik_non_medis_sppb')
                      ->where('no_sppb', $no_sppb)
                      ->update([
-                        'status' => 'Proses',
+                         'status' => 'Terverifikasi',
                          'user_verifikasi' => $user,
                          'tgl_verifikasi' => date('Y-m-d H:i:s')
                      ]);
@@ -7262,7 +6497,6 @@ $(document).ready(function() {
       try {
           $items = $this->db('rsns_custom_logistik_non_medis_sppb')
                         ->where('no_sppb', $no_sppb)
-                        ->where('status', 'Disetujui Unit')
                         ->toArray();
           
           foreach($items as &$item) {
@@ -7270,8 +6504,11 @@ $(document).ready(function() {
               $item['nama_barang'] = $barang['nama_barang'] ?? '-';
               
               $item['stok'] = $this->_getCurrentStock($item['kode_item']);
+              $item['kuota'] = $this->_getRemainingQuota($item['kode_unit'], $item['kode_item']);
               
               $item['stok_color'] = ($item['stok'] < $item['jumlah']) ? 'label-danger' : 'label-success';
+              $item['kuota_color'] = ($item['kuota'] < $item['jumlah']) ? 'label-warning' : 'label-info';
+              $item['kuota_display'] = ($item['kuota'] == 999999) ? '&infin; Bebas' : $item['kuota'];
           }
           
           echo $this->draw('distribusi.verifikasi.detail.html', [
@@ -7286,57 +6523,42 @@ $(document).ready(function() {
 
   public function postSaveDistribusiVerifikasi()
   {
-      header('Content-Type: application/json; charset=utf-8');
       $no_sppb = $_POST['no_sppb'] ?? '';
-      $user = $this->core->getUserInfo('username', null, true);
-      $items = $_POST['items'] ?? [];
+      $status = $_POST['status_verif'] ?? 'Terverifikasi';
+      $user = $_SESSION['mlite_user'] ?? 'admin';
 
-      if(empty($no_sppb) || !is_array($items)) {
-          echo json_encode(['status' => 'error', 'message' => 'No. SPPB atau daftar barang tidak valid.']);
+      if(empty($no_sppb)) {
+          echo json_encode(['status' => 'error', 'message' => 'No. SPPB tidak valid. Diterima: ' . json_encode($_POST)]);
           exit();
       }
 
       try {
-          $diproses = 0;
-          $disetujui = 0;
-          $ditolak = 0;
-          foreach($items as $id => $val) {
-              if (empty($val['pilih'])) continue;
-              $row = $this->db('rsns_custom_logistik_non_medis_sppb')->where('id', (int)$id)->where('no_sppb', $no_sppb)->where('status', 'Disetujui Unit')->oneArray();
-              if (!$row) continue;
-              $keputusan = ($val['keputusan'] ?? 'Setujui') === 'Tolak' ? 'Tolak' : 'Setujui';
-              $keterangan = trim($val['keterangan_verifikasi'] ?? '');
-              if ($keputusan === 'Setujui') {
-                  $qty = max(0, min((float)$row['jumlah'], (float)($val['jumlah_disetujui'] ?? $row['jumlah'])));
-                  if ($qty <= 0) continue;
-                  $this->db('rsns_custom_logistik_non_medis_sppb')->where('id', (int)$id)->update([
-                      'status' => 'Proses',
-                      'jumlah_disetujui' => $qty,
-                      'keterangan_verifikasi' => $keterangan,
-                      'alasan_penolakan' => null,
-                      'user_verifikasi' => $user,
-                      'tgl_verifikasi' => date('Y-m-d H:i:s')
+          if($status == 'Terverifikasi') {
+              // Mark all items under this SPPB as Terverifikasi
+              $this->db('rsns_custom_logistik_non_medis_sppb')->where('no_sppb', $no_sppb)->update([
+                  'status' => 'Terverifikasi',
+                  'user_verifikasi' => $user,
+                  'tgl_verifikasi' => date('Y-m-d H:i:s')
+              ]);
+              
+              // Update approved quantities for specific items
+              $items = $_POST['items'] ?? [];
+              foreach($items as $id => $val) {
+                  $this->db('rsns_custom_logistik_non_medis_sppb')->where('id', $id)->update([
+                      'jumlah_disetujui' => $val['jumlah_disetujui']
                   ]);
-                  $disetujui++;
-              } else {
-                  $this->db('rsns_custom_logistik_non_medis_sppb')->where('id', (int)$id)->update([
-                      'status' => 'Ditolak',
-                      'jumlah_disetujui' => 0,
-                      'keterangan_verifikasi' => $keterangan,
-                      'alasan_penolakan' => $keterangan,
-                      'user_verifikasi' => $user,
-                      'tgl_verifikasi' => date('Y-m-d H:i:s')
-                  ]);
-                  $ditolak++;
               }
-              $diproses++;
+              $this->_logAction('logistik_non_medis_sppb', 'Verifikasi SPPB Disetujui: ' . $no_sppb, 'U');
+          } else {
+              $this->db('rsns_custom_logistik_non_medis_sppb')->where('no_sppb', $no_sppb)->update([
+                  'status' => 'Ditolak',
+                  'alasan_penolakan' => $_POST['alasan_penolakan'] ?? '',
+                  'user_verifikasi' => $user,
+                  'tgl_verifikasi' => date('Y-m-d H:i:s')
+              ]);
+              $this->_logAction('logistik_non_medis_sppb', 'Verifikasi SPPB Ditolak: ' . $no_sppb . ' | Alasan: ' . ($_POST['alasan_penolakan'] ?? ''), 'U');
           }
-          if (!$diproses) {
-              echo json_encode(['status' => 'error', 'message' => 'Centang minimal satu barang yang akan diproses.']);
-              exit();
-          }
-          $this->_logAction('logistik_non_medis_sppb', "Verifikasi per item SPPB: $no_sppb | Setujui: $disetujui | Tolak: $ditolak", 'U');
-          echo json_encode(['status' => 'success', 'message' => "$disetujui barang disetujui dan $ditolak barang ditolak."]);
+          echo json_encode(['status' => 'success']);
       } catch (\Exception $e) {
           echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
       }
@@ -7807,7 +7029,6 @@ $(document).ready(function() {
 
   public function postSaveSerahTerima()
   {
-      $this->_initSerahTerima();
       $no_sppb = $_POST['no_sppb'] ?? '';
       $no_serah_terima = $_POST['no_serah_terima'] ?? '';
       $penerima_nama = $_POST['penerima_nama'] ?? '';
@@ -7815,12 +7036,6 @@ $(document).ready(function() {
 
       if(empty($no_sppb) || empty($penerima_nama) || empty($tanda_terima_base64)) {
           echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap!']);
-          exit();
-      }
-
-      $ttd_filename = $this->_saveOptimizedSignature($tanda_terima_base64, $no_serah_terima);
-      if (!$ttd_filename) {
-          echo json_encode(['status' => 'error', 'message' => 'Tanda tangan tidak valid atau gagal dioptimasi. Pastikan ekstensi GD PHP aktif.']);
           exit();
       }
 
@@ -7841,8 +7056,7 @@ $(document).ready(function() {
           'penerima_nama' => $penerima_nama,
           'penerima_nip' => $_POST['penerima_nip'] ?? '',
           'foto_kondisi' => $foto_filename,
-          'tanda_terima' => null,
-          'tanda_terima_file' => $ttd_filename,
+          'tanda_terima' => $tanda_terima_base64,
           'keterangan' => $_POST['keterangan'] ?? ''
       ];
 
@@ -7868,12 +7082,6 @@ $(document).ready(function() {
 
           echo json_encode(['status' => 'success', 'no_sppb' => $no_sppb]);
       } else {
-          $ttd_path = UPLOADS . '/logistik_non_medis/serah_terima/ttd/' . $ttd_filename;
-          if (is_file($ttd_path)) unlink($ttd_path);
-          if ($foto_filename) {
-              $foto_path = $upload_dir . '/foto/' . $foto_filename;
-              if (is_file($foto_path)) unlink($foto_path);
-          }
           echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data serah terima.']);
       }
       exit();
@@ -7903,8 +7111,6 @@ $(document).ready(function() {
                     ->join('rsns_custom_logistik_non_medis_master_barang b', 'b.kode_item = s.kode_item')
                     ->where('s.no_sppb', $no_sppb)
                     ->toArray();
-      foreach ($items as $index => &$item) $item['no_urut'] = $index + 1;
-      unset($item);
 
       $logo = url($this->settings->get('settings.logo'));
       if(!$this->settings->get('settings.logo')) {
@@ -7916,13 +7122,6 @@ $(document).ready(function() {
           $foto_url = url('uploads/logistik_non_medis/serah_terima/foto/' . $st['foto_kondisi']);
       }
 
-      $ttd_url = '';
-      if(!empty($st['tanda_terima_file'])) {
-          $ttd_url = url('uploads/logistik_non_medis/serah_terima/ttd/' . $st['tanda_terima_file']);
-      } elseif (!empty($st['tanda_terima'])) {
-          $ttd_url = $st['tanda_terima'];
-      }
-
       echo $this->draw('distribusi.serahterima.bast.html', [
           'st' => $st,
           'sppb' => $sppb,
@@ -7932,8 +7131,7 @@ $(document).ready(function() {
           'alamat_rs' => $this->settings->get('settings.alamat'),
           'kota_rs' => $this->settings->get('settings.kota'),
           'kontak_rs' => $this->settings->get('settings.nomor_telepon'),
-          'foto_url' => $foto_url,
-          'ttd_url' => $ttd_url
+          'foto_url' => $foto_url
       ]);
       exit();
   }
@@ -8258,8 +7456,12 @@ $(document).ready(function() {
       $cari = isset($_POST['cari']) ? $_POST['cari'] : '';
       
       $_offset = ($halaman - 1) * $perpage;
+
+      $username = $this->core->getUserInfo('username', null, true);
+      $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+      $role = $userRoleData['role'] ?? 'unit';
+      $user_kode_unit = $userRoleData['kode_unit'] ?? null;
       
-      // Query sederhana untuk mengambil data tanpa group by di SQL untuk menghindari strict mode
       $query = $this->db('rsns_custom_logistik_non_medis_retur_unit')
                     ->select('rsns_custom_logistik_non_medis_retur_unit.*, rsns_custom_logistik_non_medis_unit.nama_unit')
                     ->join('rsns_custom_logistik_non_medis_unit', 'rsns_custom_logistik_non_medis_unit.kode_unit = rsns_custom_logistik_non_medis_retur_unit.kode_unit', 'LEFT');
@@ -8270,6 +7472,10 @@ $(document).ready(function() {
                 ->orWhere('rsns_custom_logistik_non_medis_retur_unit.no_sppb', 'LIKE', '%'.$cari.'%')
                 ->orWhere('rsns_custom_logistik_non_medis_unit.nama_unit', 'LIKE', '%'.$cari.'%');
           });
+      }
+
+      if ($role === 'unit' && !empty($user_kode_unit)) {
+          $query->where('rsns_custom_logistik_non_medis_retur_unit.kode_unit', $user_kode_unit);
       }
       
       // Ambil semua data sesuai filter, lalu group di PHP
@@ -8308,6 +7514,11 @@ $(document).ready(function() {
   {
       $this->_initRetur();
       $mode = $_POST['mode'] ?? 'add';
+
+      $username = $this->core->getUserInfo('username', null, true);
+      $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+      $role = $userRoleData['role'] ?? 'unit';
+      $user_kode_unit = $userRoleData['kode_unit'] ?? null;
       
       if ($mode == 'edit' && isset($_POST['no_retur'])) {
           $no_retur = $_POST['no_retur'];
@@ -8322,13 +7533,16 @@ $(document).ready(function() {
           echo $this->draw('distribusi.retur.form.html', ['retur' => $retur, 'mode' => 'edit']);
       } else {
           // Get SPPBs that are 'Selesai' or 'Diterima' for the unit selection
-          $sppbs = $this->db('rsns_custom_logistik_non_medis_sppb')
+          $query = $this->db('rsns_custom_logistik_non_medis_sppb')
                         ->select('rsns_custom_logistik_non_medis_sppb.no_sppb, rsns_custom_logistik_non_medis_unit.nama_unit')
                         ->join('rsns_custom_logistik_non_medis_unit', 'rsns_custom_logistik_non_medis_unit.kode_unit = rsns_custom_logistik_non_medis_sppb.kode_unit')
-                        ->where('rsns_custom_logistik_non_medis_sppb.status', 'Selesai')
-                        ->orWhere('rsns_custom_logistik_non_medis_sppb.status', 'Diterima')
-                        ->group('rsns_custom_logistik_non_medis_sppb.no_sppb')
-                        ->toArray();
+                        ->where('rsns_custom_logistik_non_medis_sppb.status', 'IN', ['Selesai', 'Diterima']);
+
+          if ($role === 'unit' && !empty($user_kode_unit)) {
+              $query->where('rsns_custom_logistik_non_medis_sppb.kode_unit', $user_kode_unit);
+          }
+
+          $sppbs = $query->group('rsns_custom_logistik_non_medis_sppb.no_sppb')->toArray();
 
           $retur = [
               'no_retur' => $this->_generateNoRetur(),
@@ -8384,10 +7598,22 @@ $(document).ready(function() {
           exit();
       }
 
+      $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $user)->oneArray();
+      $role = $userRoleData['role'] ?? 'unit';
+      $user_kode_unit = $userRoleData['kode_unit'] ?? null;
+
       try {
           // Get unit from SPPB
           $sppb = $this->db('rsns_custom_logistik_non_medis_sppb')->where('no_sppb', $no_sppb)->oneArray();
           $kode_unit = $sppb['kode_unit'] ?? 'GUDANG';
+
+          if ($role === 'unit' && !empty($user_kode_unit)) {
+              if (!$sppb || $sppb['kode_unit'] !== $user_kode_unit) {
+                  echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak untuk melakukan retur pada SPPB unit lain!']);
+                  exit();
+              }
+              $kode_unit = $user_kode_unit;
+          }
 
           // Delete existing if edit
           $this->db('rsns_custom_logistik_non_medis_retur_unit')->where('no_retur', $no_retur)->delete();
@@ -8532,7 +7758,6 @@ $(document).ready(function() {
   public function getJavascript()
   {
       header('Content-type: text/javascript');
-      header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
       echo $this->draw(MODULES.'/logistik_non_medis/js/admin/logistik.js');
       exit();
   }
@@ -8548,10 +7773,7 @@ $(document).ready(function() {
       $this->core->addJS(url('assets/jscripts/moment-with-locales.js'));
       $this->core->addJS(url('assets/jscripts/bootstrap-datetimepicker.js'));
       $this->core->addJS('https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js');
-      $javascript_url = url([ADMIN, 'logistik_non_medis', 'javascript']);
-      $javascript_file = BASE_DIR . '/plugins/logistik_non_medis/js/admin/logistik.js';
-      $javascript_url .= (strpos($javascript_url, '?') !== false ? '&' : '?') . 'v=' . (is_file($javascript_file) ? filemtime($javascript_file) : time());
-      $this->core->addJS($javascript_url, 'footer');
+      $this->core->addJS(url([ADMIN, 'logistik_non_medis', 'javascript']), 'footer');
   }
 
   private function _initKuota()
@@ -8595,6 +7817,11 @@ $(document).ready(function() {
       $cari = isset($_POST['cari']) ? $_POST['cari'] : '';
       
       $_offset = ($halaman - 1) * $perpage;
+
+      $username = $this->core->getUserInfo('username', null, true);
+      $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+      $role = $userRoleData['role'] ?? 'unit';
+      $user_kode_unit = $userRoleData['kode_unit'] ?? null;
       
       $sql = "SELECT k.*, b.nama_barang, u.nama_unit 
               FROM rsns_custom_logistik_non_medis_kuota k
@@ -8605,7 +7832,14 @@ $(document).ready(function() {
       $params = [];
       if(!empty($cari)) {
           $sql .= " AND (b.nama_barang LIKE ? OR u.nama_unit LIKE ? OR k.periode_tipe LIKE ?)";
-          $params = ['%'.$cari.'%', '%'.$cari.'%', '%'.$cari.'%'];
+          $params[] = '%'.$cari.'%';
+          $params[] = '%'.$cari.'%';
+          $params[] = '%'.$cari.'%';
+      }
+
+      if ($role === 'unit' && !empty($user_kode_unit)) {
+          $sql .= " AND k.kode_unit = ? ";
+          $params[] = $user_kode_unit;
       }
       
       $sql_count = "SELECT COUNT(*) as total FROM ($sql) as t";
@@ -8641,21 +7875,22 @@ $(document).ready(function() {
       $this->_initKuota();
       $barang = $this->db('rsns_custom_logistik_non_medis_master_barang')->where('status', 'Aktif')->toArray();
       $unit = $this->db('rsns_custom_logistik_non_medis_unit')->toArray();
-      $defaults = [
-          'id' => '', 'kode_unit' => '', 'kode_item' => '', 'periode_tipe' => 'Bulanan',
-          'tahun' => date('Y'), 'bulan' => (int)date('m'), 'triwulan' => '', 'jumlah' => 0,
-          'jenis' => 'Utama', 'status' => 'Draft', 'keterangan' => ''
-      ];
-      if (!empty($_POST['id'])){
-          $row = $this->db('rsns_custom_logistik_non_medis_kuota')->where('id', (int)$_POST['id'])->oneArray();
-          if (!$row) {
-              echo '<div class="alert alert-danger">Data alokasi kuota tidak ditemukan.</div>';
-              exit();
-          }
-          $kuota = array_merge($defaults, $row);
+      
+      if (isset($_POST['id'])){
+          $kuota = $this->db('rsns_custom_logistik_non_medis_kuota')->where('id', $_POST['id'])->oneArray();
           echo $this->draw('distribusi.kuota.form.html', ['kuota' => $kuota, 'mode' => 'edit', 'barang' => $barang, 'unit' => $unit]);
       } else {
-          $kuota = $defaults;
+          $kuota = [
+              'kode_unit' => '',
+              'kode_item' => '',
+              'periode_tipe' => 'Bulanan',
+              'tahun' => date('Y'),
+              'bulan' => date('m'),
+              'triwulan' => '',
+              'jumlah' => 0,
+              'jenis' => 'Utama',
+              'status' => 'Draft'
+          ];
           echo $this->draw('distribusi.kuota.form.html', ['kuota' => $kuota, 'mode' => 'add', 'barang' => $barang, 'unit' => $unit]);
       }
       exit();
@@ -8724,13 +7959,33 @@ $(document).ready(function() {
   {
       $this->_initKuota();
       $this->_addHeaderFiles();
-      $unit = $this->db('rsns_custom_logistik_non_medis_unit')->toArray();
+
+      $username = $this->core->getUserInfo('username', null, true);
+      $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+      $role = $userRoleData['role'] ?? 'unit';
+      $user_kode_unit = $userRoleData['kode_unit'] ?? null;
+
+      $query = $this->db('rsns_custom_logistik_non_medis_unit');
+      if ($role === 'unit' && !empty($user_kode_unit)) {
+          $query->where('kode_unit', $user_kode_unit);
+      }
+      $unit = $query->toArray();
+
       return $this->draw('distribusi.kuota.monitoring.html', ['unit' => $unit]);
   }
 
   public function anyDisplayMonitoring()
   {
+      $username = $this->core->getUserInfo('username', null, true);
+      $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+      $role = $userRoleData['role'] ?? 'unit';
+      $user_kode_unit = $userRoleData['kode_unit'] ?? null;
+
       $kode_unit = $_POST['kode_unit'] ?? '';
+      if ($role === 'unit' && !empty($user_kode_unit)) {
+          $kode_unit = $user_kode_unit;
+      }
+
       $tahun = $_POST['tahun'] ?? date('Y');
       $bulan = $_POST['bulan'] ?? date('m');
       
@@ -8846,13 +8101,10 @@ $(document).ready(function() {
           $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_aset` ADD `kode_lokasi` varchar(50) DEFAULT NULL AFTER `kode_unit`");
       }
 
-      // Mutasi columns migration. Pastikan tabel ada sebelum SHOW COLUMNS agar endpoint CSV tidak tercampur warning.
-      $check_mutasi_table = $this->db()->pdo()->query("SHOW TABLES LIKE 'rsns_custom_logistik_non_medis_aset_mutasi'")->fetch();
-      if ($check_mutasi_table) {
-          $check_mutasi_col = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_aset_mutasi` LIKE 'no_mutasi'")->fetch();
-          if (!$check_mutasi_col) {
-              $this->db()->pdo()->exec("DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_aset_mutasi`");
-          }
+      // Mutasi columns migration
+      $check_mutasi_col = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_aset_mutasi` LIKE 'no_mutasi'")->fetch();
+      if (!$check_mutasi_col) {
+          $this->db()->pdo()->exec("DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_aset_mutasi`");
       }
 
       $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_aset_mutasi` (
@@ -8881,10 +8133,7 @@ $(document).ready(function() {
         KEY `kode_aset` (`kode_aset`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
-      $mutasi_no_column = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_aset_mutasi` LIKE 'no_mutasi'")->fetch(\PDO::FETCH_ASSOC);
-      if (strtolower($mutasi_no_column['Type'] ?? '') !== 'varchar(50)' || strtoupper($mutasi_no_column['Null'] ?? '') !== 'YES') {
-          $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_aset_mutasi` MODIFY `no_mutasi` varchar(50) DEFAULT NULL");
-      }
+      $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_aset_mutasi` MODIFY `no_mutasi` varchar(50) DEFAULT NULL");
 
       $upload_dir = UPLOADS . '/logistik_non_medis';
       if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
@@ -8992,165 +8241,6 @@ $(document).ready(function() {
       return $this->draw('aset.registrasi.html', ['units' => $units]);
   }
 
-  public function getDownloadTemplateAset()
-  {
-      $this->_initAset();
-      $item = $this->db('rsns_custom_logistik_non_medis_master_barang')->where('status', 'Aktif')->oneArray();
-      $unit = $this->db('rsns_custom_logistik_non_medis_unit')->where('status', 'Aktif')->oneArray();
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Template_Import_Aset_Non_Medis.csv');
-      $output = fopen('php://output', 'w');
-      fwrite($output, "\xEF\xBB\xBF");
-      fputcsv($output, ['Kode Aset (Opsional)', 'Serial Number', 'Kode Item', 'Nama Aset', 'Spesifikasi', 'Tanggal Perolehan (YYYY-MM-DD)', 'Harga Beli', 'Sumber Perolehan', 'Kode Unit', 'PIC', 'Kondisi', 'Jenis KIB', 'Masa Manfaat (Tahun)', 'Nilai Residu'], ';');
-      fputcsv($output, ['', 'SN-CONTOH-001', $item['kode_item'] ?? 'BRG001', $item['nama_barang'] ?? 'Laptop Administrasi', 'Core i5 / RAM 8 GB', date('Y-m-d'), 7500000, 'Beli', $unit['kode_unit'] ?? 'UNT001', 'Nama Penanggung Jawab', 'Baik', 'B', 5, 0], ';');
-      fclose($output);
-      exit();
-  }
-
-  /** Menyederhanakan pekerjaan gudang: setelah verifikasi, petugas cukup menandai siap diambil. */
-  public function postTandaiSiapDiambil()
-  {
-      header('Content-Type: application/json; charset=utf-8');
-      $no_sppb = trim($_POST['no_sppb'] ?? '');
-      if ($no_sppb === '') {
-          echo json_encode(['status' => 'error', 'message' => 'Nomor permintaan tidak valid.']);
-          exit();
-      }
-
-      try {
-          $updated = $this->db('rsns_custom_logistik_non_medis_sppb')
-              ->where('no_sppb', $no_sppb)
-              ->where('status', 'Proses')
-              ->update(['status' => 'Ready']);
-          if ((int)$updated->rowCount() < 1) {
-              echo json_encode(['status' => 'error', 'message' => 'Permintaan tidak berada pada status Proses atau sudah diperbarui.']);
-              exit();
-          }
-          $this->_logAction('logistik_non_medis_sppb', 'Tandai siap diambil: ' . $no_sppb, 'U');
-          echo json_encode(['status' => 'success', 'message' => 'Permintaan telah ditandai siap diambil.']);
-      } catch (\Exception $e) {
-          echo json_encode(['status' => 'error', 'message' => 'Gagal memperbarui status: ' . $e->getMessage()]);
-      }
-      exit();
-  }
-
-  public function getExportAset()
-  {
-      $this->_initAset();
-      $rows = $this->db()->pdo()->query("SELECT a.*, u.nama_unit FROM rsns_custom_logistik_non_medis_aset a LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = a.kode_unit ORDER BY a.id")->fetchAll(\PDO::FETCH_ASSOC);
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Data_Aset_Non_Medis_'.date('Y-m-d').'.csv');
-      $output = fopen('php://output', 'w');
-      fwrite($output, "\xEF\xBB\xBF");
-      fputcsv($output, ['Kode Aset', 'Serial Number', 'Kode Item', 'Nama Aset', 'Spesifikasi', 'Tanggal Perolehan', 'Harga Beli', 'Sumber Perolehan', 'Kode Unit', 'Nama Unit', 'PIC', 'Kondisi', 'Status', 'Jenis KIB', 'Masa Manfaat (Tahun)', 'Nilai Residu', 'Akumulasi Penyusutan', 'Nilai Buku'], ';');
-      foreach ($rows as $row) {
-          fputcsv($output, [$row['kode_aset'], $row['serial_number'], $row['kode_item'], $row['nama_aset'], $row['spesifikasi'], $row['tanggal_perolehan'], $row['harga_beli'], $row['sumber_perolehan'], $row['kode_unit'], $row['nama_unit'], $row['pic'], $row['status_kondisi'], $row['status'], $row['kib_jenis'], $row['masa_manfaat_tahun'], $row['nilai_residu'], $row['akumulasi_penyusutan'], $row['nilai_buku']], ';');
-      }
-      fclose($output);
-      exit();
-  }
-
-  public function postImportAset()
-  {
-      $this->_initAset();
-      header('Content-Type: application/json');
-      if (!isset($_FILES['file_import']) || $_FILES['file_import']['error'] !== UPLOAD_ERR_OK) {
-          echo json_encode(['status' => 'error', 'message' => 'File CSV belum dipilih atau gagal diunggah.']);
-          exit();
-      }
-      $path = $_FILES['file_import']['tmp_name'];
-      $delimiter = $this->_detectCsvDelimiter($path);
-      $handle = fopen($path, 'r');
-      if (!$handle) {
-          echo json_encode(['status' => 'error', 'message' => 'File CSV tidak dapat dibaca.']);
-          exit();
-      }
-      $header = fgetcsv($handle, 0, $delimiter);
-      if (!$header) {
-          fclose($handle);
-          echo json_encode(['status' => 'error', 'message' => 'Header CSV tidak ditemukan.']);
-          exit();
-      }
-      $header = array_map(function($v) { return $this->_normalizeImportText(str_replace("\xEF\xBB\xBF", '', $v)); }, $header);
-      $index = [];
-      foreach ($header as $i => $name) $index[$name] = $i;
-      $column = function($row, $names, $default = '') use ($index) {
-          foreach ($names as $name) {
-              $key = $this->_normalizeImportText($name);
-              if (isset($index[$key])) return trim((string)($row[$index[$key]] ?? $default));
-          }
-          return $default;
-      };
-      foreach (['Kode Item', 'Nama Aset', 'Kode Unit'] as $required) {
-          if (!isset($index[$this->_normalizeImportText($required)])) {
-              fclose($handle);
-              echo json_encode(['status' => 'error', 'message' => "Kolom '$required' tidak ditemukan. Gunakan template terbaru."]);
-              exit();
-          }
-      }
-
-      $items = [];
-      foreach ($this->db('rsns_custom_logistik_non_medis_master_barang')->where('status', 'Aktif')->toArray() as $item) {
-          $items[$this->_normalizeImportText($item['kode_item'])] = $item;
-          $items[$this->_normalizeImportText($item['nama_barang'])] = $item;
-      }
-      $units = [];
-      foreach ($this->db('rsns_custom_logistik_non_medis_unit')->where('status', 'Aktif')->toArray() as $unit) {
-          $units[$this->_normalizeImportText($unit['kode_unit'])] = $unit;
-          $units[$this->_normalizeImportText($unit['nama_unit'])] = $unit;
-      }
-
-      $pdo = $this->db()->pdo();
-      $stmt = $pdo->prepare("INSERT INTO rsns_custom_logistik_non_medis_aset (kode_aset, serial_number, kode_item, nama_aset, spesifikasi, tanggal_perolehan, harga_beli, sumber_perolehan, kode_unit, pic, status_kondisi, status, kib_jenis, masa_manfaat_tahun, nilai_residu, nilai_buku, tgl_input, user_input) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Aktif', ?, ?, ?, ?, ?, ?)");
-      $success = 0;
-      $errors = [];
-      $row_number = 1;
-      $allowed_source = ['Beli', 'Hibah', 'APBD', 'Lainnya'];
-      $allowed_condition = ['Baik', 'Rusak Ringan', 'Rusak Berat'];
-      $allowed_kib = ['A', 'B', 'C', 'D', 'E', 'F'];
-      while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
-          $row_number++;
-          if (!array_filter($row, function($v) { return trim((string)$v) !== ''; })) continue;
-          $item_key = $this->_normalizeImportText($column($row, ['Kode Item']));
-          $unit_key = $this->_normalizeImportText($column($row, ['Kode Unit']));
-          if (!isset($items[$item_key])) { $errors[] = "Baris $row_number: kode item tidak ditemukan."; continue; }
-          if (!isset($units[$unit_key])) { $errors[] = "Baris $row_number: kode unit tidak ditemukan."; continue; }
-          $item = $items[$item_key];
-          $unit = $units[$unit_key];
-          $kode_aset = $column($row, ['Kode Aset (Opsional)', 'Kode Aset']);
-          if ($kode_aset === '') $kode_aset = $this->_generateKodeAset($unit['kode_unit']);
-          if ($this->db('rsns_custom_logistik_non_medis_aset')->where('kode_aset', $kode_aset)->oneArray()) { $errors[] = "Baris $row_number: kode aset $kode_aset sudah ada."; continue; }
-          $nama = $column($row, ['Nama Aset'], $item['nama_barang']);
-          if ($nama === '') { $errors[] = "Baris $row_number: nama aset kosong."; continue; }
-          $tanggal = $column($row, ['Tanggal Perolehan (YYYY-MM-DD)', 'Tanggal Perolehan'], date('Y-m-d'));
-          $date = \DateTime::createFromFormat('Y-m-d', $tanggal);
-          if (!$date || $date->format('Y-m-d') !== $tanggal) { $errors[] = "Baris $row_number: tanggal harus YYYY-MM-DD."; continue; }
-          $harga_text = str_replace(['Rp', 'rp', ' ', '.'], '', $column($row, ['Harga Beli'], '0'));
-          $harga = (float)str_replace(',', '.', $harga_text);
-          $residu_text = str_replace(['Rp', 'rp', ' ', '.'], '', $column($row, ['Nilai Residu'], '0'));
-          $residu = (float)str_replace(',', '.', $residu_text);
-          $source = $column($row, ['Sumber Perolehan'], 'Beli');
-          if (!in_array($source, $allowed_source, true)) $source = 'Lainnya';
-          $condition = $column($row, ['Kondisi'], 'Baik');
-          if (!in_array($condition, $allowed_condition, true)) $condition = 'Baik';
-          $kib = strtoupper($column($row, ['Jenis KIB'], ''));
-          if (!in_array($kib, $allowed_kib, true)) $kib = null;
-          try {
-              $stmt->execute([$kode_aset, $column($row, ['Serial Number']), $item['kode_item'], $nama, $column($row, ['Spesifikasi']), $tanggal, $harga, $source, $unit['kode_unit'], $column($row, ['PIC']), $condition, $kib, (int)$column($row, ['Masa Manfaat (Tahun)'], 0), $residu, $harga, date('Y-m-d H:i:s'), $this->core->getUserInfo('username', null, true)]);
-              $success++;
-          } catch (\Exception $e) {
-              $errors[] = "Baris $row_number: " . $e->getMessage();
-          }
-      }
-      fclose($handle);
-      if (!$success) {
-          echo json_encode(['status' => 'error', 'message' => 'Tidak ada aset yang berhasil diimport.', 'errors' => array_slice($errors, 0, 10)]);
-      } else {
-          echo json_encode(['status' => 'success', 'message' => "$success aset berhasil diimport." . ($errors ? ' '.count($errors).' baris dilewati.' : ''), 'errors' => array_slice($errors, 0, 10)]);
-      }
-      exit();
-  }
-
   public function anyDisplayAsetRegistrasi()
   {
       $this->_initAset();
@@ -9238,7 +8328,6 @@ $(document).ready(function() {
       
       $master_barang = $this->db('rsns_custom_logistik_non_medis_master_barang')->where('status', 'Aktif')->toArray();
       $units = $this->db('rsns_custom_logistik_non_medis_unit')->where('status', 'Aktif')->toArray();
-      $kategori_aset = $this->db('rsns_custom_logistik_non_medis_kategori_aset')->where('status_aktif', 'Aktif')->toArray();
       
       if (isset($_POST['id'])) {
           $aset = $this->db('rsns_custom_logistik_non_medis_aset')->where('id', $_POST['id'])->oneArray();
@@ -9246,8 +8335,7 @@ $(document).ready(function() {
               'aset' => $aset,
               'mode' => 'edit',
               'master_barang' => $master_barang,
-              'units' => $units,
-              'kategori_aset' => $kategori_aset
+              'units' => $units
           ]);
       } else {
           $aset = [
@@ -9264,15 +8352,13 @@ $(document).ready(function() {
               'sumber_perolehan' => 'Beli',
               'kode_unit' => '',
               'pic' => '',
-              'status_kondisi' => 'Baik',
-              'kode_kategori_aset' => ''
+              'status_kondisi' => 'Baik'
           ];
           echo $this->draw('aset.registrasi.form.html', [
               'aset' => $aset,
               'mode' => 'add',
               'master_barang' => $master_barang,
-              'units' => $units,
-              'kategori_aset' => $kategori_aset
+              'units' => $units
           ]);
       }
       exit();
@@ -9319,7 +8405,6 @@ $(document).ready(function() {
       $data = [
           'serial_number' => $_POST['serial_number'] ?? '',
           'kode_item' => $_POST['kode_item'] ?? '',
-          'kode_kategori_aset' => $_POST['kode_kategori_aset'] ?? NULL,
           'nama_aset' => $_POST['nama_aset'] ?? '',
           'spesifikasi' => $_POST['spesifikasi'] ?? '',
           'tanggal_perolehan' => $_POST['tanggal_perolehan'] ?? date('Y-m-d'),
@@ -9643,8 +8728,7 @@ $(document).ready(function() {
       $this->_initUnit();
       $this->_addHeaderFiles();
       $units = $this->db('rsns_custom_logistik_non_medis_unit')->where('status', 'Aktif')->toArray();
-      $kategori = $this->db('rsns_custom_logistik_non_medis_kategori_aset')->where('status_aktif', 'Aktif')->toArray();
-      return $this->draw('aset.kib.html', ['units' => $units, 'kategori' => $kategori]);
+      return $this->draw('aset.kib.html', ['units' => $units]);
   }
 
   public function anyDisplayKib()
@@ -9690,7 +8774,7 @@ $(document).ready(function() {
       
       // Build rows query for paginated results
       $rows_query = $this->db('rsns_custom_logistik_non_medis_aset')
-                         ->where('kode_kategori_aset', $kib)
+                         ->where('kib_jenis', $kib)
                          ->where('status', 'Aktif');
                          
       if(!empty($cari)) {
@@ -9718,13 +8802,6 @@ $(document).ready(function() {
       foreach($asets as &$aset) {
           $unit = $this->db('rsns_custom_logistik_non_medis_unit')->where('kode_unit', $aset['kode_unit'])->oneArray();
           $aset['nama_unit'] = $unit['nama_unit'] ?? '-';
-          
-          if(!empty($aset['kode_kategori_aset'])) {
-              $kat = $this->db('rsns_custom_logistik_non_medis_kategori_aset')->where('kode_kategori', $aset['kode_kategori_aset'])->oneArray();
-              $aset['nama_kategori_aset'] = $kat['nama_kategori'] ?? '-';
-          } else {
-              $aset['nama_kategori_aset'] = '-';
-          }
       }
       
       // Build pagination HTML
@@ -9764,7 +8841,14 @@ $(document).ready(function() {
   {
       $this->_initAset();
       
-      $kategori_aset = $this->db('rsns_custom_logistik_non_medis_kategori_aset')->where('status_aktif', 'Aktif')->toArray();
+      $kib_categories = [
+          'A' => ['nama' => 'Tanah', 'nama_singkat' => 'Tanah'],
+          'B' => ['nama' => 'Peralatan & Mesin', 'nama_singkat' => 'Peralatan'],
+          'C' => ['nama' => 'Gedung & Bangunan', 'nama_singkat' => 'Gedung'],
+          'D' => ['nama' => 'Jalan, Irigasi & Jaringan', 'nama_singkat' => 'Jalan/Jaringan'],
+          'E' => ['nama' => 'Aset Tetap Lainnya', 'nama_singkat' => 'Aset Lainnya'],
+          'F' => ['nama' => 'Konstruksi Dalam Pengerjaan', 'nama_singkat' => 'Konstruksi']
+      ];
       
       $rekap_data = [];
       $kpi = [];
@@ -9775,10 +8859,9 @@ $(document).ready(function() {
       $grand_total_berat = 0;
       $grand_total_nilai = 0.0;
       
-      foreach ($kategori_aset as $kat) {
-          $jenis = $kat['kode_kategori'];
+      foreach ($kib_categories as $jenis => $meta) {
           $assets_in_cat = $this->db('rsns_custom_logistik_non_medis_aset')
-                                ->where('kode_kategori_aset', $jenis)
+                                ->where('kib_jenis', $jenis)
                                 ->where('status', 'Aktif')
                                 ->toArray();
                                 
@@ -9802,8 +8885,8 @@ $(document).ready(function() {
           
           $rekap_data[] = [
               'jenis' => $jenis,
-              'nama' => $kat['nama_kategori'],
-              'nama_singkat' => $kat['nama_kategori'],
+              'nama' => $meta['nama'],
+              'nama_singkat' => $meta['nama_singkat'],
               'jumlah' => $total_count,
               'kondisi_baik' => $baik,
               'kondisi_rusak_ringan' => $ringan,
@@ -9813,8 +8896,7 @@ $(document).ready(function() {
           
           $kpi[$jenis] = [
               'jumlah' => $total_count,
-              'total_nilai' => $total_nilai,
-              'nama_kategori' => $kat['nama_kategori']
+              'total_nilai' => $total_nilai
           ];
           
           $grand_total_barang += $total_count;
@@ -12777,217 +11859,6 @@ $(document).ready(function() {
       exit();
   }
 
-  private function _costUnitPriceExpression($sppb_alias = 's')
-  {
-      return "COALESCE(NULLIF($sppb_alias.harga_satuan_cost, 0),
-              NULLIF((SELECT sb.harga_beli FROM rsns_custom_logistik_non_medis_stok_batch sb
-                      WHERE sb.kode_item = $sppb_alias.kode_item AND sb.harga_beli > 0
-                      ORDER BY sb.tgl_terima DESC, sb.batch_no DESC LIMIT 1), 0),
-              NULLIF(b.harga_referensi, 0), 0)";
-  }
-
-  public function getLaporanCostUnit()
-  {
-      $this->_initCostUnit();
-      $this->_addHeaderFiles();
-      return $this->draw('laporan.costunit.html');
-  }
-
-  public function anyDisplayLaporanCostUnit()
-  {
-      $this->_initCostUnit();
-      $periode = $_POST['periode'] ?? date('Y-m');
-      $minggu = (int)($_POST['minggu'] ?? 0);
-      $status = $_POST['status'] ?? '';
-      if (!preg_match('/^(\d{4})-(\d{2})$/', $periode, $match)) $periode = date('Y-m');
-      $tahun = (int)substr($periode, 0, 4);
-      $bulan = (int)substr($periode, 5, 2);
-      if ($minggu < 0 || $minggu > 4) $minggu = 0;
-      if (!in_array($status, ['Diajukan', 'Selesai'], true)) $status = '';
-
-      $price = $this->_costUnitPriceExpression('s');
-      $sql = "SELECT s.no_sppb, MIN(s.tgl_sppb) AS tgl_sppb, MAX(s.minggu_ke) AS minggu_ke,
-                     s.kode_unit, COALESCE(u.nama_unit, s.kode_unit) AS nama_unit,
-                     COUNT(*) AS jumlah_item, SUM(s.jumlah) AS total_qty,
-                     SUM(CASE WHEN $price <= 0 THEN 1 ELSE 0 END) AS belum_harga,
-                     SUM(s.jumlah * $price) AS total_cost,
-                     CASE WHEN SUM(CASE WHEN s.status = 'Diajukan' THEN 1 ELSE 0 END) > 0
-                          THEN 'Diajukan' ELSE 'Selesai' END AS status
-              FROM rsns_custom_logistik_non_medis_sppb s
-              LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = s.kode_unit
-              LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = s.kode_item
-              WHERE YEAR(s.tgl_sppb) = ? AND MONTH(s.tgl_sppb) = ?
-                AND s.minggu_ke IS NOT NULL AND s.status IN ('Diajukan','Selesai')";
-      $params = [$tahun, $bulan];
-      if ($minggu) { $sql .= " AND s.minggu_ke = ?"; $params[] = $minggu; }
-      if ($status) { $sql .= " AND s.status = ?"; $params[] = $status; }
-      $sql .= " GROUP BY s.no_sppb, s.kode_unit, u.nama_unit ORDER BY s.kode_unit, MIN(s.tgl_sppb), s.no_sppb";
-      $stmt = $this->db()->pdo()->prepare($sql);
-      $stmt->execute($params);
-      $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-
-      $total_cost = 0;
-      $total_item = 0;
-      $belum_harga = 0;
-      foreach ($rows as $index => &$row) {
-          $row['no'] = $index + 1;
-          $total_cost += (float)$row['total_cost'];
-          $total_item += (int)$row['jumlah_item'];
-          $belum_harga += (int)$row['belum_harga'];
-          $row['tgl_sppb_format'] = date('d/m/Y', strtotime($row['tgl_sppb']));
-      }
-
-      $audit_sql = "SELECT a.*, COALESCE(u.nama_unit, a.kode_unit) nama_unit, b.nama_barang
-                    FROM rsns_custom_logistik_non_medis_cost_unit_audit a
-                    LEFT JOIN rsns_custom_logistik_non_medis_sppb s ON s.id = a.sppb_item_id
-                    LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = a.kode_unit
-                    LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = a.kode_item
-                    WHERE YEAR(s.tgl_sppb) = ? AND MONTH(s.tgl_sppb) = ?";
-      $audit_params = [$tahun, $bulan];
-      if ($minggu) { $audit_sql .= " AND s.minggu_ke = ?"; $audit_params[] = $minggu; }
-      $audit_sql .= " ORDER BY a.id DESC LIMIT 30";
-      $audit_stmt = $this->db()->pdo()->prepare($audit_sql);
-      $audit_stmt->execute($audit_params);
-      $audit = $audit_stmt->fetchAll(\PDO::FETCH_ASSOC);
-      foreach ($audit as &$log) $log['tgl_proses_format'] = date('d/m/Y H:i', strtotime($log['tgl_proses']));
-
-      echo $this->draw('laporan.costunit.display.html', [
-          'rows' => $rows,
-          'audit' => $audit,
-          'total_cost' => $total_cost,
-          'total_unit' => count(array_unique(array_column($rows, 'kode_unit'))),
-          'total_sppb' => count($rows),
-          'total_item' => $total_item,
-          'belum_harga' => $belum_harga
-      ]);
-      exit();
-  }
-
-  public function anyDetailLaporanCostUnit()
-  {
-      $this->_initCostUnit();
-      $no_sppb = trim($_POST['no_sppb'] ?? '');
-      $price = $this->_costUnitPriceExpression('s');
-      $stmt = $this->db()->pdo()->prepare("SELECT s.*, b.nama_barang, b.harga_referensi,
-                 COALESCE(u.nama_unit, s.kode_unit) nama_unit, $price AS harga_cost
-          FROM rsns_custom_logistik_non_medis_sppb s
-          LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = s.kode_item
-          LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = s.kode_unit
-          WHERE s.no_sppb = ? AND s.minggu_ke IS NOT NULL AND s.status IN ('Diajukan','Selesai')
-          ORDER BY b.nama_barang");
-      $stmt->execute([$no_sppb]);
-      $items = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-      if (!$items) {
-          echo '<div class="alert alert-warning">Data SPPB mingguan tidak ditemukan.</div>';
-          exit();
-      }
-      $meta = $items[0];
-      $meta['editable'] = $meta['status'] === 'Diajukan';
-      $meta['tgl_sppb_format'] = date('d/m/Y', strtotime($meta['tgl_sppb']));
-      $total_cost = 0;
-      foreach ($items as $index => &$item) {
-          $item['no'] = $index + 1;
-          $total_cost += (float)$item['jumlah'] * (float)$item['harga_cost'];
-      }
-      echo $this->draw('laporan.costunit.detail.html', ['meta' => $meta, 'items' => $items, 'total_cost' => $total_cost]);
-      exit();
-  }
-
-  public function postSaveLaporanCostUnit()
-  {
-      $this->_initCostUnit();
-      header('Content-Type: application/json; charset=utf-8');
-      $no_sppb = trim($_POST['no_sppb'] ?? '');
-      $action = ($_POST['action'] ?? 'simpan') === 'selesai' ? 'selesai' : 'simpan';
-      $input_items = $_POST['items'] ?? [];
-      $keterangan = trim($_POST['keterangan'] ?? '');
-      if (!$no_sppb || !is_array($input_items)) {
-          echo json_encode(['status' => 'error', 'message' => 'Data Cost Unit tidak valid.']);
-          exit();
-      }
-
-      $pdo = $this->db()->pdo();
-      $stmt = $pdo->prepare("SELECT s.*, b.nama_barang, b.harga_referensi,
-                   COALESCE(NULLIF(s.harga_satuan_cost,0), NULLIF((SELECT sb.harga_beli FROM rsns_custom_logistik_non_medis_stok_batch sb WHERE sb.kode_item=s.kode_item AND sb.harga_beli>0 ORDER BY sb.tgl_terima DESC, sb.batch_no DESC LIMIT 1),0), NULLIF(b.harga_referensi,0),0) harga_awal
-            FROM rsns_custom_logistik_non_medis_sppb s
-            LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item
-            WHERE s.no_sppb=? AND s.minggu_ke IS NOT NULL AND s.status='Diajukan'");
-      $stmt->execute([$no_sppb]);
-      $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-      if (!$rows) {
-          echo json_encode(['status' => 'error', 'message' => 'SPPB tidak ditemukan atau sudah berstatus Selesai.']);
-          exit();
-      }
-
-      $prepared = [];
-      $missing = [];
-      foreach ($rows as $row) {
-          $raw = $input_items[$row['id']]['harga'] ?? $row['harga_awal'];
-          $harga = (float)str_replace(',', '.', preg_replace('/[^0-9,.-]/', '', (string)$raw));
-          if ($harga < 0) $harga = 0;
-          if ($action === 'selesai' && $harga <= 0) $missing[] = $row['nama_barang'] ?: $row['kode_item'];
-          $prepared[] = ['row' => $row, 'harga' => $harga, 'subtotal' => (float)$row['jumlah'] * $harga];
-      }
-      if ($missing) {
-          echo json_encode(['status' => 'error', 'message' => 'Harga satuan belum diisi: ' . implode(', ', array_slice($missing, 0, 5)) . (count($missing) > 5 ? ' dan lainnya.' : '.')]);
-          exit();
-      }
-
-      $user = $this->core->getUserInfo('username', null, true);
-      $now = date('Y-m-d H:i:s');
-      try {
-          $pdo->beginTransaction();
-          $update = $pdo->prepare("UPDATE rsns_custom_logistik_non_medis_sppb SET harga_satuan_cost=?, subtotal_cost=?, user_cost=?, tgl_cost=? WHERE id=? AND status='Diajukan'");
-          $audit = $pdo->prepare("INSERT INTO rsns_custom_logistik_non_medis_cost_unit_audit (no_sppb,sppb_item_id,kode_unit,kode_item,qty,harga_lama,harga_baru,subtotal,aksi,keterangan,user_proses,tgl_proses) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-          foreach ($prepared as $item) {
-              $row = $item['row'];
-              $update->execute([$item['harga'], $item['subtotal'], $user, $now, $row['id']]);
-              $audit->execute([$no_sppb, $row['id'], $row['kode_unit'], $row['kode_item'], $row['jumlah'], $row['harga_satuan_cost'], $item['harga'], $item['subtotal'], $action === 'selesai' ? 'Selesaikan' : 'Simpan', $keterangan, $user, $now]);
-          }
-          if ($action === 'selesai') {
-              $finish = $pdo->prepare("UPDATE rsns_custom_logistik_non_medis_sppb SET status='Selesai' WHERE no_sppb=? AND minggu_ke IS NOT NULL AND status='Diajukan'");
-              $finish->execute([$no_sppb]);
-          }
-          $pdo->commit();
-          $this->_logAction('logistik_non_medis_cost_unit', ($action === 'selesai' ? 'Finalisasi' : 'Simpan') . " Cost Unit: $no_sppb", 'U');
-          echo json_encode(['status' => 'success', 'message' => $action === 'selesai' ? 'Cost Unit berhasil difinalisasi dan status SPPB menjadi Selesai.' : 'Harga Cost Unit berhasil disimpan. Status tetap Diajukan.']);
-      } catch (\Exception $e) {
-          if ($pdo->inTransaction()) $pdo->rollBack();
-          echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan Cost Unit: ' . $e->getMessage()]);
-      }
-      exit();
-  }
-
-  public function getExportLaporanCostUnit()
-  {
-      $this->_initCostUnit();
-      $periode = $_GET['periode'] ?? date('Y-m');
-      $minggu = (int)($_GET['minggu'] ?? 0);
-      $status = $_GET['status'] ?? '';
-      if (!preg_match('/^(\d{4})-(\d{2})$/', $periode)) $periode = date('Y-m');
-      $price = $this->_costUnitPriceExpression('s');
-      $sql = "SELECT s.tgl_sppb,s.minggu_ke,s.no_sppb,COALESCE(u.nama_unit,s.kode_unit) nama_unit,
-                     b.nama_barang,s.jumlah,s.satuan,$price harga_satuan,(s.jumlah*$price) subtotal,s.status
-              FROM rsns_custom_logistik_non_medis_sppb s
-              LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=s.kode_unit
-              LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item
-              WHERE YEAR(s.tgl_sppb)=? AND MONTH(s.tgl_sppb)=? AND s.minggu_ke IS NOT NULL AND s.status IN ('Diajukan','Selesai')";
-      $params = [(int)substr($periode,0,4),(int)substr($periode,5,2)];
-      if ($minggu >= 1 && $minggu <= 4) { $sql .= " AND s.minggu_ke=?"; $params[]=$minggu; }
-      if (in_array($status,['Diajukan','Selesai'],true)) { $sql .= " AND s.status=?"; $params[]=$status; }
-      $sql .= " ORDER BY u.nama_unit,b.nama_barang";
-      $stmt = $this->db()->pdo()->prepare($sql);
-      $stmt->execute($params);
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Cost_Unit_'.$periode.($minggu ? '_Minggu-'.$minggu : '').'.csv');
-      $out = fopen('php://output','w');
-      fwrite($out,"\xEF\xBB\xBF");
-      fputcsv($out,['Tanggal','Minggu','No. SPPB','Nama Unit','Nama Barang','Jumlah','Satuan','Harga Satuan','Subtotal','Status'],';');
-      while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) fputcsv($out,[$row['tgl_sppb'],$row['minggu_ke'],$row['no_sppb'],$row['nama_unit'],$row['nama_barang'],$row['jumlah'],$row['satuan'],$row['harga_satuan'],$row['subtotal'],$row['status']],';');
-      fclose($out);
-      exit();
-  }
-
   public function getLaporanStokMutasi()
   {
       $this->_addHeaderFiles();
@@ -14015,14 +12886,14 @@ $(document).ready(function() {
 
       // 1. Total Distribusi
       $q1 = "SELECT COUNT(DISTINCT no_sppb) as count FROM rsns_custom_logistik_non_medis_sppb 
-             WHERE status IN ('Proses', 'Ready', 'Selesai') AND tgl_sppb BETWEEN :start_date AND :end_date";
+             WHERE status IN ('Dikirim', 'Diterima', 'Selesai') AND tgl_sppb BETWEEN :start_date AND :end_date";
       $stmt1 = $db->prepare($q1);
       $stmt1->execute([':start_date' => $start_date, ':end_date' => $end_date]);
       $total_dist = $stmt1->fetch(\PDO::FETCH_ASSOC)['count'] ?? 0;
 
       // 2. Volume Terdistribusi
       $q2 = "SELECT SUM(jumlah_disetujui) as vol FROM rsns_custom_logistik_non_medis_sppb 
-             WHERE status IN ('Proses', 'Ready', 'Selesai') AND tgl_sppb BETWEEN :start_date AND :end_date";
+             WHERE status IN ('Dikirim', 'Diterima', 'Selesai') AND tgl_sppb BETWEEN :start_date AND :end_date";
       $stmt2 = $db->prepare($q2);
       $stmt2->execute([':start_date' => $start_date, ':end_date' => $end_date]);
       $total_vol = (double)($stmt2->fetch(\PDO::FETCH_ASSOC)['vol'] ?? 0);
@@ -14031,14 +12902,14 @@ $(document).ready(function() {
       $q3 = "SELECT SUM(s.jumlah_disetujui * b.harga_referensi) as nilai 
              FROM rsns_custom_logistik_non_medis_sppb s
              JOIN rsns_custom_logistik_non_medis_master_barang b ON s.kode_item = b.kode_item
-             WHERE s.status IN ('Proses', 'Ready', 'Selesai') AND s.tgl_sppb BETWEEN :start_date AND :end_date";
+             WHERE s.status IN ('Dikirim', 'Diterima', 'Selesai') AND s.tgl_sppb BETWEEN :start_date AND :end_date";
       $stmt3 = $db->prepare($q3);
       $stmt3->execute([':start_date' => $start_date, ':end_date' => $end_date]);
       $total_val = (double)($stmt3->fetch(\PDO::FETCH_ASSOC)['nilai'] ?? 0);
 
       // 4. Unit Penerima Aktif
       $q4 = "SELECT COUNT(DISTINCT kode_unit) as active_units FROM rsns_custom_logistik_non_medis_sppb 
-             WHERE status IN ('Proses', 'Ready', 'Selesai') AND tgl_sppb BETWEEN :start_date AND :end_date";
+             WHERE status IN ('Dikirim', 'Diterima', 'Selesai') AND tgl_sppb BETWEEN :start_date AND :end_date";
       $stmt4 = $db->prepare($q4);
       $stmt4->execute([':start_date' => $start_date, ':end_date' => $end_date]);
       $active_units = $stmt4->fetch(\PDO::FETCH_ASSOC)['active_units'] ?? 0;
@@ -14078,7 +12949,7 @@ $(document).ready(function() {
             LEFT JOIN rsns_custom_logistik_non_medis_serah_terima st ON s.no_sppb = st.no_sppb
             JOIN rsns_custom_logistik_non_medis_unit u ON s.kode_unit = u.kode_unit
             JOIN rsns_custom_logistik_non_medis_master_barang b ON s.kode_item = b.kode_item
-            WHERE s.status IN ('Proses', 'Ready', 'Selesai')
+            WHERE s.status IN ('Dikirim', 'Diterima', 'Selesai')
               AND s.tgl_sppb BETWEEN :start_date AND :end_date";
               
       $params = [':start_date' => $start_date, ':end_date' => $end_date];
@@ -14107,12 +12978,9 @@ $(document).ready(function() {
               $status_badge = 'label-info';
               if ($row['status'] == 'Selesai') {
                   $status_badge = 'label-success';
-              } elseif ($row['status'] == 'Ready') {
+              } elseif ($row['status'] == 'Diterima') {
                   $status_badge = 'label-primary';
-              } elseif ($row['status'] == 'Proses') {
-                  $status_badge = 'label-info';
               }
-              $status_label = $row['status'] === 'Ready' ? 'Siap Diambil' : $row['status'];
               
               $html .= '<tr>
                           <td class="text-center">' . $no++ . '</td>
@@ -14122,7 +12990,7 @@ $(document).ready(function() {
                           <td><strong>' . htmlspecialchars($row['nama_barang']) . '</strong><br><small class="text-muted">Kode: ' . htmlspecialchars($row['kode_item']) . '</small></td>
                           <td class="text-center">' . number_format($row['jumlah_disetujui'], 0, ',', '.') . ' ' . htmlspecialchars($row['satuan'] ?? 'Pcs') . '</td>
                           <td class="text-right">Rp. ' . number_format($total_biaya, 0, ',', '.') . '</td>
-                          <td class="text-center"><span class="label ' . $status_badge . '">' . htmlspecialchars($status_label) . '</span></td>
+                          <td class="text-center"><span class="label ' . $status_badge . '">' . htmlspecialchars($row['status']) . '</span></td>
                           <td>' . htmlspecialchars($row['penerima_nama'] ?? '-') . '</td>
                         </tr>';
           }
@@ -14155,7 +13023,7 @@ $(document).ready(function() {
             FROM rsns_custom_logistik_non_medis_sppb s
             JOIN rsns_custom_logistik_non_medis_unit u ON s.kode_unit = u.kode_unit
             JOIN rsns_custom_logistik_non_medis_master_barang b ON s.kode_item = b.kode_item
-            WHERE s.status IN ('Proses', 'Ready', 'Selesai')
+            WHERE s.status IN ('Diterima', 'Selesai')
               AND s.tgl_sppb BETWEEN :start_date AND :end_date";
               
       $params = [':start_date' => $start_date, ':end_date' => $end_date];
@@ -14224,7 +13092,7 @@ $(document).ready(function() {
                 SUM(s.jumlah_disetujui * b.harga_referensi) as total_nilai
             FROM rsns_custom_logistik_non_medis_sppb s
             JOIN rsns_custom_logistik_non_medis_master_barang b ON s.kode_item = b.kode_item
-            WHERE s.status IN ('Proses', 'Ready', 'Selesai')
+            WHERE s.status IN ('Diterima', 'Selesai')
               AND YEAR(s.tgl_sppb) = :tahun";
               
       $params = [':tahun' => $tahun];
@@ -14512,7 +13380,7 @@ $(document).ready(function() {
             FROM rsns_custom_logistik_non_medis_sppb s
             JOIN rsns_custom_logistik_non_medis_unit u ON s.kode_unit = u.kode_unit
             JOIN rsns_custom_logistik_non_medis_master_barang b ON s.kode_item = b.kode_item
-            WHERE s.status IN ('Proses', 'Ready', 'Selesai')
+            WHERE s.status IN ('Diterima', 'Selesai')
               AND s.tgl_sppb BETWEEN :start_date AND :end_date
             GROUP BY u.kode_unit
             ORDER BY total_biaya DESC";
@@ -14735,12 +13603,10 @@ $(document).ready(function() {
       $query_detail = "SELECT 
                           a.*, 
                           b.nama_barang, 
-                          u.nama_unit,
-                          ka.nama_kategori as nama_kategori_aset
+                          u.nama_unit 
                         FROM rsns_custom_logistik_non_medis_aset a
                         LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON a.kode_item = b.kode_item
                         LEFT JOIN rsns_custom_logistik_non_medis_unit u ON a.kode_unit = u.kode_unit
-                        LEFT JOIN rsns_custom_logistik_non_medis_kategori_aset ka ON a.kode_kategori_aset = ka.kode_kategori
                         $where_detail_str
                         ORDER BY a.kib_jenis ASC, a.kode_aset ASC";
       
@@ -16198,969 +15064,7 @@ $(document).ready(function() {
       exit();
   }
 
-
-  public function anyExportMutasiCSV()
-  {
-      $kategori = $_GET['kategori'] ?? '';
-      $bulan = $_GET['bulan'] ?? date('m');
-      $tahun = $_GET['tahun'] ?? date('Y');
-      
-      $where = "WHERE MONTH(m.tgl_mutasi) = '$bulan' AND YEAR(m.tgl_mutasi) = '$tahun'";
-      if (!empty($kategori)) {
-          $where .= " AND b.kode_kategori = '$kategori'";
-      }
-      
-      $query = "SELECT m.no_mutasi, m.tgl_mutasi, d.kode_item, b.nama_barang, d.jenis_mutasi, d.qty, d.keterangan 
-                FROM rsns_custom_logistik_non_medis_mutasi m 
-                JOIN rsns_custom_logistik_non_medis_mutasi_detail d ON m.no_mutasi = d.no_mutasi 
-                LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON d.kode_item = b.kode_item 
-                $where 
-                ORDER BY m.tgl_mutasi ASC";
-      $rows = $this->db()->pdo()->query($query)->fetchAll(\PDO::FETCH_ASSOC);
-      
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Laporan_Mutasi_' . $bulan . '_' . $tahun . '.csv');
-      $output = fopen('php://output', 'w');
-      fputcsv($output, ['No Transaksi', 'Tanggal', 'Kode Barang', 'Nama Barang', 'Jenis Mutasi', 'Qty', 'Keterangan'], ';');
-      foreach ($rows as $row) {
-          fputcsv($output, $row, ';');
-      }
-      fclose($output);
-      exit();
-  }
-
-  public function anyDownloadTemplateMutasiCSV()
-  {
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Template_Import_Mutasi.csv');
-      $output = fopen('php://output', 'w');
-      fputcsv($output, ['No Transaksi', 'Tanggal (YYYY-MM-DD)', 'Catatan Umum', 'Kode Barang', 'Jenis Mutasi (Masuk/Keluar/Penyesuaian)', 'Jumlah', 'Catatan Item'], ';');
-      fputcsv($output, ['MUT/2026/001', '2026-07-19', 'Stok awal bulan', 'BRG0001', 'Masuk', '100', ''], ';');
-      fputcsv($output, ['MUT/2026/001', '2026-07-19', 'Stok awal bulan', 'BRG0002', 'Masuk', '50', 'Dus rusak'], ';');
-      fclose($output);
-      exit();
-  }
-
-  public function postImportMutasiCSV()
-  {
-      if (!isset($_FILES['file_csv']) || $_FILES['file_csv']['error'] != UPLOAD_ERR_OK) {
-          echo json_encode(['status' => 'error', 'message' => 'Gagal mengupload file CSV']);
-          exit();
-      }
-      
-      $file = $_FILES['file_csv']['tmp_name'];
-      $handle = fopen($file, "r");
-      if ($handle !== FALSE) {
-          fgetcsv($handle, 1000, ";"); // Skip header
-          
-          $mutasi_data = [];
-          
-          while (($data = fgetcsv($handle, 1000, ";")) !== FALSE) {
-              if (count($data) < 6 || empty($data[0]) || empty($data[3])) continue;
-              
-              $no_mutasi = $data[0];
-              $tgl = $data[1];
-              $catatan_umum = $data[2];
-              
-              $kode_item = $data[3];
-              $jenis = ucfirst(strtolower(trim($data[4])));
-              if (!in_array($jenis, ['Masuk', 'Keluar', 'Penyesuaian'])) $jenis = 'Penyesuaian';
-              $qty = (float)$data[5];
-              $catatan_item = $data[6] ?? '';
-              
-              if (!isset($mutasi_data[$no_mutasi])) {
-                  $mutasi_data[$no_mutasi] = [
-                      'tgl' => $tgl,
-                      'catatan' => $catatan_umum,
-                      'items' => []
-                  ];
-              }
-              
-              $mutasi_data[$no_mutasi]['items'][] = [
-                  'kode_item' => $kode_item,
-                  'jenis' => $jenis,
-                  'qty' => $qty,
-                  'ket' => $catatan_item
-              ];
-          }
-          fclose($handle);
-          
-          // Save to DB
-          foreach ($mutasi_data as $no_mutasi => $mut) {
-              // Delete existing if any
-              $this->db('rsns_custom_logistik_non_medis_mutasi_detail')->where('no_mutasi', $no_mutasi)->delete();
-              $this->db('rsns_custom_logistik_non_medis_mutasi')->where('no_mutasi', $no_mutasi)->delete();
-              
-              $this->db('rsns_custom_logistik_non_medis_mutasi')->save([
-                  'no_mutasi' => $no_mutasi,
-                  'tgl_mutasi' => $mut['tgl'],
-                  'keterangan' => $mut['catatan'],
-                  'status' => 'Diterima'
-              ]);
-              
-              foreach ($mut['items'] as $item) {
-                  $this->db('rsns_custom_logistik_non_medis_mutasi_detail')->save([
-                      'no_mutasi' => $no_mutasi,
-                      'kode_item' => $item['kode_item'],
-                      'jenis_mutasi' => $item['jenis'],
-                      'qty' => $item['qty'],
-                      'keterangan' => $item['ket']
-                  ]);
-                  
-                  // Auto-adjust stock
-                  $batch = $this->db('rsns_custom_logistik_non_medis_stok_batch')->where('kode_item', $item['kode_item'])->where('kode_lokasi', '-')->oneArray();
-                  if ($batch) {
-                      $current_stok = (float)$batch['stok'];
-                      $new_stok = $current_stok;
-                      if ($item['jenis'] == 'Masuk') $new_stok += $item['qty'];
-                      elseif ($item['jenis'] == 'Keluar') $new_stok -= $item['qty'];
-                      elseif ($item['jenis'] == 'Penyesuaian') $new_stok = $item['qty'];
-                      $this->db('rsns_custom_logistik_non_medis_stok_batch')->where('kode_item', $item['kode_item'])->where('kode_lokasi', '-')->update(['stok' => $new_stok]);
-                  } else {
-                      $new_stok = $item['qty'];
-                      if ($item['jenis'] == 'Keluar') $new_stok = 0 - $item['qty'];
-                      $query_insert = "INSERT INTO rsns_custom_logistik_non_medis_stok_batch (kode_item, kode_lokasi, batch_no, stok) VALUES ('".$item['kode_item']."', '-', '-', $new_stok)";
-                      $this->db()->pdo()->exec($query_insert);
-                  }
-              }
-          }
-          
-          echo json_encode(['status' => 'success', 'message' => 'Data mutasi berhasil diimport dari CSV']);
-          exit();
-      }
-      echo json_encode(['status' => 'error', 'message' => 'Gagal membaca file CSV']);
-      exit();
-  }
-
-
-  // =========================================================
-  // MODUL RENCANA PEMBELIAN & REALISASI RUTIN
-  // =========================================================
-  private function _initRencanaRutin()
-  {
-      $pdo = $this->db()->pdo();
-      $check = $pdo->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_rencana_rutin` LIKE 'kode_vendor'")->fetch();
-      if (!$check) {
-          $pdo->exec("ALTER TABLE `rsns_custom_logistik_non_medis_rencana_rutin` ADD `kode_vendor` varchar(50) DEFAULT NULL AFTER `keterangan`");
-      }
-      $alasan = $pdo->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_rencana_rutin` LIKE 'alasan_penolakan'")->fetch();
-      if (!$alasan) {
-          $pdo->exec("ALTER TABLE `rsns_custom_logistik_non_medis_rencana_rutin` ADD `alasan_penolakan` TEXT NULL AFTER `status`");
-      }
-      $status = $pdo->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_rencana_rutin` LIKE 'status'")->fetch(\PDO::FETCH_ASSOC);
-      if ($status && stripos($status['Type'], "'ditolak'") === false) {
-          $pdo->exec("ALTER TABLE `rsns_custom_logistik_non_medis_rencana_rutin` MODIFY `status` ENUM('Draft','Disetujui','Ditolak','Selesai') NOT NULL DEFAULT 'Draft'");
-      }
-  }
-
-  private function _initCostUnit()
-  {
-      $this->_initSppb();
-      $pdo = $this->db()->pdo();
-      $columns = [
-          'harga_satuan_cost' => "double NOT NULL DEFAULT 0 AFTER `jumlah_disetujui`",
-          'subtotal_cost' => "double NOT NULL DEFAULT 0 AFTER `harga_satuan_cost`",
-          'user_cost' => "varchar(100) DEFAULT NULL AFTER `keterangan_verifikasi`",
-          'tgl_cost' => "datetime DEFAULT NULL AFTER `user_cost`"
-      ];
-      foreach ($columns as $name => $definition) {
-          $check = $pdo->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_sppb` LIKE " . $pdo->quote($name))->fetch();
-          if (!$check) $pdo->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` ADD `$name` $definition");
-      }
-
-      $pdo->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_cost_unit_audit` (
-        `id` int(11) NOT NULL AUTO_INCREMENT,
-        `no_sppb` varchar(50) NOT NULL,
-        `sppb_item_id` int(11) NOT NULL,
-        `kode_unit` varchar(50) NOT NULL,
-        `kode_item` varchar(50) NOT NULL,
-        `qty` double NOT NULL DEFAULT 0,
-        `harga_lama` double NOT NULL DEFAULT 0,
-        `harga_baru` double NOT NULL DEFAULT 0,
-        `subtotal` double NOT NULL DEFAULT 0,
-        `aksi` enum('Simpan','Selesaikan') NOT NULL DEFAULT 'Simpan',
-        `keterangan` text DEFAULT NULL,
-        `user_proses` varchar(100) DEFAULT NULL,
-        `tgl_proses` datetime NOT NULL,
-        PRIMARY KEY (`id`),
-        KEY `no_sppb` (`no_sppb`),
-        KEY `kode_unit` (`kode_unit`),
-        KEY `tgl_proses` (`tgl_proses`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=latin1");
-  }
-
-  private function _syncRencanaDariPO($no_po)
-  {
-      $po = $this->db('rsns_custom_logistik_non_medis_po')->where('no_po', $no_po)->oneArray();
-      if (!$po || ($po['sumber_tipe'] ?? '') !== 'rutin' || empty($po['no_rencana'])) {
-          return;
-      }
-
-      $no_rencana = $po['no_rencana'];
-      $penerimaan = $this->db('rsns_custom_logistik_non_medis_penerimaan')
-          ->where('no_po', $no_po)
-          ->where('status', 'Selesai')
-          ->toArray();
-      $qty_terima = [];
-      foreach ($penerimaan as $row) {
-          $kode_item = $row['kode_item'] ?? '';
-          $qty_terima[$kode_item] = ($qty_terima[$kode_item] ?? 0) + (float) ($row['qty_terima'] ?? 0);
-      }
-
-      $details = $this->db('rsns_custom_logistik_non_medis_rencana_rutin_detail')
-          ->where('no_rencana', $no_rencana)
-          ->toArray();
-      $selesai = !empty($details);
-      foreach ($details as $detail) {
-          $qty = min((float) $detail['qty_rencana'], (float) ($qty_terima[$detail['kode_item']] ?? 0));
-          $this->db('rsns_custom_logistik_non_medis_rencana_rutin_detail')
-              ->where('id_detail', $detail['id_detail'])
-              ->update(['qty_realisasi' => $qty]);
-          if ($qty < (float) $detail['qty_rencana']) {
-              $selesai = false;
-          }
-      }
-
-      if ($selesai) {
-          $this->db('rsns_custom_logistik_non_medis_rencana_rutin')
-              ->where('no_rencana', $no_rencana)
-              ->update(['status' => 'Selesai']);
-      }
-  }
-
-  private function _initRencanaNonRutin()
-  {
-      // Instalasi lama belum menyimpan asal unit usulan non-rutin.
-      // Periksa skema dahulu; menjalankan ALTER berulang dapat menulis warning ke hasil export.
-      $pdo = $this->db()->pdo();
-      $stmt = $pdo->query("SHOW COLUMNS FROM rsns_custom_logistik_non_medis_rencana_nonrutin LIKE 'kode_unit'");
-      if (!$stmt->fetch(\PDO::FETCH_ASSOC)) {
-          $pdo->exec("ALTER TABLE rsns_custom_logistik_non_medis_rencana_nonrutin ADD kode_unit VARCHAR(50) NULL AFTER no_rencana");
-      }
-      $alasan = $pdo->query("SHOW COLUMNS FROM rsns_custom_logistik_non_medis_rencana_nonrutin LIKE 'alasan_penolakan'")->fetch();
-      if (!$alasan) {
-          $pdo->exec("ALTER TABLE rsns_custom_logistik_non_medis_rencana_nonrutin ADD alasan_penolakan TEXT NULL AFTER status");
-      }
-      $status = $pdo->query("SHOW COLUMNS FROM rsns_custom_logistik_non_medis_rencana_nonrutin LIKE 'status'")->fetch(\PDO::FETCH_ASSOC);
-      if ($status && stripos($status['Type'], "'ditolak'") === false) {
-          $pdo->exec("ALTER TABLE rsns_custom_logistik_non_medis_rencana_nonrutin MODIFY status ENUM('Draft','Disetujui','Ditolak','Selesai') NOT NULL DEFAULT 'Draft'");
-      }
-  }
-
-  /**
-   * Halaman tunggal untuk seluruh rencana pembelian.
-   * Penerimaan tidak ditampilkan di sini karena realisasi bersumber dari PO dan
-   * dicatat pada menu Penerimaan Barang.
-   */
-  public function getRencanapembelian()
-  {
-      $this->_initRencanaRutin();
-      $this->_initRencanaNonRutin();
-      $bulan = $_GET['bulan'] ?? date('m');
-      $tahun = $_GET['tahun'] ?? date('Y');
-      $tipe = ($_GET['tipe'] ?? 'rutin') === 'nonrutin' ? 'nonrutin' : 'rutin';
-
-      $sql_rutin = "SELECT r.*, v.nama_vendor,
-                    (SELECT SUM(d.qty_rencana * d.estimasi_harga)
-                     FROM rsns_custom_logistik_non_medis_rencana_rutin_detail d
-                     WHERE d.no_rencana = r.no_rencana) AS total_estimasi
-                    FROM rsns_custom_logistik_non_medis_rencana_rutin r
-                    LEFT JOIN rsns_custom_logistik_non_medis_vendor v ON v.kode_vendor = r.kode_vendor
-                    WHERE r.bulan = '$bulan' AND r.tahun = '$tahun'
-                    ORDER BY r.tanggal_buat DESC, r.no_rencana DESC";
-      $rutin_rows = $this->db()->pdo()->query($sql_rutin)->fetchAll(\PDO::FETCH_ASSOC);
-      $rencana_rutin = [];
-      foreach ($rutin_rows as $i => $row) {
-          $row['no'] = $i + 1;
-          $row['total_estimasi'] = number_format($row['total_estimasi'] ?? 0, 0, ',', '.');
-          $rencana_rutin[] = $row;
-      }
-
-      $sql_nonrutin = "SELECT r.*, u.nama_unit,
-                    (SELECT SUM(d.qty_rencana * d.estimasi_harga)
-                     FROM rsns_custom_logistik_non_medis_rencana_nonrutin_detail d
-                     WHERE d.no_rencana = r.no_rencana) AS total_estimasi
-                    FROM rsns_custom_logistik_non_medis_rencana_nonrutin r
-                    LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = r.kode_unit
-                    WHERE r.tahun = '$tahun'
-                    ORDER BY r.tanggal_buat DESC, r.no_rencana DESC";
-      $nonrutin_rows = $this->db()->pdo()->query($sql_nonrutin)->fetchAll(\PDO::FETCH_ASSOC);
-      $rencana_nonrutin = [];
-      foreach ($nonrutin_rows as $i => $row) {
-          $row['no'] = $i + 1;
-          $row['total_estimasi'] = number_format($row['total_estimasi'] ?? 0, 0, ',', '.');
-          $rencana_nonrutin[] = $row;
-      }
-
-      $this->core->addJS('https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js');
-      $this->core->addCSS('https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css');
-      return $this->draw('pengadaan.rencana_pembelian.html', [
-          'rencana_rutin' => $rencana_rutin,
-          'rencana_nonrutin' => $rencana_nonrutin,
-          'bulan' => $bulan,
-          'tahun' => $tahun,
-          'tipe' => $tipe,
-          'token' => $_GET['t'] ?? ''
-      ]);
-  }
-
-  public function getExportlaporanperencanaan()
-  {
-      $this->_initRencanaRutin();
-      $this->_initRencanaNonRutin();
-      $bulan = $_GET['bulan'] ?? date('m');
-      $tahun = $_GET['tahun'] ?? date('Y');
-
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Laporan_Perencanaan_Pembelian_'.$tahun.'_'.$bulan.'.csv');
-      $output = fopen('php://output', 'w');
-      // UTF-8 BOM agar aksara Indonesia langsung terbaca baik di Excel.
-      fwrite($output, "\xEF\xBB\xBF");
-      fputcsv($output, ['Jenis Rencana', 'No. Rencana', 'Periode/Tahun', 'Tanggal Dibuat', 'Unit Pengaju', 'Vendor', 'Keterangan', 'Total Estimasi (Rp)', 'Status'], ';');
-
-      $rutin = $this->db()->pdo()->query("SELECT r.*, v.nama_vendor,
-          (SELECT SUM(d.qty_rencana * d.estimasi_harga) FROM rsns_custom_logistik_non_medis_rencana_rutin_detail d WHERE d.no_rencana = r.no_rencana) AS total_estimasi
-          FROM rsns_custom_logistik_non_medis_rencana_rutin r
-          LEFT JOIN rsns_custom_logistik_non_medis_vendor v ON v.kode_vendor = r.kode_vendor
-          WHERE r.bulan = '$bulan' AND r.tahun = '$tahun'
-          ORDER BY r.tanggal_buat, r.no_rencana")->fetchAll(\PDO::FETCH_ASSOC);
-      foreach ($rutin as $row) {
-          fputcsv($output, ['Rutin', $row['no_rencana'], $row['bulan'].' / '.$row['tahun'], $row['tanggal_buat'], '-', $row['nama_vendor'] ?? '-', $row['keterangan'], $row['total_estimasi'] ?? 0, $row['status']], ';');
-      }
-
-      $nonrutin = $this->db()->pdo()->query("SELECT r.*, u.nama_unit,
-          (SELECT SUM(d.qty_rencana * d.estimasi_harga) FROM rsns_custom_logistik_non_medis_rencana_nonrutin_detail d WHERE d.no_rencana = r.no_rencana) AS total_estimasi
-          FROM rsns_custom_logistik_non_medis_rencana_nonrutin r
-          LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = r.kode_unit
-          WHERE r.tahun = '$tahun'
-          ORDER BY r.tanggal_buat, r.no_rencana")->fetchAll(\PDO::FETCH_ASSOC);
-      foreach ($nonrutin as $row) {
-          fputcsv($output, ['Non-Rutin / Aset', $row['no_rencana'], $row['tahun'], $row['tanggal_buat'], $row['nama_unit'] ?? '-', '-', $row['keterangan'], $row['total_estimasi'] ?? 0, $row['status']], ';');
-      }
-      fclose($output);
-      exit();
-  }
-
-  /** Export rincian item dari rencana yang dicentang pengguna. */
-  public function postExportrencanaterpilih()
-  {
-      $this->_initRencanaRutin();
-      $this->_initRencanaNonRutin();
-      $pilihan = $_POST['rencana'] ?? [];
-      if (!is_array($pilihan) || empty($pilihan)) {
-          http_response_code(422);
-          echo 'Pilih minimal satu rencana untuk diexport.';
-          exit();
-      }
-
-      header('Content-Type: text/csv; charset=utf-8');
-      header('Content-Disposition: attachment; filename=Rincian_Rencana_Terpilih_'.date('Ymd_His').'.csv');
-      $output = fopen('php://output', 'w');
-      fwrite($output, "\xEF\xBB\xBF");
-      fputcsv($output, ['Jenis Rencana', 'No. Rencana', 'Status', 'Tanggal Dibuat', 'Periode/Tahun', 'Unit Pengaju', 'Vendor', 'Keterangan', 'Kode Barang', 'Nama Barang', 'Kategori', 'Satuan', 'Qty Rencana', 'Qty Realisasi', 'Estimasi Harga (Rp)', 'Subtotal Estimasi (Rp)', 'Alasan / Urgensi'], ';');
-
-      $pdo = $this->db()->pdo();
-      foreach (array_unique($pilihan) as $value) {
-          $parts = explode('|', $value, 2);
-          if (count($parts) !== 2 || !in_array($parts[0], ['rutin', 'nonrutin'], true)) {
-              continue;
-          }
-          [$tipe, $no_rencana] = $parts;
-          if ($tipe === 'rutin') {
-              $stmt = $pdo->prepare("SELECT r.*, v.nama_vendor FROM rsns_custom_logistik_non_medis_rencana_rutin r LEFT JOIN rsns_custom_logistik_non_medis_vendor v ON v.kode_vendor = r.kode_vendor WHERE r.no_rencana = ?");
-              $stmt->execute([$no_rencana]);
-              $rencana = $stmt->fetch(\PDO::FETCH_ASSOC);
-              if (!$rencana) continue;
-              $detail = $pdo->prepare("SELECT d.*, b.nama_barang, b.satuan_dasar FROM rsns_custom_logistik_non_medis_rencana_rutin_detail d LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = d.kode_item WHERE d.no_rencana = ?");
-              $detail->execute([$no_rencana]);
-              foreach ($detail->fetchAll(\PDO::FETCH_ASSOC) as $item) {
-                  fputcsv($output, ['Rutin', $rencana['no_rencana'], $rencana['status'], $rencana['tanggal_buat'], $rencana['bulan'].' / '.$rencana['tahun'], '-', $rencana['nama_vendor'] ?? '-', $rencana['keterangan'], $item['kode_item'], $item['nama_barang'], '-', $item['satuan_dasar'], $item['qty_rencana'], $item['qty_realisasi'], $item['estimasi_harga'], $item['qty_rencana'] * $item['estimasi_harga'], '-'], ';');
-              }
-          } else {
-              $stmt = $pdo->prepare("SELECT r.*, u.nama_unit FROM rsns_custom_logistik_non_medis_rencana_nonrutin r LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = r.kode_unit WHERE r.no_rencana = ?");
-              $stmt->execute([$no_rencana]);
-              $rencana = $stmt->fetch(\PDO::FETCH_ASSOC);
-              if (!$rencana) continue;
-              $detail = $pdo->prepare("SELECT * FROM rsns_custom_logistik_non_medis_rencana_nonrutin_detail WHERE no_rencana = ?");
-              $detail->execute([$no_rencana]);
-              foreach ($detail->fetchAll(\PDO::FETCH_ASSOC) as $item) {
-                  fputcsv($output, ['Non-Rutin / Aset', $rencana['no_rencana'], $rencana['status'], $rencana['tanggal_buat'], $rencana['tahun'], $rencana['nama_unit'] ?? '-', '-', $rencana['keterangan'], '-', $item['nama_barang'], $item['kategori'], '-', $item['qty_rencana'], $item['qty_realisasi'] ?? 0, $item['estimasi_harga'], $item['qty_rencana'] * $item['estimasi_harga'], $item['alasan']], ';');
-              }
-          }
-      }
-      fclose($output);
-      exit();
-  }
-
-  /** Setujui atau tolak banyak rencana sekaligus dari daftar yang dicentang. */
-  public function postBulkkeputusanrencana()
-  {
-      $this->_initRencanaRutin();
-      $this->_initRencanaNonRutin();
-      $aksi = $_POST['aksi'] ?? '';
-      $pilihan = $_POST['rencana'] ?? [];
-      $alasan = trim($_POST['alasan_penolakan'] ?? '');
-      header('Content-Type: application/json');
-
-      if (!in_array($aksi, ['setujui', 'tolak'], true) || !is_array($pilihan) || empty($pilihan)) {
-          echo json_encode(['status' => 'error', 'message' => 'Pilih minimal satu rencana dan aksi yang valid.']);
-          exit();
-      }
-      if ($aksi === 'tolak' && $alasan === '') {
-          echo json_encode(['status' => 'error', 'message' => 'Alasan penolakan wajib diisi.']);
-          exit();
-      }
-
-      $pdo = $this->db()->pdo();
-      $berhasil = 0;
-      $dilewati = 0;
-      foreach (array_unique($pilihan) as $value) {
-          $parts = explode('|', $value, 2);
-          if (count($parts) !== 2 || !in_array($parts[0], ['rutin', 'nonrutin'], true)) {
-              $dilewati++;
-              continue;
-          }
-          [$tipe, $no_rencana] = $parts;
-          $table = $tipe === 'rutin' ? 'rsns_custom_logistik_non_medis_rencana_rutin' : 'rsns_custom_logistik_non_medis_rencana_nonrutin';
-          if ($aksi === 'setujui') {
-              $stmt = $pdo->prepare("UPDATE $table SET status = 'Disetujui' WHERE no_rencana = ? AND status = 'Draft'");
-              $stmt->execute([$no_rencana]);
-          } else {
-              $stmt = $pdo->prepare("UPDATE $table SET status = 'Ditolak', alasan_penolakan = ? WHERE no_rencana = ? AND status = 'Draft'");
-              $stmt->execute([$alasan, $no_rencana]);
-          }
-          if ($stmt->rowCount()) $berhasil++; else $dilewati++;
-      }
-      if (!$berhasil) {
-          echo json_encode(['status' => 'error', 'message' => 'Tidak ada rencana Draft yang dapat diproses.']);
-          exit();
-      }
-      $label = $aksi === 'setujui' ? 'disetujui' : 'ditolak';
-      echo json_encode(['status' => 'success', 'message' => "$berhasil rencana berhasil $label." . ($dilewati ? " $dilewati rencana dilewati karena bukan Draft." : '')]);
-      exit();
-  }
-
-  // URL lama tetap didukung agar bookmark pengguna tidak putus.
-  public function getRencanarutin()
-  {
-      $_GET['tipe'] = 'rutin';
-      return $this->getRencanapembelian();
-  }
-
-  public function anyFormRencanaRutin()
-  {
-      $this->_initRencanaRutin();
-      $id = $_POST['id'] ?? '';
-      $rencana = [
-          'no_rencana' => 'RTR-'.date('YmdHis'),
-          'bulan' => date('m'),
-          'tahun' => date('Y'),
-          'tanggal_buat' => date('Y-m-d'),
-          'keterangan' => '',
-          'kode_vendor' => ''
-      ];
-      $details = [];
-      
-      if ($id) {
-          $rencana = $this->db('rsns_custom_logistik_non_medis_rencana_rutin')->where('no_rencana', $id)->oneArray();
-          
-          $sql_det = "SELECT d.*, b.nama_barang, b.satuan_dasar AS satuan
-                      FROM rsns_custom_logistik_non_medis_rencana_rutin_detail d
-                      LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = d.kode_item
-                      WHERE d.no_rencana = '$id'";
-          $details = $this->db()->pdo()->query($sql_det)->fetchAll(\PDO::FETCH_ASSOC);
-      }
-      
-      $list_barang = $this->db()->pdo()->query("SELECT kode_item, nama_barang, satuan_dasar FROM rsns_custom_logistik_non_medis_master_barang WHERE status='Aktif' ORDER BY nama_barang ASC")->fetchAll(\PDO::FETCH_ASSOC);
-      $list_vendor = $this->db()->pdo()->query("SELECT kode_vendor, nama_vendor FROM rsns_custom_logistik_non_medis_vendor WHERE status = 'Whitelist' ORDER BY nama_vendor ASC")->fetchAll(\PDO::FETCH_ASSOC);
-      
-      $this->tpl->set('id', $id);
-      $this->tpl->set('rencana', $rencana);
-      $this->tpl->set('details', $details);
-      $this->tpl->set('list_barang', $list_barang);
-      $this->tpl->set('list_vendor', $list_vendor);
-      echo $this->tpl->draw(MODULES.'/logistik_non_medis/view/admin/pengadaan.rencana_rutin.form.html', true);
-      exit();
-  }
-
-  public function postSaveRencanaRutin()
-  {
-      $this->_initRencanaRutin();
-      $no_rencana = $_POST['no_rencana'] ?? '';
-      $bulan = $_POST['bulan'] ?? '';
-      $tahun = $_POST['tahun'] ?? '';
-      $tanggal_buat = $_POST['tanggal_buat'] ?? '';
-      $keterangan = $_POST['keterangan'] ?? '';
-      $kode_vendor = trim($_POST['kode_vendor'] ?? '');
-      $items = $_POST['items'] ?? [];
-      
-      if (empty($items)) {
-          echo json_encode(['status' => 'error', 'message' => 'Barang tidak boleh kosong!']);
-          exit();
-      }
-      
-      try {
-          if ($kode_vendor !== '' && !$this->db('rsns_custom_logistik_non_medis_vendor')->where('kode_vendor', $kode_vendor)->oneArray()) {
-              echo json_encode(['status' => 'error', 'message' => 'Vendor yang dipilih tidak ditemukan.']);
-              exit();
-          }
-
-          $pdo = $this->db()->pdo();
-          $cek = $this->db('rsns_custom_logistik_non_medis_rencana_rutin')->where('no_rencana', $no_rencana)->oneArray();
-          if ($cek) {
-              $stmt_rencana = $pdo->prepare("UPDATE rsns_custom_logistik_non_medis_rencana_rutin SET bulan = ?, tahun = ?, tanggal_buat = ?, keterangan = ?, kode_vendor = ? WHERE no_rencana = ?");
-              $stmt_rencana->execute([$bulan, $tahun, $tanggal_buat, $keterangan, $kode_vendor ?: null, $no_rencana]);
-              $pdo->prepare("DELETE FROM rsns_custom_logistik_non_medis_rencana_rutin_detail WHERE no_rencana = ?")->execute([$no_rencana]);
-          } else {
-              $stmt_rencana = $pdo->prepare("INSERT INTO rsns_custom_logistik_non_medis_rencana_rutin (no_rencana, tahun, bulan, tanggal_buat, keterangan, kode_vendor, status) VALUES (?, ?, ?, ?, ?, ?, 'Draft')");
-              $stmt_rencana->execute([$no_rencana, $tahun, $bulan, $tanggal_buat, $keterangan, $kode_vendor ?: null]);
-          }
-          
-          $stmt = $pdo->prepare("INSERT INTO rsns_custom_logistik_non_medis_rencana_rutin_detail (no_rencana, kode_item, qty_rencana, estimasi_harga) VALUES (?, ?, ?, ?)");
-          foreach ($items as $item) {
-              $kode = $item['kode_item'];
-              $qty = floatval($item['qty_rencana']);
-              $harga = floatval($item['estimasi_harga']);
-              if($qty > 0 && !empty($kode)) {
-                  $stmt->execute([$no_rencana, $kode, $qty, $harga]);
-              }
-          }
-          echo json_encode(['status' => 'success']);
-      } catch (\Exception $e) {
-          echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-      }
-      exit();
-  }
-
-  public function anyDetailRencanaRutin()
-  {
-      $id = $_POST['id'] ?? '';
-      $rencana = $this->db('rsns_custom_logistik_non_medis_rencana_rutin')->where('no_rencana', $id)->oneArray();
-      
-      $sql_det = "SELECT d.*, b.nama_barang, b.satuan_dasar as satuan
-                  FROM rsns_custom_logistik_non_medis_rencana_rutin_detail d
-                  LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = d.kode_item
-                  WHERE d.no_rencana = '$id'";
-      $details = $this->db()->pdo()->query($sql_det)->fetchAll(\PDO::FETCH_ASSOC);
-      
-      $total = 0;
-      foreach ($details as $d) {
-          $total += ($d['qty_rencana'] * $d['estimasi_harga']);
-      }
-      
-      $this->tpl->set('rencana', $rencana);
-      $this->tpl->set('details', $details);
-      $this->tpl->set('total_estimasi', $total);
-      echo $this->tpl->draw(MODULES.'/logistik_non_medis/view/admin/pengadaan.rencana_rutin.detail.html', true);
-      exit();
-  }
-
-  public function postHapusRencanaRutin()
-  {
-      $id = $_POST['id'] ?? '';
-      if($id) {
-          try {
-              $this->db()->pdo()->exec("DELETE FROM rsns_custom_logistik_non_medis_rencana_rutin_detail WHERE no_rencana = '$id'");
-              $this->db()->pdo()->exec("DELETE FROM rsns_custom_logistik_non_medis_rencana_rutin WHERE no_rencana = '$id'");
-          } catch(\Exception $e) {}
-      }
-      exit();
-  }
-
-  public function postApproveRencanaRutin()
-  {
-      $id = $_POST['id'] ?? '';
-      header('Content-Type: application/json');
-      if (!$id) {
-          echo json_encode(['status' => 'error', 'message' => 'Nomor rencana tidak valid.']);
-          exit();
-      }
-      try {
-          $stmt = $this->db()->pdo()->prepare("UPDATE rsns_custom_logistik_non_medis_rencana_rutin SET status = 'Disetujui' WHERE no_rencana = ? AND status = 'Draft'");
-          $stmt->execute([$id]);
-          if ($stmt->rowCount() < 1) {
-              echo json_encode(['status' => 'error', 'message' => 'Rencana tidak ditemukan atau statusnya bukan Draft.']);
-          } else {
-              echo json_encode(['status' => 'success', 'message' => 'Rencana rutin berhasil disetujui.']);
-          }
-      } catch(\Exception $e) {
-          echo json_encode(['status' => 'error', 'message' => 'Rencana gagal disetujui.']);
-      }
-      exit();
-  }
-
-  public function postRejectRencanaRutin()
-  {
-      $this->_initRencanaRutin();
-      $id = $_POST['id'] ?? '';
-      $alasan = trim($_POST['alasan_penolakan'] ?? '');
-      header('Content-Type: application/json');
-      if (!$id || $alasan === '') {
-          echo json_encode(['status' => 'error', 'message' => 'Alasan penolakan wajib diisi.']);
-          exit();
-      }
-      try {
-          $stmt = $this->db()->pdo()->prepare("UPDATE rsns_custom_logistik_non_medis_rencana_rutin SET status = 'Ditolak', alasan_penolakan = ? WHERE no_rencana = ? AND status = 'Draft'");
-          $stmt->execute([$alasan, $id]);
-          echo json_encode($stmt->rowCount() ? ['status' => 'success'] : ['status' => 'error', 'message' => 'Rencana tidak ditemukan atau statusnya bukan Draft.']);
-      } catch (\Exception $e) {
-          echo json_encode(['status' => 'error', 'message' => 'Rencana gagal ditolak.']);
-      }
-      exit();
-  }
-
-
-  // =========================================================
-  // MODUL PENERIMAAN BARANG RUTIN
-  // =========================================================
-  public function getTerimarutin()
-  {
-      $cari = $_GET['cari'] ?? '';
-      $where = "";
-      if($cari) {
-          $where = "WHERE t.no_terima LIKE '%$cari%' OR t.no_faktur LIKE '%$cari%' OR t.no_rencana LIKE '%$cari%'";
-      }
-      
-      $query = "SELECT t.*, 
-                v.nama_vendor,
-                (SELECT SUM(d.total) FROM rsns_custom_logistik_non_medis_terima_rutin_detail d WHERE d.no_terima = t.no_terima) as total_pembelian
-                FROM rsns_custom_logistik_non_medis_terima_rutin t
-                LEFT JOIN rsns_custom_logistik_non_medis_vendor v ON v.kode_vendor = t.kode_vendor
-                $where
-                ORDER BY t.tanggal_terima DESC";
-                
-      $rows = $this->db()->pdo()->query($query)->fetchAll(\PDO::FETCH_ASSOC);
-      $terima_rutin = [];
-      foreach ($rows as $i => $row) {
-          $row['no'] = $i + 1;
-          $row['total_pembelian'] = number_format($row['total_pembelian'] ?? 0, 0, ',', '.');
-          $terima_rutin[] = $row;
-      }
-      
-      $this->tpl->set('terima_rutin', $terima_rutin);
-      $this->tpl->set('cari', $cari);
-      return $this->draw('pengadaan.terima_rutin.html');
-  }
-
-  public function anyFormTerimaRutin()
-  {
-      // Kita butuh list Rencana Rutin yang statusnya Disetujui
-      $sql_rencana = "SELECT no_rencana, bulan, tahun FROM rsns_custom_logistik_non_medis_rencana_rutin WHERE status = 'Disetujui' ORDER BY no_rencana DESC";
-      $list_rencana = $this->db()->pdo()->query($sql_rencana)->fetchAll(\PDO::FETCH_ASSOC);
-      
-      $sql_vendor = "SELECT kode_vendor as kode_rekanan, nama_vendor as nama_rekanan FROM rsns_custom_logistik_non_medis_vendor ORDER BY nama_vendor ASC";
-      $list_vendor = $this->db()->pdo()->query($sql_vendor)->fetchAll(\PDO::FETCH_ASSOC);
-      
-      $this->core->addJS('https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js');
-      $this->core->addCSS('https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css');
-      $list_barang = $this->db()->pdo()->query("SELECT kode_item, nama_barang FROM rsns_custom_logistik_non_medis_master_barang WHERE status='Aktif' ORDER BY nama_barang ASC")->fetchAll(\PDO::FETCH_ASSOC);
-      $this->tpl->set('list_rencana', $list_rencana);
-      $this->tpl->set('list_vendor', $list_vendor);
-      $this->tpl->set('list_barang', $list_barang);
-      $this->tpl->set('no_terima_auto', 'TRM-'.date('YmdHis'));
-      echo $this->tpl->draw(MODULES.'/logistik_non_medis/view/admin/pengadaan.terima_rutin.form.html', true);
-      exit();
-  }
-  
-  public function postAjaxGetRencanaRutin()
-  {
-      $no_rencana = $_POST['no_rencana'] ?? '';
-      $sql = "SELECT d.kode_item, b.nama_barang, b.satuan_dasar as satuan, d.qty_rencana, d.qty_realisasi, d.estimasi_harga
-              FROM rsns_custom_logistik_non_medis_rencana_rutin_detail d
-              JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = d.kode_item
-              WHERE d.no_rencana = '$no_rencana' AND d.qty_rencana > d.qty_realisasi";
-      $data = $this->db()->pdo()->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
-      echo json_encode($data);
-      exit();
-  }
-
-  public function postSaveTerimaRutin()
-  {
-      $no_terima = $_POST['no_terima'] ?? '';
-      $no_rencana = $_POST['no_rencana'] ?? '';
-      $tanggal_terima = $_POST['tanggal_terima'] ?? '';
-      $no_faktur = $_POST['no_faktur'] ?? '';
-      $kode_vendor = $_POST['kode_vendor'] ?? '';
-      $keterangan = $_POST['keterangan'] ?? '';
-      $items = $_POST['items'] ?? [];
-      
-      if(empty($items)) {
-          echo json_encode(['status' => 'error', 'message' => 'Detail barang kosong!']);
-          exit();
-      }
-      
-      try {
-          $this->db()->pdo()->beginTransaction();
-          
-          $this->db()->pdo()->exec("INSERT INTO rsns_custom_logistik_non_medis_terima_rutin (no_terima, no_rencana, tanggal_terima, no_faktur, kode_vendor, keterangan) VALUES ('$no_terima', '$no_rencana', '$tanggal_terima', '$no_faktur', '$kode_vendor', '$keterangan')");
-          
-          $stmt_det = $this->db()->pdo()->prepare("INSERT INTO rsns_custom_logistik_non_medis_terima_rutin_detail (no_terima, kode_item, qty_terima, harga_beli, total) VALUES (?, ?, ?, ?, ?)");
-          
-          $stmt_stock = $this->db()->pdo()->prepare("UPDATE rsns_custom_logistik_non_medis_master_barang SET stok = stok + ? WHERE kode_item = ?");
-          
-          $stmt_realisasi = $this->db()->pdo()->prepare("UPDATE rsns_custom_logistik_non_medis_rencana_rutin_detail SET qty_realisasi = qty_realisasi + ? WHERE no_rencana = ? AND kode_item = ?");
-          
-          foreach($items as $item) {
-              $kode = $item['kode_item'];
-              $qty = floatval($item['qty_terima']);
-              $harga = floatval($item['harga_beli']);
-              $total = $qty * $harga;
-              
-              if($qty > 0) {
-                  // 1. Simpan detail terima
-                  $stmt_det->execute([$no_terima, $kode, $qty, $harga, $total]);
-                  // 2. Tambah Stok Gudang
-                  $stmt_stock->execute([$qty, $kode]);
-                  // 3. Update Realisasi di Rencana (jika ada no_rencana)
-                  if(!empty($no_rencana)) {
-                      $stmt_realisasi->execute([$qty, $no_rencana, $kode]);
-                  }
-              }
-          }
-          
-          $this->db()->pdo()->commit();
-          echo json_encode(['status' => 'success']);
-      } catch (\Exception $e) {
-          $this->db()->pdo()->rollBack();
-          echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-      }
-      exit();
-  }
-
-  public function postHapusTerimaRutin()
-  {
-      $id = $_POST['id'] ?? '';
-      if($id) {
-          try {
-              $this->db()->pdo()->beginTransaction();
-              
-              $terima = $this->db('rsns_custom_logistik_non_medis_terima_rutin')->where('no_terima', $id)->oneArray();
-              $details = $this->db('rsns_custom_logistik_non_medis_terima_rutin_detail')->where('no_terima', $id)->toArray();
-              
-              $stmt_stock = $this->db()->pdo()->prepare("UPDATE rsns_custom_logistik_non_medis_master_barang SET stok = stok - ? WHERE kode_item = ?");
-              $stmt_realisasi = $this->db()->pdo()->prepare("UPDATE rsns_custom_logistik_non_medis_rencana_rutin_detail SET qty_realisasi = qty_realisasi - ? WHERE no_rencana = ? AND kode_item = ?");
-              
-              foreach($details as $d) {
-                  // Rollback Stock
-                  $stmt_stock->execute([$d['qty_terima'], $d['kode_item']]);
-                  // Rollback Realisasi
-                  if(!empty($terima['no_rencana'])) {
-                      $stmt_realisasi->execute([$d['qty_terima'], $terima['no_rencana'], $d['kode_item']]);
-                  }
-              }
-              
-              $this->db()->pdo()->exec("DELETE FROM rsns_custom_logistik_non_medis_terima_rutin_detail WHERE no_terima = '$id'");
-              $this->db()->pdo()->exec("DELETE FROM rsns_custom_logistik_non_medis_terima_rutin WHERE no_terima = '$id'");
-              
-              $this->db()->pdo()->commit();
-          } catch(\Exception $e) {
-              $this->db()->pdo()->rollBack();
-          }
-      }
-      exit();
-  }
-
-  public function anyDetailTerimaRutin()
-  {
-      $id = $_POST['id'] ?? '';
-      $terima = $this->db('rsns_custom_logistik_non_medis_terima_rutin')->where('no_terima', $id)->oneArray();
-      
-      if($terima['kode_vendor']) {
-          $vendor = $this->db('rsns_custom_logistik_non_medis_vendor')->where('kode_vendor', $terima['kode_vendor'])->oneArray();
-          $terima['nama_vendor'] = $vendor['nama_vendor'] ?? '-';
-      }
-      
-      $sql_det = "SELECT d.*, b.nama_barang, b.satuan_dasar as satuan
-                  FROM rsns_custom_logistik_non_medis_terima_rutin_detail d
-                  LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = d.kode_item
-                  WHERE d.no_terima = '$id'";
-      $details = $this->db()->pdo()->query($sql_det)->fetchAll(\PDO::FETCH_ASSOC);
-      
-      $total = 0;
-      foreach ($details as $d) {
-          $total += $d['total'];
-      }
-      
-      $this->tpl->set('terima', $terima);
-      $this->tpl->set('details', $details);
-      $this->tpl->set('total_pembelian', $total);
-      echo $this->tpl->draw(MODULES.'/logistik_non_medis/view/admin/pengadaan.terima_rutin.detail.html', true);
-      exit();
-  }
-
-
-  // =========================================================
-  // MODUL RENCANA PEMBELIAN ASET & NON RUTIN
-  // =========================================================
-  public function getRencananonrutin()
-  {
-      $_GET['tipe'] = 'nonrutin';
-      return $this->getRencanapembelian();
-  }
-
-  public function anyFormRencanaNonRutin()
-  {
-      $this->_initRencanaNonRutin();
-      $id = $_POST['id'] ?? '';
-      $rencana = [
-          'no_rencana' => 'RNR-'.date('YmdHis'),
-          'tahun' => date('Y'),
-          'tanggal_buat' => date('Y-m-d'),
-          'keterangan' => '',
-          'kode_unit' => ''
-      ];
-      $details = [];
-      
-      if ($id) {
-          $rencana = $this->db('rsns_custom_logistik_non_medis_rencana_nonrutin')->where('no_rencana', $id)->oneArray();
-          
-          $sql_det = "SELECT * FROM rsns_custom_logistik_non_medis_rencana_nonrutin_detail WHERE no_rencana = '$id'";
-          $details = $this->db()->pdo()->query($sql_det)->fetchAll(\PDO::FETCH_ASSOC);
-      }
-
-      $units = $this->db('rsns_custom_logistik_non_medis_unit')->where('status', 'Aktif')->asc('nama_unit')->toArray();
-      
-      $this->tpl->set('id', $id);
-      $this->tpl->set('rencana', $rencana);
-      $this->tpl->set('details', $details);
-      $this->tpl->set('units', $units);
-      echo $this->tpl->draw(MODULES.'/logistik_non_medis/view/admin/pengadaan.rencana_nonrutin.form.html', true);
-      exit();
-  }
-
-  public function postSaveRencanaNonRutin()
-  {
-      $this->_initRencanaNonRutin();
-      $no_rencana = $_POST['no_rencana'] ?? '';
-      $tahun = $_POST['tahun'] ?? '';
-      $tanggal_buat = $_POST['tanggal_buat'] ?? '';
-      $keterangan = $_POST['keterangan'] ?? '';
-      $kode_unit = trim($_POST['kode_unit'] ?? '');
-      $items = $_POST['items'] ?? [];
-      
-      if (empty($items)) {
-          echo json_encode(['status' => 'error', 'message' => 'Barang tidak boleh kosong!']);
-          exit();
-      }
-      if ($kode_unit === '') {
-          echo json_encode(['status' => 'error', 'message' => 'Unit pengaju wajib dipilih!']);
-          exit();
-      }
-      
-      try {
-          $cek = $this->db('rsns_custom_logistik_non_medis_rencana_nonrutin')->where('no_rencana', $no_rencana)->oneArray();
-          $unit = $this->db('rsns_custom_logistik_non_medis_unit')->where('kode_unit', $kode_unit)->where('status', 'Aktif')->oneArray();
-          if (!$unit) {
-              throw new \Exception('Unit pengaju tidak ditemukan atau tidak aktif.');
-          }
-          $pdo = $this->db()->pdo();
-          if ($cek) {
-              $stmt_header = $pdo->prepare("UPDATE rsns_custom_logistik_non_medis_rencana_nonrutin SET kode_unit = ?, tahun = ?, tanggal_buat = ?, keterangan = ? WHERE no_rencana = ?");
-              $stmt_header->execute([$kode_unit, $tahun, $tanggal_buat, $keterangan, $no_rencana]);
-              $pdo->prepare("DELETE FROM rsns_custom_logistik_non_medis_rencana_nonrutin_detail WHERE no_rencana = ?")->execute([$no_rencana]);
-          } else {
-              $stmt_header = $pdo->prepare("INSERT INTO rsns_custom_logistik_non_medis_rencana_nonrutin (no_rencana, kode_unit, tahun, tanggal_buat, keterangan, status) VALUES (?, ?, ?, ?, ?, 'Draft')");
-              $stmt_header->execute([$no_rencana, $kode_unit, $tahun, $tanggal_buat, $keterangan]);
-          }
-          
-          $stmt = $this->db()->pdo()->prepare("INSERT INTO rsns_custom_logistik_non_medis_rencana_nonrutin_detail (no_rencana, nama_barang, kategori, qty_rencana, estimasi_harga, alasan) VALUES (?, ?, ?, ?, ?, ?)");
-          foreach ($items as $item) {
-              $nama = $item['nama_barang'];
-              $kat = $item['kategori'];
-              $qty = floatval($item['qty_rencana']);
-              $harga = floatval($item['estimasi_harga']);
-              $alasan = $item['alasan'];
-              if($qty > 0 && !empty($nama)) {
-                  $stmt->execute([$no_rencana, $nama, $kat, $qty, $harga, $alasan]);
-              }
-          }
-          echo json_encode(['status' => 'success']);
-      } catch (\Exception $e) {
-          echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
-      }
-      exit();
-  }
-
-  public function anyDetailRencanaNonRutin()
-  {
-      $this->_initRencanaNonRutin();
-      $id = $_POST['id'] ?? '';
-      $rencana = $this->db('rsns_custom_logistik_non_medis_rencana_nonrutin')->where('no_rencana', $id)->oneArray();
-      if (!empty($rencana['kode_unit'])) {
-          $unit = $this->db('rsns_custom_logistik_non_medis_unit')->where('kode_unit', $rencana['kode_unit'])->oneArray();
-          $rencana['nama_unit'] = $unit['nama_unit'] ?? '-';
-      } else {
-          $rencana['nama_unit'] = '-';
-      }
-      
-      $sql_det = "SELECT * FROM rsns_custom_logistik_non_medis_rencana_nonrutin_detail WHERE no_rencana = '$id'";
-      $details = $this->db()->pdo()->query($sql_det)->fetchAll(\PDO::FETCH_ASSOC);
-      
-      $total = 0;
-      foreach ($details as $d) {
-          $total += ($d['qty_rencana'] * $d['estimasi_harga']);
-      }
-      
-      $this->tpl->set('rencana', $rencana);
-      $this->tpl->set('details', $details);
-      $this->tpl->set('total_estimasi', $total);
-      echo $this->tpl->draw(MODULES.'/logistik_non_medis/view/admin/pengadaan.rencana_nonrutin.detail.html', true);
-      exit();
-  }
-
-  public function postHapusRencanaNonRutin()
-  {
-      $id = $_POST['id'] ?? '';
-      if($id) {
-          try {
-              $this->db()->pdo()->exec("DELETE FROM rsns_custom_logistik_non_medis_rencana_nonrutin_detail WHERE no_rencana = '$id'");
-              $this->db()->pdo()->exec("DELETE FROM rsns_custom_logistik_non_medis_rencana_nonrutin WHERE no_rencana = '$id'");
-          } catch(\Exception $e) {}
-      }
-      exit();
-  }
-
-  public function postApproveRencanaNonRutin()
-  {
-      $this->_initRencanaNonRutin();
-      $id = $_POST['id'] ?? '';
-      header('Content-Type: application/json');
-      if (!$id) {
-          echo json_encode(['status' => 'error', 'message' => 'Nomor rencana tidak valid.']);
-          exit();
-      }
-      try {
-          $stmt = $this->db()->pdo()->prepare("UPDATE rsns_custom_logistik_non_medis_rencana_nonrutin SET status = 'Disetujui' WHERE no_rencana = ? AND status = 'Draft'");
-          $stmt->execute([$id]);
-          if ($stmt->rowCount() < 1) {
-              echo json_encode(['status' => 'error', 'message' => 'Usulan tidak ditemukan atau statusnya bukan Draft.']);
-          } else {
-              echo json_encode(['status' => 'success', 'message' => 'Usulan non-rutin berhasil disetujui.']);
-          }
-      } catch(\Exception $e) {
-          echo json_encode(['status' => 'error', 'message' => 'Usulan gagal disetujui.']);
-      }
-      exit();
-  }
-
-  public function postRejectRencanaNonRutin()
-  {
-      $this->_initRencanaNonRutin();
-      $id = $_POST['id'] ?? '';
-      $alasan = trim($_POST['alasan_penolakan'] ?? '');
-      header('Content-Type: application/json');
-      if (!$id || $alasan === '') {
-          echo json_encode(['status' => 'error', 'message' => 'Alasan penolakan wajib diisi.']);
-          exit();
-      }
-      try {
-          $stmt = $this->db()->pdo()->prepare("UPDATE rsns_custom_logistik_non_medis_rencana_nonrutin SET status = 'Ditolak', alasan_penolakan = ? WHERE no_rencana = ? AND status = 'Draft'");
-          $stmt->execute([$alasan, $id]);
-          echo json_encode($stmt->rowCount() ? ['status' => 'success'] : ['status' => 'error', 'message' => 'Usulan tidak ditemukan atau statusnya bukan Draft.']);
-      } catch (\Exception $e) {
-          echo json_encode(['status' => 'error', 'message' => 'Usulan gagal ditolak.']);
-      }
-      exit();
-  }
-
 }
+
+
+?>

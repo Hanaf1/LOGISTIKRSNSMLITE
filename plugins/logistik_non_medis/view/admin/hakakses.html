@@ -1,0 +1,140 @@
+<div class="panel panel-default">
+    <div class="panel-heading" style="overflow: hidden;">
+        <h3 class="panel-title pull-left" style="line-height: 34px;"><i class="fa fa-key"></i> Pengaturan Hak Akses & Role Unit (Logistik Non Medis)</h3>
+    </div>
+    <div class="panel-body">
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active"><a href="#tab-users" aria-controls="tab-users" role="tab" data-toggle="tab"><i class="fa fa-users"></i> Hak Akses Pengguna</a></li>
+            <li role="presentation"><a href="#tab-roles" aria-controls="tab-roles" role="tab" data-toggle="tab"><i class="fa fa-lock"></i> Izin Akses Role</a></li>
+        </ul>
+
+        <div class="tab-content" style="margin-top: 20px;">
+            <!-- Tab Users -->
+            <div role="tabpanel" class="tab-pane active" id="tab-users">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="table-users">
+                        <thead>
+                            <tr>
+                                <th width="50">No</th>
+                                <th>Username</th>
+                                <th>Nama Lengkap</th>
+                                <th>Role Logistik</th>
+                                <th>Unit Kerja Terkait</th>
+                                <th width="100" class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {if: !empty($users)}
+                                {loop: $users}
+                                    <tr>
+                                        <td>{$value.id}</td>
+                                        <td><strong>{$value.username}</strong></td>
+                                        <td>{$value.fullname}</td>
+                                        <td>
+                                            {if: $value.logistik_role == 'admin'}
+                                                <span class="label label-danger">Admin Logistik</span>
+                                            {elseif: $value.logistik_role == 'logistik'}
+                                                <span class="label label-warning">Staf Logistik</span>
+                                            {elseif: $value.logistik_role == 'gudang'}
+                                                <span class="label label-success">Staf Gudang</span>
+                                            {elseif: $value.logistik_role == 'aset'}
+                                                <span class="label label-info">Staf Aset</span>
+                                            {elseif: $value.logistik_role == 'kepala_unit'}
+                                                <span class="label label-primary">Ka. Unit</span>
+                                            {elseif: $value.logistik_role == 'kepala_sie'}
+                                                <span class="label label-primary">Ka. Sie</span>
+                                            {elseif: $value.logistik_role == 'kepala_bidang'}
+                                                <span class="label label-primary">Ka. Bidang</span>
+                                            {else}
+                                                <span class="label label-default">Unit / Ruangan</span>
+                                            {/if}
+                                        </td>
+                                        <td>
+                                            {if: !empty($value.logistik_kode_unit)}
+                                                <i class="fa fa-building-o"></i> {$value.logistik_kode_unit} - {$value.nama_unit}
+                                            {else}
+                                                <span class="text-muted"><i class="fa fa-globe"></i> Semua Unit (Logistik/Admin)</span>
+                                            {/if}
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-xs btn-default" onclick="editUserRole('{$value.username}')" title="Sunting Role & Unit"><i class="fa fa-pencil"></i> Edit</button>
+                                        </td>
+                                    </tr>
+                                {/loop}
+                            {else}
+                                <tr>
+                                    <td colspan="6" class="text-center">Tidak ada user ditemukan.</td>
+                                </tr>
+                            {/if}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Roles Permissions Matrix -->
+            <div role="tabpanel" class="tab-pane" id="tab-roles">
+                <form action="{?=url(ADMIN.'/logistik_non_medis/saverolepermissions')?}" method="POST">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped table-hover">
+                            <thead>
+                                <tr class="active">
+                                    <th>Nama Menu / Fitur</th>
+                                    {loop: $roles}
+                                        <th class="text-center" width="110">
+                                            {if: $value == 'admin'}Admin
+                                            {elseif: $value == 'logistik'}Logistik
+                                            {elseif: $value == 'gudang'}Gudang
+                                            {elseif: $value == 'aset'}Aset
+                                            {elseif: $value == 'kepala_unit'}Ka. Unit
+                                            {elseif: $value == 'kepala_sie'}Ka. Sie
+                                            {elseif: $value == 'kepala_bidang'}Ka. Bidang
+                                            {else}Unit{/if}
+                                        </th>
+                                    {/loop}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loop: $matrix}
+                                    <tr>
+                                        <td><strong>{$value.label}</strong> <small class="text-muted">({$value.key})</small></td>
+                                        {loop: $value.roles}
+                                            <td class="text-center">
+                                                {if: $value.isManage}
+                                                    <input type="checkbox" checked disabled>
+                                                    <input type="hidden" name="permissions[{$value.role}][]" value="manage">
+                                                {else}
+                                                    <input type="checkbox" name="permissions[{$value.role}][]" value="{$value.menuKey}" {if: $value.checked}checked{/if}>
+                                                {/if}
+                                            </td>
+                                        {/loop}
+                                    </tr>
+                                {/loop}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan Izin Role</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Form User Edit -->
+<div class="modal fade" id="modal-hakakses" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content" id="hakakses-form-content">
+            <!-- Loaded via AJAX -->
+        </div>
+    </div>
+</div>
+
+<script>
+function editUserRole(username) {
+    $.post('{?=url(ADMIN."/logistik_non_medis/formhakakses")?}', {username: username}, function(data) {
+        $('#hakakses-form-content').html(data);
+        $('#modal-hakakses').modal('show');
+    });
+}
+</script>

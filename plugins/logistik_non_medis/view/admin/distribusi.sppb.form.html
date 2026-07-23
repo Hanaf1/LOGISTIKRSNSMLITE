@@ -56,13 +56,13 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label>Unit Pengaju</label>
-                        <select name="kode_unit" id="kode_unit" class="form-control select2" required {if: $mode == 'edit'}disabled{/if}>
+                        <select name="kode_unit" id="kode_unit" class="form-control select2" required {if: $mode == 'edit' || ($role == 'unit' && !empty($user_kode_unit))}disabled{/if}>
                             <option value="">-- Pilih Unit --</option>
                             {loop: $units}
                                 <option value="{$value.kode_unit}" {if: $sppb.kode_unit == $value.kode_unit}selected{/if}>{$value.kode_unit} - {$value.nama_unit}</option>
                             {/loop}
                         </select>
-                        {if: $mode == 'edit'}<input type="hidden" name="kode_unit" value="{$sppb.kode_unit}">{/if}
+                        {if: $mode == 'edit' || ($role == 'unit' && !empty($user_kode_unit))}<input type="hidden" name="kode_unit" value="{$sppb.kode_unit}">{/if}
                     </div>
                 </div>
             </div>

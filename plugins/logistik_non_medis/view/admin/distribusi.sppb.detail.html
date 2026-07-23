@@ -18,8 +18,12 @@
                         <span class="label label-default">Draft</span>
                     {elseif: $sppb.status == 'Diajukan'}
                         <span class="label label-info">Diajukan</span>
+                    {elseif: $sppb.status == 'Disetujui Ka. Unit'}
+                        <span class="label label-warning">Disetujui Ka. Unit</span>
+                    {elseif: $sppb.status == 'Disetujui Ka. Sie'}
+                        <span class="label label-primary">Disetujui Ka. Sie</span>
                     {elseif: $sppb.status == 'Disetujui Unit'}
-                        <span class="label label-primary">Disetujui Unit</span>
+                        <span class="label label-success">Disetujui Unit</span>
                     {elseif: $sppb.status == 'Terverifikasi'}
                         <span class="label label-success">Terverifikasi</span>
                     {elseif: $sppb.status == 'Selesai'}
@@ -29,8 +33,17 @@
                     {/if}
                 </td></tr>
                 <tr><th>User Input</th><td>: {$sppb.user_input} <small class="text-muted">({$sppb.tgl_input})</small></td></tr>
-                {if: $sppb.user_approve_unit}
-                <tr><th>Approve Unit</th><td>: {$sppb.user_approve_unit} <small class="text-muted">({$sppb.tgl_approve_unit})</small></td></tr>
+                {if: $sppb.user_approve_ka_unit}
+                <tr><th>Approve Ka. Unit</th><td>: {$sppb.user_approve_ka_unit} <small class="text-muted">({$sppb.tgl_approve_ka_unit})</small></td></tr>
+                {/if}
+                {if: $sppb.user_approve_ka_sie}
+                <tr><th>Approve Ka. Sie</th><td>: {$sppb.user_approve_ka_sie} <small class="text-muted">({$sppb.tgl_approve_ka_sie})</small></td></tr>
+                {/if}
+                {if: $sppb.user_approve_ka_bidang}
+                <tr><th>Approve Ka. Bidang</th><td>: {$sppb.user_approve_ka_bidang} <small class="text-muted">({$sppb.tgl_approve_ka_bidang})</small></td></tr>
+                {/if}
+                {if: $sppb.status == 'Ditolak' && !empty($sppb.alasan_penolakan)}
+                <tr><th>Alasan Penolakan</th><td>: <span class="text-danger">{$sppb.alasan_penolakan}</span></td></tr>
                 {/if}
             </table>
         </div>
@@ -86,9 +99,19 @@
 </div>
 <div class="modal-footer">
     <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
-    {if: $sppb.status == 'Diajukan'}
-        <button type="button" class="btn btn-primary" onclick="approveUnit('{$sppb.no_sppb}')">Approve Unit</button>
-    {elseif: $sppb.status == 'Disetujui Unit'}
+    {if: $sppb.status == 'Diajukan' && ($role == 'kepala_unit' || $role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-primary" onclick="approveUnit('{$sppb.no_sppb}', 'Kepala Unit')">Setujui Ka. Unit</button>
+        <button type="button" class="btn btn-danger" onclick="rejectUnit('{$sppb.no_sppb}')">Tolak</button>
+    {/if}
+    {if: $sppb.status == 'Disetujui Ka. Unit' && ($role == 'kepala_sie' || $role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-warning" onclick="approveUnit('{$sppb.no_sppb}', 'Kepala Sie')">Setujui Ka. Sie</button>
+        <button type="button" class="btn btn-danger" onclick="rejectUnit('{$sppb.no_sppb}')">Tolak</button>
+    {/if}
+    {if: $sppb.status == 'Disetujui Ka. Sie' && ($role == 'kepala_bidang' || $role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-success" onclick="approveUnit('{$sppb.no_sppb}', 'Kepala Bidang')">Setujui Ka. Bidang</button>
+        <button type="button" class="btn btn-danger" onclick="rejectUnit('{$sppb.no_sppb}')">Tolak</button>
+    {/if}
+    {if: $sppb.status == 'Disetujui Unit' && ($role == 'admin' || $role == 'logistik')}
         <button type="button" class="btn btn-success" onclick="verifikasiLogistik('{$sppb.no_sppb}')">Verifikasi Logistik</button>
     {/if}
     <a href="{?=url(ADMIN.'/logistik_non_medis/cetaksppb/'.$sppb.no_sppb)?}" target="_blank" class="btn btn-info"><i class="fa fa-print"></i> Cetak</a>

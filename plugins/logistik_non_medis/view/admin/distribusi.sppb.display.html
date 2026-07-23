@@ -30,8 +30,12 @@
                                 <span class="label label-default">Draft</span>
                             {elseif: $value.status == 'Diajukan'}
                                 <span class="label label-info">Diajukan</span>
+                            {elseif: $value.status == 'Disetujui Ka. Unit'}
+                                <span class="label label-warning">Disetujui Ka. Unit</span>
+                            {elseif: $value.status == 'Disetujui Ka. Sie'}
+                                <span class="label label-primary">Disetujui Ka. Sie</span>
                             {elseif: $value.status == 'Disetujui Unit'}
-                                <span class="label label-primary">Disetujui Unit</span>
+                                <span class="label label-success">Disetujui Unit</span>
                             {elseif: $value.status == 'Terverifikasi'}
                                 <span class="label label-success">Terverifikasi</span>
                             {elseif: $value.status == 'Selesai'}
@@ -45,11 +49,20 @@
                                 {if: $value.status == 'Draft' || $value.status == 'Diajukan'}
                                     <button class="btn btn-xs btn-default" onclick="editSPPB('{$value.no_sppb}')" title="Edit"><i class="fa fa-pencil"></i></button>
                                     <button class="btn btn-xs btn-danger" onclick="hapusSPPB('{$value.no_sppb}')" title="Hapus"><i class="fa fa-trash"></i></button>
-                                    {if: $value.status == 'Diajukan'}
-                                        <button class="btn btn-xs btn-primary" onclick="approveUnit('{$value.no_sppb}')" title="Setujui Unit"><i class="fa fa-check-circle"></i></button>
-                                    {/if}
                                 {/if}
-                                {if: $value.status == 'Disetujui Unit'}
+                                {if: $value.status == 'Diajukan' && ($role == 'kepala_unit' || $role == 'admin' || $role == 'logistik')}
+                                    <button class="btn btn-xs btn-primary" onclick="approveUnit('{$value.no_sppb}', 'Kepala Unit')" title="Setujui Ka. Unit"><i class="fa fa-check-circle"></i></button>
+                                    <button class="btn btn-xs btn-danger" onclick="rejectUnit('{$value.no_sppb}')" title="Tolak Permintaan"><i class="fa fa-times-circle"></i></button>
+                                {/if}
+                                {if: $value.status == 'Disetujui Ka. Unit' && ($role == 'kepala_sie' || $role == 'admin' || $role == 'logistik')}
+                                    <button class="btn btn-xs btn-warning" onclick="approveUnit('{$value.no_sppb}', 'Kepala Sie')" title="Setujui Ka. Sie"><i class="fa fa-check-circle"></i></button>
+                                    <button class="btn btn-xs btn-danger" onclick="rejectUnit('{$value.no_sppb}')" title="Tolak Permintaan"><i class="fa fa-times-circle"></i></button>
+                                {/if}
+                                {if: $value.status == 'Disetujui Ka. Sie' && ($role == 'kepala_bidang' || $role == 'admin' || $role == 'logistik')}
+                                    <button class="btn btn-xs btn-success" onclick="approveUnit('{$value.no_sppb}', 'Kepala Bidang')" title="Setujui Ka. Bidang"><i class="fa fa-check-circle"></i></button>
+                                    <button class="btn btn-xs btn-danger" onclick="rejectUnit('{$value.no_sppb}')" title="Tolak Permintaan"><i class="fa fa-times-circle"></i></button>
+                                {/if}
+                                {if: $value.status == 'Disetujui Unit' && ($role == 'admin' || $role == 'logistik')}
                                     <button class="btn btn-xs btn-success" onclick="verifikasiLogistik('{$value.no_sppb}')" title="Verifikasi Logistik"><i class="fa fa-shield"></i></button>
                                 {/if}
                                 <button class="btn btn-xs btn-info" onclick="detailSPPB('{$value.no_sppb}')" title="Detail"><i class="fa fa-eye"></i></button>
