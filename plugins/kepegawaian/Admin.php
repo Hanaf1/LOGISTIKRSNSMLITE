@@ -6,6 +6,7 @@ use Systems\AdminModule;
 
 class Admin extends AdminModule
 {
+    protected $assign = [];
     public function navigation()
     {
         return [
@@ -134,7 +135,7 @@ class Admin extends AdminModule
             $this->assign['bank'] = $this->db('bank')->toArray();
             $this->assign['emergency_index'] = $this->db('emergency_index')->toArray();
 
-            $this->assign['fotoURL'] = WEBAPPS_URL.'/penggajian/'.$row['photo'];
+            $this->assign['fotoURL'] = url('webapps').'/penggajian/'.$row['photo'];
 
             return $this->draw('form.html', ['pegawai' => $this->assign]);
         } else {

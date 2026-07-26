@@ -43,6 +43,170 @@
         <h3 class="panel-title" style="margin-top: 5px;">{if: $mode == 'edit'}Edit{else}Tambah{/if} Permintaan Barang (SPPB)</h3>
     </div>
     <div class="panel-body">
+        
+        <!-- STEPPER UI -->
+        <style>
+            .sppb-stepper {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                position: relative;
+                margin-bottom: 30px;
+                padding: 0 20px;
+            }
+            .sppb-stepper::before {
+                content: '';
+                position: absolute;
+                top: 20px;
+                left: 40px;
+                right: 40px;
+                height: 3px;
+                background: #e0e0e0;
+                z-index: 1;
+            }
+            .stepper-item {
+                position: relative;
+                z-index: 2;
+                text-align: center;
+                flex: 1;
+            }
+            .stepper-circle {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: #fff;
+                border: 3px solid #e0e0e0;
+                color: #999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 10px;
+                font-size: 16px;
+                font-weight: bold;
+                transition: all 0.3s;
+            }
+            .stepper-title {
+                font-size: 12px;
+                font-weight: 600;
+                color: #777;
+                line-height: 1.2;
+            }
+            /* Active & Completed State */
+            .stepper-item.completed .stepper-circle {
+                border-color: #2196F3;
+                background: #2196F3;
+                color: #fff;
+            }
+            .stepper-item.active .stepper-circle {
+                border-color: #ff9800;
+                color: #fff;
+                background: #ff9800;
+                transform: scale(1.2);
+                box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+                z-index: 10;
+            }
+            .stepper-item.completed .stepper-title {
+                color: #333;
+            }
+            .stepper-item.active .stepper-title {
+                color: #ff9800;
+                font-size: 13px;
+                margin-top: 5px;
+            }
+            /* Connecting Line Fill */
+            .stepper-item.completed + .stepper-item::after {
+                content: '';
+                position: absolute;
+                top: 20px;
+                right: 50%;
+                width: 100%;
+                height: 3px;
+                background: #2196F3;
+                z-index: -1;
+            }
+            
+            /* Rejected State */
+            .sppb-stepper.rejected .stepper-item.active .stepper-circle {
+                border-color: #F44336;
+                color: #F44336;
+            }
+            .sppb-stepper.rejected .stepper-item.completed .stepper-circle {
+                border-color: #F44336;
+                background: #F44336;
+            }
+            .sppb-stepper.rejected .stepper-item.completed + .stepper-item::after {
+                background: #F44336;
+            }
+        </style>
+        
+        {if: $sppb.jenis_permintaan == 'Non Rutin'}
+    <div class="sppb-stepper {if: $stepper_rejected}rejected{/if}">
+        <!-- Step 1 -->
+        <div class="stepper-item {if: $stepper_step > 1}completed{elseif: $stepper_step == 1 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-pencil-square-o"></i></div>
+            <div class="stepper-title">Pengajuan</div>
+        </div>
+        <!-- Step 2 -->
+        <div class="stepper-item {if: $stepper_step > 2}completed{elseif: $stepper_step == 2 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-user"></i></div>
+            <div class="stepper-title">Ka. Unit</div>
+        </div>
+        <!-- Step 3 -->
+        <div class="stepper-item {if: $stepper_step > 3}completed{elseif: $stepper_step == 3 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-user-md"></i></div>
+            <div class="stepper-title">Ka. Sie</div>
+        </div>
+        <!-- Step 4 -->
+        <div class="stepper-item {if: $stepper_step > 4}completed{elseif: $stepper_step == 4 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-users"></i></div>
+            <div class="stepper-title">Ka. Bidang</div>
+        </div>
+        <!-- Step 5 -->
+        <div class="stepper-item {if: $stepper_step > 5}completed{elseif: $stepper_step == 5 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-check-square-o"></i></div>
+            <div class="stepper-title">Logistik</div>
+        </div>
+        <!-- Step 6 -->
+        <div class="stepper-item {if: $stepper_step > 6}completed{elseif: $stepper_step == 6 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-shopping-cart"></i></div>
+            <div class="stepper-title">Pengadaan</div>
+        </div>
+        <!-- Step 7 -->
+        <div class="stepper-item {if: $stepper_step > 7}completed{elseif: $stepper_step == 7 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-flag-checkered"></i></div>
+            <div class="stepper-title">Siap Diambil</div>
+        </div>
+    </div>
+    {else}
+    <div class="sppb-stepper {if: $stepper_rejected}rejected{/if}">
+        <!-- Step 1 -->
+        <div class="stepper-item {if: $stepper_step > 1}completed{elseif: $stepper_step == 1 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-pencil-square-o"></i></div>
+            <div class="stepper-title">Pengajuan</div>
+        </div>
+        <!-- Step 2 -->
+        <div class="stepper-item {if: $stepper_step > 2}completed{elseif: $stepper_step == 2 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-users"></i></div>
+            <div class="stepper-title">Persetujuan</div>
+        </div>
+        <!-- Step 3 -->
+        <div class="stepper-item {if: $stepper_step > 3}completed{elseif: $stepper_step == 3 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-check-square-o"></i></div>
+            <div class="stepper-title">Verifikasi Gudang</div>
+        </div>
+        <!-- Step 4 -->
+        <div class="stepper-item {if: $stepper_step > 4}completed{elseif: $stepper_step == 4 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-truck"></i></div>
+            <div class="stepper-title">Distribusi</div>
+        </div>
+        <!-- Step 5 -->
+        <div class="stepper-item {if: $stepper_step > 5}completed{elseif: $stepper_step == 5 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-flag-checkered"></i></div>
+            <div class="stepper-title">Selesai</div>
+        </div>
+    </div>
+    {/if}
+
         <form id="form-sppb">
             <input type="hidden" name="no_sppb" value="{$sppb.no_sppb}">
             <input type="hidden" name="status" id="status-submit" value="{$sppb.status}">
@@ -53,7 +217,7 @@
                         <input type="text" name="tgl_sppb" class="form-control datepicker" value="{$sppb.tgl_sppb}" required>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-5">
                     <div class="form-group">
                         <label>Unit Pengaju</label>
                         <select name="kode_unit" id="kode_unit" class="form-control select2" required {if: $mode == 'edit' || ($role == 'unit' && !empty($user_kode_unit))}disabled{/if}>
@@ -63,6 +227,16 @@
                             {/loop}
                         </select>
                         {if: $mode == 'edit' || ($role == 'unit' && !empty($user_kode_unit))}<input type="hidden" name="kode_unit" value="{$sppb.kode_unit}">{/if}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Jenis Permintaan</label>
+                        <select class="form-control" disabled>
+                            <option value="Rutin" {if: $sppb.jenis_permintaan == 'Rutin'}selected{/if}>Rutin</option>
+                            <option value="Non Rutin" {if: $sppb.jenis_permintaan == 'Non Rutin'}selected{/if}>Non Rutin</option>
+                        </select>
+                        <input type="hidden" name="jenis_permintaan" value="{$sppb.jenis_permintaan}">
                     </div>
                 </div>
             </div>
@@ -95,7 +269,7 @@
                                 <tr>
                                     <td>
                                         <select name="kode_item[]" class="form-control select-item" required>
-                                            <option value="{$value.kode_item}" selected>{$value.kode_item}</option>
+                                            <option value="{$value.kode_item}" selected>{$value.nama_barang}</option>
                                         </select>
                                     </td>
                                     <td><input type="number" step="any" name="jumlah[]" class="form-control" value="{$value.jumlah}" required></td>
@@ -155,7 +329,7 @@ $(document).ready(function() {
     $('#form-sppb').submit(function(e) {
         e.preventDefault();
         var formData = $(this).serialize();
-        $.post('{?=url(ADMIN.'/logistik_non_medis/savesppb')?}', formData, function(data) {
+        $.post("{?=url(ADMIN.'/logistik_non_medis/savesppb')?}", formData, function(data) {
             var res = JSON.parse(data);
             if(res.status == 'success') {
                 $('#form-container').hide();
@@ -188,14 +362,14 @@ function initSelect2Item($el) {
         width: '100%',
         placeholder: '-- Pilih Barang --',
         ajax: {
-            url: '{?=url(ADMIN.'/logistik_non_medis/ajaxmasterbarang')?}',
+            url: "{?=url(ADMIN.'/logistik_non_medis/ajaxmasterbarang')?}",
             dataType: 'json',
             delay: 250,
             processResults: function (data) {
                 return {
                     results: $.map(data, function (item) {
                         return {
-                            text: item.kode_item + ' - ' + item.nama_barang,
+                            text: item.nama_barang,
                             id: item.kode_item,
                             satuan: item.satuan_dasar
                         }

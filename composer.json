@@ -7,7 +7,12 @@
 		"phpseclib/phpseclib": "~3.0.36", 
         "phpmailer/phpmailer": "^6.9.1", 
         "mpdf/mpdf": "^8.2.4", 
-        "workerman/workerman": "^4.0"
+        "workerman/workerman": "4.0.47"
+    },
+    "config": {
+        "platform": {
+            "php": "7.4.33"
+        }
     },
     "license": "MIT",
     "authors": [

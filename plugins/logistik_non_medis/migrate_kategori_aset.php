@@ -1,7 +1,9 @@
 <?php
+use Systems\Lib\QueryWrapper;
+
 require '../../systems/Main.php';
 
-$db = Systems\Lib\QueryWrapper::connect("mysql:host=".DBHOST.";port=".DBPORT.";dbname=".DBNAME."", DBUSER, DBPASS);
+$db = QueryWrapper::connect("mysql:host=".DBHOST.";port=".DBPORT.";dbname=".DBNAME."", DBUSER, DBPASS);
 
 // 1. Create table
 $sql_create = "

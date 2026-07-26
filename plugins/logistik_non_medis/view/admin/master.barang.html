@@ -145,7 +145,7 @@
                         <input type="file" name="file" class="form-control" accept=".csv" required>
                         <p class="help-block">Pastikan format kolom sesuai dengan template CSV.</p>
                     </div>
-                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'downloadtemplatemasterbarang'])?}" target="_blank" class="btn btn-default btn-sm"><i class="fa fa-download"></i> Download Template CSV</a>
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'downloadTemplateCSV'])?}?type=barang" target="_blank" class="btn btn-default btn-sm"><i class="fa fa-download"></i> Download Template CSV</a>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
@@ -155,3 +155,39 @@
         </div>
     </div>
 </div>
+
+<script>
+$(document).ready(function() {
+    $('#form-import-barang').on('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+        formData.append('type', 'barang');
+        var btn = $('#btn-submit-import-barang');
+        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Mengimpor...');
+        
+        $.ajax({
+            url: "{?=url([ADMIN, 'logistik_non_medis', 'postImportCSV'])?}",
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(res) {
+                var data = JSON.parse(res);
+                if (data.status == 'success') {
+                    alert(data.message);
+                    $('#modal-import-barang').modal('hide');
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            },
+            error: function() {
+                alert('Terjadi kesalahan saat mengimpor data.');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('Mulai Import');
+            }
+        });
+    });
+});
+</script>

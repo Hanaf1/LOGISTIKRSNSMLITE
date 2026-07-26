@@ -69,6 +69,7 @@
                 <div class="row clearfix action-row">
                     <div class="col col-md-6">
                         <button type="button" class="btn btn-primary" id="btn-tambah-lokasi"><i class="fa fa-plus"></i> Tambah Lokasi Baru</button>
+                        <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#modal-import-lokasi" style="margin-left: 5px;"><i class="fa fa-upload"></i> Import</button>
                     </div>
                     <div class="col col-md-6">
                         <form action="" class="searchbox-masterlokasi">
@@ -143,3 +144,69 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Import Lokasi -->
+<div class="modal fade" id="modal-import-lokasi" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="form-import-lokasi" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Import Data Lokasi Gudang</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Pilih File CSV</label>
+                        <input type="file" name="file" class="form-control" accept=".csv" required>
+                        <p class="help-block">Pastikan format kolom sesuai dengan template CSV.</p>
+                    </div>
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'downloadTemplateCSV'])?}?type=lokasi" target="_blank" class="btn btn-default btn-sm"><i class="fa fa-download"></i> Download Template CSV</a>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-import-lokasi">Mulai Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    $('#form-import-lokasi').on('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+        formData.append('type', 'lokasi');
+        var btn = $('#btn-submit-import-lokasi');
+        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Mengimpor...');
+        
+        $.ajax({
+            url: "{?=url([ADMIN, 'logistik_non_medis', 'postImportCSV'])?}",
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(res) {
+                var data = JSON.parse(res);
+                if (data.status == 'success') {
+                    alert(data.message);
+                    $('#modal-import-lokasi').modal('hide');
+                    if(typeof loadMasterLokasi === 'function') {
+                        loadMasterLokasi(1); // reload datatable
+                    } else {
+                        location.reload();
+                    }
+                } else {
+                    alert(data.message);
+                }
+            },
+            error: function() {
+                alert('Terjadi kesalahan saat mengimpor data.');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('Mulai Import');
+            }
+        });
+    });
+});
+</script>

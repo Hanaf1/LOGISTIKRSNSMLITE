@@ -1,20 +1,20 @@
 {if: !empty($aset)}
 {loop: $aset}
 <tr>
-    <td style="font-weight: bold;">{$value.kode_aset}</td>
     <td>
-        {if: !empty($value.serial_number)}
-        <code style="font-size:12px;">{$value.serial_number}</code>
+        {if: !empty($value.nomor_inventaris)}
+        <code style="font-size:12px; font-weight:bold;">{$value.nomor_inventaris}</code>
         {else}
-        <span class="text-muted">-</span>
+        <code style="font-size:11px;">{$value.kode_aset}</code>
         {/if}
     </td>
     <td>
-        <span>{$value.nama_aset}</span>
+        <strong>{$value.nama_aset}</strong><br><small class="text-muted">Kode sistem: {$value.kode_aset}</small>
     </td>
-    <td>{$value.nama_unit}</td>
-    <td>{?=date('d-m-Y', strtotime($value.tanggal_perolehan))?}</td>
-    <td style="font-weight: bold;">Rp. {?=number_format($value.harga_beli,0,',','.')?}</td>
+    <td>{if: !empty($value.merk_type)}{$value.merk_type}{else}-{/if}<br><small class="text-muted">{$value.nomor_dokumen}</small></td>
+    <td>{if: !empty($value.lokasi_fisik)}{$value.lokasi_fisik}{else}{$value.nama_unit}{/if}</td>
+    <td>{$value.sumber_perolehan}<br><small class="text-muted">{if: !empty($value.tahun_beli)}{$value.tahun_beli}{else}{?=date('Y', strtotime($value.tanggal_perolehan))?}{/if}</small></td>
+    <td><strong>{$value.jumlah}</strong> {$value.satuan}</td>
     <td>
         {if: $value.status_kondisi == 'Baik'}
         <span class="label label-success"><i class="fa fa-check-circle"></i> Baik</span>
@@ -24,6 +24,7 @@
         <span class="label label-danger"><i class="fa fa-times-circle"></i> Rusak Berat</span>
         {/if}
     </td>
+    <td style="font-weight: bold; white-space:nowrap;">Rp. {?=number_format($value.harga_beli,0,',','.')?}</td>
     <td class="text-right">
         <div class="btn-group">
             <button type="button" class="btn btn-info btn-xs btn-detail-aset" data-id="{$value.id}" title="Detail Spesifikasi & Foto"><i class="fa fa-eye"></i></button>
@@ -36,7 +37,7 @@
 {/loop}
 {else}
 <tr>
-    <td colspan="8" class="text-center" style="padding: 30px; color: #888;">
+    <td colspan="9" class="text-center" style="padding: 30px; color: #888;">
         <i class="fa fa-info-circle fa-2x" style="margin-bottom: 10px;"></i>
         <p>Belum ada data aset non-medis yang terdaftar atau cocok dengan pencarian.</p>
     </td>

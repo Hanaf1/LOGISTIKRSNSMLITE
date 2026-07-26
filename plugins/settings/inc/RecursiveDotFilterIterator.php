@@ -1,7 +1,9 @@
 <?php
-    namespace Plugins\Settings\Inc;
+namespace Plugins\Settings\Inc;
 
-class RecursiveDotFilterIterator extends \RecursiveFilterIterator
+use RecursiveFilterIterator;
+
+class RecursiveDotFilterIterator extends RecursiveFilterIterator
 {
     public function accept()
     {

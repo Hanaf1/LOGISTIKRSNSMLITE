@@ -16,9 +16,22 @@
                     </select>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="form-group">
-                    <label>Tahun Perencanaan</label>
+                    <label>Bulan</label>
+                    <select name="bulan" id="form_bulan" class="form-control" required>
+                        <option value="01">Januari</option><option value="02">Februari</option>
+                        <option value="03">Maret</option><option value="04">April</option>
+                        <option value="05">Mei</option><option value="06">Juni</option>
+                        <option value="07">Juli</option><option value="08">Agustus</option>
+                        <option value="09">September</option><option value="10">Oktober</option>
+                        <option value="11">November</option><option value="12">Desember</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label>Tahun</label>
                     <input type="number" name="tahun" id="form_tahun" class="form-control" value="{$perencanaan.tahun}" required>
                 </div>
             </div>
@@ -38,10 +51,11 @@
             <table class="table table-bordered table-condensed" id="table_perencanaan">
                 <thead>
                     <tr class="info">
-                        <th width="35%">Barang / Katalog</th>
-                        <th width="20%">Harga Ref (Rp)</th>
+                        <th width="30%">Barang / Katalog</th>
+                        <th width="15%">Pemakaian Bln Lalu</th>
+                        <th width="15%">Harga Ref (Rp)</th>
                         <th width="15%">Prioritas</th>
-                        <th width="20%">Qty (1 Thn)</th>
+                        <th width="15%">Rencana Qty</th>
                         <th width="10%">Aksi</th>
                     </tr>
                 </thead>
@@ -63,7 +77,7 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header bg-info">
-                <h4 class="modal-title">Detail Kebutuhan Bulanan</h4>
+                <h4 class="modal-title">Detail Breakdown</h4>
             </div>
             <div class="modal-body">
                 <div class="row" id="monthly_inputs_container">
@@ -86,6 +100,10 @@ $('#formPerencanaan').attr('action', mlite.url + '/' + mlite.admin + '/logistik_
 
 // Initialize select2
 $('.select2-main').select2({ dropdownParent: $('#modalForm') });
+
+// Select current month
+var currentMonth = "{?=isset($perencanaan['bulan']) ? $perencanaan['bulan'] : date('m')?}";
+$('#form_bulan').val(currentMonth);
 
 // Add first row if new
 {if: $mode == 'add'}
@@ -120,6 +138,9 @@ function addTableRow(data = null) {
                 <input type="text" name="items[${index}][harga_referensi]" class="form-control rupiah-input" id="harga_${index}" value="${harga ? formatRupiah(harga, 'Rp. ') : ''}" placeholder="Rp. 0">
             </td>
             <td>
+                <input type="number" name="items[${index}][pemakaian_lalu]" class="form-control" value="${data ? (data.pemakaian_lalu || 0) : 0}" readonly>
+            </td>
+            <td>
                 <select name="items[${index}][prioritas]" class="form-control">
                     <option value="Desirable" ${prioritas == 'Desirable' ? 'selected' : ''}>D</option>
                     <option value="Essential" ${prioritas == 'Essential' ? 'selected' : ''}>E</option>
@@ -127,43 +148,23 @@ function addTableRow(data = null) {
                 </select>
             </td>
             <td>
-                <div class="input-group">
-                    <input type="text" name="items[${index}][total_qty]" class="form-control" id="total_qty_${index}" readonly value="${total_qty}">
-                    <span class="input-group-btn">
-                        <button class="btn btn-default" type="button" onclick="openMonthly(${index})"><i class="fa fa-calendar"></i></button>
-                    </span>
-                </div>
-                <div id="monthly_store_${index}">
-                    <input type="hidden" name="items[${index}][jan]" value="${data ? data.jan : 0}" class="m-jan">
-                    <input type="hidden" name="items[${index}][feb]" value="${data ? data.feb : 0}" class="m-feb">
-                    <input type="hidden" name="items[${index}][mar]" value="${data ? data.mar : 0}" class="m-mar">
-                    <input type="hidden" name="items[${index}][apr]" value="${data ? data.apr : 0}" class="m-apr">
-                    <input type="hidden" name="items[${index}][mei]" value="${data ? data.mei : 0}" class="m-mei">
-                    <input type="hidden" name="items[${index}][jun]" value="${data ? data.jun : 0}" class="m-jun">
-                    <input type="hidden" name="items[${index}][jul]" value="${data ? data.jul : 0}" class="m-jul">
-                    <input type="hidden" name="items[${index}][agu]" value="${data ? data.agu : 0}" class="m-agu">
-                    <input type="hidden" name="items[${index}][sep]" value="${data ? data.sep : 0}" class="m-sep">
-                    <input type="hidden" name="items[${index}][okt]" value="${data ? data.okt : 0}" class="m-okt">
-                    <input type="hidden" name="items[${index}][nov]" value="${data ? data.nov : 0}" class="m-nov">
-                    <input type="hidden" name="items[${index}][des]" value="${data ? data.des : 0}" class="m-des">
-                </div>
+                <input type="number" name="items[${index}][total_qty]" class="form-control" id="total_qty_${index}" value="${total_qty}" min="0">
             </td>
-            <td class="text-center">
-                <button type="button" class="btn btn-danger btn-xs" onclick="removeRow(${index})"><i class="fa fa-times"></i></button>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm" onclick="$(this).closest('tr').remove()"><i class="fa fa-times"></i></button>
             </td>
         </tr>
     `;
+    
     $('#item_rows').append(html);
+    $('.select2-row').select2({ dropdownParent: $('#modalForm') });
     
-    // Init Select2 for new row
-    var $newSelect = $(`#row_${index} .item-select`);
-    $newSelect.select2({ dropdownParent: $('#modalForm') });
-    
-    // Listen for change on the specific select2
-    $newSelect.on('select2:select', function(e) {
-        var data = e.params.data;
-        var harga = $(this).find(':selected').data('harga') || 0;
-        $(`#harga_${index}`).val(formatRupiah(harga.toString(), 'Rp. '));
+    // Auto-fetch price on item select (if not set)
+    $(`select[name="items[${index}][kode_item]"]`).on('change', function() {
+        var p = $(this).find(':selected').data('harga');
+        if (p) {
+            $(`#harga_${index}`).val(formatRupiah(p.toString(), 'Rp. '));
+        }
     });
 }
 
@@ -171,50 +172,6 @@ function addTableRow(data = null) {
 $(document).on('keyup', '.rupiah-input', function() {
     $(this).val(formatRupiah($(this).val(), 'Rp. '));
 });
-
-function removeRow(index) {
-    if($('#item_rows tr').length > 1) {
-        $(`#row_${index}`).remove();
-    }
-}
-
-function openMonthly(index) {
-    activeRowIndex = index;
-    var container = $('#monthly_inputs_container');
-    container.empty();
-    
-    var months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    var monthKeys = ['jan','feb','mar','apr','mei','jun','jul','agu','sep','okt','nov','des'];
-    
-    months.forEach(function(m, i) {
-        var key = monthKeys[i];
-        var val = $(`#monthly_store_${index} .m-${key}`).val();
-        var html = `
-            <div class="col-md-3" style="margin-bottom: 10px;">
-                <label>${m}</label>
-                <input type="number" step="any" class="form-control input-sm temp-month" data-key="${key}" value="${val}">
-            </div>
-        `;
-        container.append(html);
-    });
-    
-    $('#modalMonthly').modal('show');
-}
-
-function closeMonthly() {
-    if(activeRowIndex == -1) return;
-    
-    var total = 0;
-    $('.temp-month').each(function() {
-        var key = $(this).data('key');
-        var val = parseFloat($(this).val()) || 0;
-        $(`#monthly_store_${activeRowIndex} .m-${key}`).val(val);
-        total += val;
-    });
-    
-    $(`#total_qty_${activeRowIndex}`).val(total);
-    $('#modalMonthly').modal('hide');
-}
 
 function formatRupiah(angka, prefix) {
     if (angka == null || angka === "") return "Rp. 0";

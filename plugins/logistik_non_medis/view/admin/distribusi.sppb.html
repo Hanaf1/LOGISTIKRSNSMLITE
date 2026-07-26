@@ -1,15 +1,93 @@
 <div id="display">
+    <style>
+        .custom-breadcrumb {
+            display: inline-flex;
+            align-items: center;
+            background: #f8f9fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 6px 15px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .custom-breadcrumb a {
+            color: #4a4a4a;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            font-weight: 500;
+        }
+        .custom-breadcrumb a:hover {
+            color: #337ab7;
+        }
+        .custom-breadcrumb .separator {
+            margin: 0 10px;
+            color: #a0a0a0;
+            font-size: 11px;
+        }
+        .custom-breadcrumb .active {
+            color: #337ab7;
+            font-weight: 600;
+        }
+        .sppb-approval-tabs > li > a {
+            border-radius: 4px 4px 0 0;
+            font-weight: 500;
+            color: #555;
+            cursor: pointer;
+        }
+        .sppb-approval-tabs > li.active > a,
+        .sppb-approval-tabs > li.active > a:hover,
+        .sppb-approval-tabs > li.active > a:focus {
+            color: #337ab7;
+            background-color: #fff;
+            border-color: #ddd #ddd #fff;
+            font-weight: 600;
+        }
+        .sppb-approval-tabs > li > a:hover {
+            background-color: #f5f5f5;
+        }
+    </style>
+    <div class="custom-breadcrumb">
+        <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
+        <i class="fa fa-chevron-right separator"></i>
+        <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}#distribusi">Distribusi</a>
+        <i class="fa fa-chevron-right separator"></i>
+        <span class="active">{if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Permintaan Pengadaan (Non Rutin){else}Permintaan BHP Mingguan{/if}{else}Permintaan Barang (SPPB){/if}</span>
+    </div>
     <div class="row">
         <div class="col-md-12">
             <div class="panel panel-default">
                 <div class="panel-heading" style="overflow: hidden;">
-                    <h3 class="panel-title pull-left" style="line-height: 34px;"><i class="fa fa-shopping-cart"></i> Permintaan Barang (SPPB)</h3>
+                    <h3 class="panel-title pull-left" style="line-height: 34px;"><i class="fa fa-shopping-cart"></i> Permintaan Barang (SPPB) {if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Non Rutin{else}Rutin{/if}{/if}</h3>
+                    {if: $role != 'kepala_unit' && $role != 'kepala_sie' && $role != 'kepala_bidang'}
                     <div class="btn-group pull-right">
+                        {if: !empty($can_manage_distribusi_controls)}
+                        {if: empty($jenis_page) || $jenis_page == 'Rutin'}
                         <button class="btn btn-warning" data-toggle="modal" data-target="#modal-import-sppb" style="margin-right: 5px;"><i class="fa fa-upload"></i> Import SPPB Mingguan</button>
+                        {/if}
+                        {/if}
                         <button class="btn btn-primary" id="btn-tambah"><i class="fa fa-plus"></i> Tambah Permintaan</button>
                     </div>
+                    {/if}
                 </div>
                 <div class="panel-body">
+                    {if: $role == 'kepala_unit' || $role == 'kepala_sie' || $role == 'kepala_bidang'}
+                    <ul class="nav nav-tabs sppb-approval-tabs" id="approvalTabs">
+                        <li class="active">
+                            <a href="javascript:void(0)" class="approval-tab-link" data-tab="pending">
+                                <i class="fa fa-clock-o"></i> Butuh Persetujuan
+                            </a>
+                        </li>
+                        <li>
+                            <a href="javascript:void(0)" class="approval-tab-link" data-tab="history">
+                                <i class="fa fa-history"></i> Riwayat Persetujuan
+                            </a>
+                        </li>
+                    </ul>
+                    <div style="margin-top:15px;"></div>
+                    {/if}
+                    {if: !empty($can_manage_distribusi_controls)}
                     <div class="well well-sm">
                         <div class="row">
                             <div class="col-md-4">
@@ -20,21 +98,26 @@
                                     </span>
                                 </div>
                             </div>
+                            {if: $role != 'kepala_unit' && $role != 'kepala_sie' && $role != 'kepala_bidang'}
                             <div class="col-md-3">
-                                <select id="filter-status" class="form-control">
+                                <select id="filter-status" class="form-control" onchange="loadDisplay()">
                                     <option value="">-- Semua Status --</option>
                                     <option value="Draft">Draft</option>
-                                    <option value="Diajukan">Diajukan</option>
-                                    <option value="Disetujui Ka. Unit">Disetujui Ka. Unit</option>
-                                    <option value="Disetujui Ka. Sie">Disetujui Ka. Sie</option>
-                                    <option value="Disetujui Unit">Disetujui Unit</option>
-                                    <option value="Terverifikasi">Terverifikasi</option>
+                                    <option value="Diajukan">Diajukan (Butuh Persetujuan Ka. Unit)</option>
+                                    <option value="Disetujui Ka. Unit">Disetujui Ka. Unit (Butuh Persetujuan Ka. Sie)</option>
+                                    <option value="Disetujui Ka. Sie">Disetujui Ka. Sie (Butuh Persetujuan Ka. Bidang)</option>
+                                    <option value="Disetujui Kabid">Disetujui Kabid</option>
+                                    <option value="Proses Logistik">Proses Logistik</option>
+                                    <option value="Proses Pengadaan">Proses Pengadaan</option>
+                                    <option value="Siap Ambil">Siap Ambil</option>
                                     <option value="Selesai">Selesai</option>
                                     <option value="Ditolak">Ditolak</option>
                                 </select>
                             </div>
+                            {/if}
                         </div>
                     </div>
+                    {/if}
                     <div id="sppb-list"></div>
                 </div>
             </div>
@@ -53,6 +136,7 @@
 </div>
 
 <!-- Modal Import SPPB Mingguan -->
+{if: !empty($can_manage_distribusi_controls)}
 <div class="modal fade" id="modal-import-sppb" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -81,10 +165,10 @@
                             <div class="form-group">
                                 <label>Minggu Ke- <span class="text-danger">*</span></label>
                                 <select name="minggu_ke" class="form-control" required>
-                                    <option value="1">Minggu ke-1 (tgl 1–7)</option>
-                                    <option value="2">Minggu ke-2 (tgl 8–14)</option>
-                                    <option value="3">Minggu ke-3 (tgl 15–21)</option>
-                                    <option value="4">Minggu ke-4 (tgl 22–akhir bulan)</option>
+                                    <option value="1">Minggu ke-1 (tgl 1-7)</option>
+                                    <option value="2">Minggu ke-2 (tgl 8-14)</option>
+                                    <option value="3">Minggu ke-3 (tgl 15-21)</option>
+                                    <option value="4">Minggu ke-4 (tgl 22-akhir bulan)</option>
                                 </select>
                             </div>
                         </div>
@@ -104,10 +188,22 @@
         </div>
     </div>
 </div>
+{/if}
 
 <script>
+var sppbCurrentRole = '{$role}';
+var sppbCurrentTab = 'pending';
+
 $(document).ready(function() {
     loadDisplay();
+
+    $(document).on('click', '.approval-tab-link', function(e) {
+        e.preventDefault();
+        sppbCurrentTab = $(this).data('tab');
+        $('#approvalTabs li').removeClass('active');
+        $(this).closest('li').addClass('active');
+        loadDisplay();
+    });
 
     $('#btn-cari').click(function() {
         loadDisplay();
@@ -122,7 +218,9 @@ $(document).ready(function() {
     });
 
     $('#btn-tambah').click(function() {
-        $.post('{?=url(ADMIN."/logistik_non_medis/formsppb")?}', function(data) {
+        var jenis = '{$jenis_page}';
+        if (!jenis) jenis = 'Rutin';
+        $.post('{?=url(ADMIN."/logistik_non_medis/formsppb")?}', {jenis: jenis}, function(data) {
             $('#display').hide();
             $('#form-container').html(data).show();
         });
@@ -203,15 +301,28 @@ $(document).ready(function() {
     }, 0);
 });
 
-function loadDisplay(halaman = 1) {
-    var cari = $('#cari').val();
-    var status = $('#filter-status').val();
-    $.post('{?=url(ADMIN."/logistik_non_medis/displaysppb")?}', {
+function loadDisplay(halaman) {
+    if (!halaman) halaman = 1;
+    var cari = $('#cari').val() || '';
+    var status = $('#filter-status').length ? $('#filter-status').val() : '';
+    var jenis = '{$jenis_page}';
+
+    var postData = {
         cari: cari,
         status: status,
+        jenis_permintaan: jenis,
         halaman: halaman
-    }, function(data) {
+    };
+
+    if (sppbCurrentRole === 'kepala_unit' || sppbCurrentRole === 'kepala_sie' || sppbCurrentRole === 'kepala_bidang') {
+        postData.approval_tab = sppbCurrentTab;
+    }
+
+    $.post('{?=url(ADMIN."/logistik_non_medis/displaysppb")?}', postData, function(data) {
         $('#sppb-list').html(data);
+    }).fail(function(xhr, status, error) {
+        console.error("AJAX Error:", status, error);
+        console.error("Response Text:", xhr.responseText);
     });
 }
 
@@ -289,3 +400,5 @@ function verifikasiLogistik(no_sppb) {
     }
 }
 </script>
+
+{? include_once(MODULES . '/logistik_non_medis/view/admin/notifikasi.html') ?}

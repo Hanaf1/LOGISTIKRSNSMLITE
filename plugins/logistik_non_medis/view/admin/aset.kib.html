@@ -1,305 +1,145 @@
 <div class="row">
-    <div class="col-md-12">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <style>
-                    .custom-breadcrumb {
-                        display: inline-flex;
-                        align-items: center;
-                        background: #f8f9fa;
-                        border: 1px solid #e1e4e8;
-                        border-radius: 6px;
-                        padding: 6px 15px;
-                        font-size: 13px;
-                        margin-bottom: 15px;
-                        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                    }
-                    .custom-breadcrumb a {
-                        color: #4a4a4a;
-                        text-decoration: none;
-                        display: inline-flex;
-                        align-items: center;
-                        font-weight: 500;
-                    }
-                    .custom-breadcrumb a:hover {
-                        color: #337ab7;
-                    }
-                    .custom-breadcrumb .separator {
-                        margin: 0 10px;
-                        color: #a0a0a0;
-                        font-size: 11px;
-                    }
-                    .custom-breadcrumb .active {
-                        color: #337ab7;
-                        font-weight: 600;
-                    }
-                </style>
-                <div class="custom-breadcrumb">
-                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
-                    <i class="fa fa-chevron-right separator"></i>
-                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Aset</a>
-                    <i class="fa fa-chevron-right separator"></i>
-                    <span class="active">Kib</span>
-                </div>
-
-                <h3 class="panel-title" style="margin-top: 5px;">
-                    <i class="fa fa-folder-open"></i> Kartu Inventaris Barang (KIB)
-                    <small class="pull-right">Golongan Aset Tetap Non-Medis</small>
-                </h3>
-            </div>
-            <div class="panel-body">
-                
-                <!-- Navigation Tabs -->
-                <ul class="nav nav-tabs nav-justified kib-nav-tabs" style="border-bottom: 1px solid #ddd; margin-bottom: 20px;">
-                    <li class="active">
-                        <a href="#tab-kib-rekap" data-toggle="tab" data-kib="rekap" style="padding: 12px 10px; font-weight: bold; border-radius: 0; transition: all 0.2s;"><i class="fa fa-bar-chart text-primary"></i> <span class="tab-label">Rekapitulasi</span></a>
-                    </li>
-                    {if: !empty($kategori)}
-                    {loop: $kategori}
-                    <li>
-                        <a href="#tab-kib-{$value.kode_kategori}" data-toggle="tab" data-kib="{$value.kode_kategori}" style="padding: 12px 10px; font-weight: bold; border-radius: 0; transition: all 0.2s;"><i class="fa fa-tags text-info"></i> <span class="tab-label">{$value.nama_kategori}</span></a>
-                    </li>
-                    {/loop}
-                    {/if}
-                </ul>
-
-                <!-- Filter & Search Bar Section (using host's standard .filter-well style) -->
-                <div class="filter-well filter-section" style="margin-bottom: 20px; display: none;">
-                    <form id="form-filter-kib" onsubmit="return false;">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>Pencarian Aset</label>
-                                    <div class="input-group">
-                                        <span class="input-group-addon" style="background: transparent; border-right: none;"><i class="fa fa-search text-muted"></i></span>
-                                        <input type="text" id="filter_cari" class="form-control" placeholder="Cari Kode, Nama Aset, Merk, atau Lokasi..." style="border-left: none; box-shadow: none;">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 col-sm-6">
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>Unit Penugasan</label>
-                                    <select id="filter_unit" class="form-control">
-                                        <option value="">-- Semua Unit Penugasan --</option>
-                                        {if: !empty($units)}
-                                        {loop: $units}
-                                        <option value="{$value.kode_unit}">{$value.nama_unit}</option>
-                                        {/loop}
-                                        {/if}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3 col-sm-6">
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>Kondisi Fisik</label>
-                                    <select id="filter_kondisi" class="form-control">
-                                        <option value="">-- Semua Kondisi Aset --</option>
-                                        <option value="Baik">Baik</option>
-                                        <option value="Rusak Ringan">Rusak Ringan</option>
-                                        <option value="Rusak Berat">Rusak Berat</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-2" style="display: flex; align-items: flex-end; justify-content: flex-end; height: 59px;">
-                                <button type="button" class="btn btn-default btn-block btn-reset-filter"><i class="fa fa-refresh"></i> Reset</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Panel Body serving as AJAX content container -->
-                <div style="margin-top: 15px;">
-                    <div id="kib-content-loader" style="display: none; text-align: center; padding: 50px 0;">
-                        <i class="fa fa-spinner fa-spin fa-2x text-primary"></i>
-                        <p style="margin-top: 15px; color: #777;">Memuat Kartu Inventaris Barang...</p>
-                    </div>
-                    
-                    <div id="kib-ajax-container">
-                        <!-- Loaded dynamically via AJAX -->
-                    </div>
-                </div>
-                
-            </div>
+  <div class="col-md-12">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <div class="custom-breadcrumb" style="display:inline-flex;align-items:center;background:#f8f9fa;border:1px solid #e1e4e8;border-radius:6px;padding:6px 15px;font-size:13px;margin-bottom:15px;box-shadow:0 1px 2px rgba(0,0,0,.05);">
+          <a href="{?=url([ADMIN,'logistik_non_medis','manage'])?}" style="color:#4a4a4a;text-decoration:none;"><i class="fa fa-home"></i></a>
+          <i class="fa fa-chevron-right" style="margin:0 10px;color:#aaa;font-size:11px;"></i>
+          <a href="{?=url([ADMIN,'logistik_non_medis','manage'])?}#aset" style="color:#4a4a4a;text-decoration:none;">Aset</a>
+          <i class="fa fa-chevron-right" style="margin:0 10px;color:#aaa;font-size:11px;"></i>
+          <span style="color:#337ab7;font-weight:600;">KIB Inventaris</span>
         </div>
+        <h3 class="panel-title"><i class="fa fa-folder-open"></i> Kartu Inventaris Barang</h3>
+      </div>
+      <div class="panel-body">
+        <div class="well well-sm" style="margin-bottom:15px;">
+          <form id="form-filter-kib" onsubmit="return false;">
+            <div class="row">
+              <div class="col-md-3">
+                <label>Pencarian</label>
+                <input type="text" id="filter_cari" class="form-control" placeholder="Kode aset, nama barang, nomor inventaris...">
+              </div>
+              <div class="col-md-3">
+                <label>Unit</label>
+                <select id="filter_unit" class="form-control">
+                  <option value="">Semua Unit</option>
+                  {loop: $units}
+            <option value="{$value.kode}">{$value.kode_inventaris} - {$value.nama}</option>
+                  {/loop}
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label>Kelompok</label>
+                <select id="filter_kelompok" class="form-control">
+                  <option value="">Semua Kelompok</option>
+                  {loop: $kelompok}
+                  <option value="{$value.kode_kelompok}">{$value.kode_kelompok} - {$value.nama_kelompok}</option>
+                  {/loop}
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label>Jenis Barang</label>
+                <select id="filter_jenis" class="form-control">
+                  <option value="">Semua Jenis</option>
+                  {loop: $jenis}
+                  <option value="{$value.kode_kelompok}.{$value.kode_jenis}" data-kelompok="{$value.kode_kelompok}">{$value.kode_kelompok}.{$value.kode_jenis} - {$value.nama_jenis}</option>
+                  {/loop}
+                </select>
+              </div>
+              <div class="col-md-2" style="padding-top:25px;">
+                <button type="button" class="btn btn-default btn-block btn-reset-filter"><i class="fa fa-refresh"></i> Reset</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div id="kib-content-loader" style="display:none;text-align:center;padding:45px 0;">
+          <i class="fa fa-spinner fa-spin fa-2x text-primary"></i>
+          <p style="margin-top:10px;color:#777;">Memuat data inventaris...</p>
+        </div>
+        <div id="kib-ajax-container"></div>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- Modal Detail Aset -->
-<div class="modal fade" id="modal-detail-aset" tabindex="-1" role="dialog" aria-labelledby="modalDetailAsetLabel">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content" id="detail-aset-content">
-            <!-- Loaded via AJAX -->
-        </div>
-    </div>
+<div class="modal fade" id="modal-detail-aset" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content" id="detail-aset-content"></div>
+  </div>
 </div>
 
-<style>
-    /* Tab Styling matching AdminLTE default look */
-    .kib-nav-tabs > li > a {
-        color: #555;
-        border-bottom: 2px solid transparent !important;
-        margin-right: 0;
-    }
-    .kib-nav-tabs > li.active > a,
-    .kib-nav-tabs > li.active > a:focus,
-    .kib-nav-tabs > li.active > a:hover {
-        background-color: #fff !important;
-        color: #333 !important;
-        border-bottom: 3px solid #3c8dbc !important;
-    }
-    .kib-nav-tabs > li > a:hover {
-        background-color: #f8f8f8;
-        color: #333;
-    }
-    
-    @media (max-width: 768px) {
-        .kib-nav-tabs > li > a {
-            padding: 10px 5px !important;
-        }
-        .tab-label {
-            font-size: 11px;
-        }
-        .tab-label small {
-            display: none !important;
-        }
-    }
-</style>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>
 <script>
-    var current_kib = 'rekap';
-    var current_page = 1;
+var current_page = 1;
 
-    $(document).ready(function() {
-        // Initial load
-        loadActiveTab();
+$(function() {
+  loadKib(1);
 
-        // Bind click on navigation tabs
-        $('.kib-nav-tabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
-            var selectedKib = $(this).attr('data-kib');
-            current_kib = selectedKib;
-            current_page = 1;
-            
-            // Toggle Filter section based on Rekap tab
-            if (current_kib === 'rekap') {
-                $('.filter-section').slideUp(200);
-            } else {
-                $('.filter-section').slideDown(200);
-            }
-            
-            loadActiveTab();
-        });
+  var searchTimeout;
+  $('#filter_cari').on('keyup', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(function(){ loadKib(1); }, 300);
+  });
 
-        // Trigger filters keyup and change
-        var search_timeout;
-        $('#filter_cari').on('keyup', function() {
-            clearTimeout(search_timeout);
-            search_timeout = setTimeout(function() {
-                current_page = 1;
-                loadActiveTab();
-            }, 300);
-        });
-
-        $('#filter_unit, #filter_kondisi').on('change', function() {
-            current_page = 1;
-            loadActiveTab();
-        });
-
-        // Reset filter
-        $('.btn-reset-filter').on('click', function() {
-            $('#form-filter-kib')[0].reset();
-            current_page = 1;
-            loadActiveTab();
-        });
-    });
-
-    function loadActiveTab() {
-        if (current_kib === 'rekap') {
-            $('.filter-section').hide();
-            loadRekap();
-        } else {
-            loadKib(current_page);
-        }
+  $('#filter_unit,#filter_kelompok,#filter_jenis').on('change', function() {
+    if (this.id === 'filter_kelompok') {
+      var kelompok = $(this).val();
+      $('#filter_jenis option').show();
+      if (kelompok) $('#filter_jenis option[data-kelompok]').not('[data-kelompok="'+kelompok+'"]').hide();
+      $('#filter_jenis').val('');
     }
+    loadKib(1);
+  });
 
-    // Load Rekap Tab
-    function loadRekap() {
-        $.ajax({
-            url: '{?=url([ADMIN, "logistik_non_medis", "displayrekapkib"])?}',
-            type: 'GET',
-            dataType: 'html',
-            beforeSend: function() {
-                $('#kib-ajax-container').hide();
-                $('#kib-content-loader').show();
-            },
-            success: function(response) {
-                $('#kib-content-loader').hide();
-                $('#kib-ajax-container').html(response).fadeIn(200);
-            },
-            error: function() {
-                $('#kib-content-loader').hide();
-                $('#kib-ajax-container').html('<div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> Terjadi kesalahan sistem saat memuat rekapitulasi inventaris.</div>').fadeIn(200);
-            }
-        });
-    }
+  $('.btn-reset-filter').on('click', function() {
+    $('#form-filter-kib')[0].reset();
+    $('#filter_jenis option').show();
+    loadKib(1);
+  });
 
-    // Load specific KIB Tab
-    function loadKib(page) {
-        current_page = page;
-        var cari = $('#filter_cari').val();
-        var filter_unit = $('#filter_unit').val();
-        var filter_kondisi = $('#filter_kondisi').val();
+  $(document).on('click', '.pagination a', function(e) {
+    e.preventDefault();
+    var page = $(this).attr('data-page');
+    if (page) loadKib(page);
+  });
 
-        $.ajax({
-            url: '{?=url([ADMIN, "logistik_non_medis", "displaykib"])?}',
-            type: 'POST',
-            data: {
-                kib: current_kib,
-                halaman: page,
-                cari: cari,
-                filter_unit: filter_unit,
-                filter_kondisi: filter_kondisi
-            },
-            dataType: 'html',
-            beforeSend: function() {
-                $('#kib-ajax-container').hide();
-                $('#kib-content-loader').show();
-            },
-            success: function(response) {
-                $('#kib-content-loader').hide();
-                $('#kib-ajax-container').html(response).fadeIn(200);
-            },
-            error: function() {
-                $('#kib-content-loader').hide();
-                $('#kib-ajax-container').html('<div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> Terjadi kesalahan sistem saat memuat data KIB ' + current_kib + '.</div>').fadeIn(200);
-            }
-        });
-    }
-
-    // Action Detail Aset modal loader
-    $(document).on('click', '.btn-detail-aset', function() {
-        var id = $(this).attr('data-id');
-        
-        $.ajax({
-            url: '{?=url([ADMIN, "logistik_non_medis", "detailasetregistrasi"])?}',
-            type: 'POST',
-            data: { id: id },
-            dataType: 'html',
-            beforeSend: function() {
-                $('#detail-aset-content').html('<div class="text-center" style="padding: 50px;"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Memuat detail aset...</p></div>');
-                $('#modal-detail-aset').modal('show');
-            },
-            success: function(response) {
-                $('#detail-aset-content').html(response);
-            },
-            error: function() {
-                $('#detail-aset-content').html('<div class="modal-body"><div class="alert alert-danger">Gagal memuat detail aset. Silakan coba lagi.</div></div>');
-            }
-        });
+  $(document).on('click', '.btn-detail-aset', function() {
+    var id = $(this).attr('data-id');
+    $('#detail-aset-content').html('<div class="text-center" style="padding:50px;"><i class="fa fa-spinner fa-spin fa-2x"></i><p>Memuat detail aset...</p></div>');
+    $('#modal-detail-aset').modal('show');
+    $.post('{?=url([ADMIN,"logistik_non_medis","detailasetregistrasi"])?}', {id:id}, function(html) {
+      $('#detail-aset-content').html(html);
+    }).fail(function() {
+      $('#detail-aset-content').html('<div class="modal-body"><div class="alert alert-danger">Gagal memuat detail aset.</div></div>');
     });
+  });
+});
 
-    // Label printing trigger
-    $(document).on('click', '.btn-print-aset', function() {
-        var kode = $(this).attr('data-kode');
-        alert('Cetak Label Fisik Aset: ' + kode + '\n(Fitur terintegrasi dengan Thermal Printer Rumah Sakit)');
-    });
+function loadKib(page) {
+  current_page = page || 1;
+  $.ajax({
+    url: '{?=url([ADMIN,"logistik_non_medis","displaykib"])?}',
+    type: 'POST',
+    data: {
+      halaman: current_page,
+      cari: $('#filter_cari').val(),
+      filter_unit: $('#filter_unit').val(),
+      filter_kelompok: $('#filter_kelompok').val(),
+      filter_jenis: $('#filter_jenis').val()
+    },
+    beforeSend: function() {
+      $('#kib-ajax-container').hide();
+      $('#kib-content-loader').show();
+    },
+    success: function(html) {
+      $('#kib-content-loader').hide();
+      $('#kib-ajax-container').html(html).fadeIn(150);
+    },
+    error: function() {
+      $('#kib-content-loader').hide();
+      $('#kib-ajax-container').html('<div class="alert alert-danger">Data KIB gagal dimuat.</div>').show();
+    }
+  });
+}
 </script>

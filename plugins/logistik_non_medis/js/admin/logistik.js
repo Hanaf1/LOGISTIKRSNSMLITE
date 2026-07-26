@@ -642,9 +642,22 @@ $(document).ready(function() {
     });
 
     $(document).on('shown.bs.modal', '#modal-form-unit', function () {
-        $('.select2').select2({
-            dropdownParent: $('#modal-form-unit')
+        var $modal = $(this);
+        // Destroy existing Select2 instances first to avoid duplicate init
+        $modal.find('.select2-unit').each(function() {
+            if ($(this).data('select2')) {
+                $(this).select2('destroy');
+            }
         });
+        // Init parent_id dulu agar filter PJ bisa berjalan
+        $modal.find('#parent_id').select2({ width: '100%', dropdownParent: $modal });
+        // Trigger change pada parent_id -> akan menjalankan filterPJOptions di form script
+        // (pj_unit akan di-init ulang di dalam filterPJOptions)
+        $modal.find('#parent_id').trigger('change');
+        // Jika pj_unit belum di-init oleh filter (misal showAllPJ), init di sini
+        if (!$modal.find('#pj_unit').data('select2')) {
+            $modal.find('#pj_unit').select2({ width: '100%', dropdownParent: $modal });
+        }
     });
 
     $(document).on('click', '.btn-hapus-unit', function() {

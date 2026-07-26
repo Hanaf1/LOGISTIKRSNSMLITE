@@ -66,7 +66,7 @@
                                 <option value="">-- Pilih Unit Penugasan --</option>
                                 {if: !empty($units)}
                                 {loop: $units}
-                                <option value="{$value.kode_unit}" {if: $value.kode_unit == $aset.kode_unit}selected{/if}>{$value.nama_unit}</option>
+                                <option value="{$value.kode}" {if: $value.kode == $aset.kode_unit}selected{/if}>[{$value.kode}] {$value.nama}</option>
                                 {/loop}
                                 {/if}
                             </select>
@@ -79,26 +79,32 @@
                         <div class="form-group">
                             <label class="control-label">Kode Aset Unik</label>
                             <input type="text" name="kode_aset" id="form_kode_aset" class="form-control" style="font-weight: bold; font-family: monospace;" value="{$aset.kode_aset}" readonly placeholder="[Akan dibuat otomatis setelah memilih Unit]">
-                            <p class="help-block" style="font-size: 11px;">Format: <code>AST-NM/[KODE-UNIT]/[TAHUN]/[SEQUENCE]</code></p>
+                            <p class="help-block" style="font-size: 11px;">Dibuat dari nomor inventaris otomatis: <code>AST-[NOMOR-INVENTARIS]</code></p>
+                        </div>
+
+                        <div class="panel panel-info" style="margin-bottom:15px;">
+                            <div class="panel-heading"><i class="fa fa-list-ol"></i> Nomor & Data Inventaris (Format Excel)</div>
+                            <div class="panel-body">
+                                <div class="form-group">
+                                    <label>Nomor Inventaris / Kode Barang</label>
+                                    <input type="text" name="nomor_inventaris" id="form_nomor_inventaris" class="form-control" value="{$aset.nomor_inventaris}" readonly placeholder="Pilih unit, kategori aset, dan item barang">
+                                    <p class="help-block">Dibuat otomatis sesuai Excel: unit (2) + kategori (1) + kelompok (2) + jenis (2) + barang (2) + urutan (2).</p>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6"><div class="form-group"><label>Merk / Type</label><input type="text" name="merk_type" class="form-control" value="{$aset.merk_type}" placeholder="Contoh: Sharp AH-A5UDY"></div></div>
+                                    <div class="col-md-6"><div class="form-group"><label>No. Sertifikat / Pabrik / Chasis / Mesin</label><input type="text" name="nomor_dokumen" class="form-control" value="{$aset.nomor_dokumen}" placeholder="Nomor dokumen identitas barang"></div></div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6"><div class="form-group"><label>Lokasi Fisik</label><input type="text" name="lokasi_fisik" class="form-control" value="{$aset.lokasi_fisik}" placeholder="Contoh: CS / Ruang Administrasi"></div></div>
+                                    <div class="col-md-6"><div class="form-group"><label>Bahan</label><input type="text" name="bahan" class="form-control" value="{$aset.bahan}" placeholder="Contoh: Plastik / Besi / Kayu"></div></div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Serial Number Manufaktur -->
                         <div class="form-group">
                             <label class="control-label">Serial Number (S/N) Pabrik</label>
                             <input type="text" name="serial_number" class="form-control" value="{$aset.serial_number}" placeholder="Contoh: SN-AC-992138">
-                        </div>
-
-                        <!-- Master Kategori Aset -->
-                        <div class="form-group">
-                            <label class="control-label">Kategori Aset <span class="text-danger">*</span></label>
-                            <select name="kode_kategori_aset" id="form_kode_kategori_aset" class="form-control" required>
-                                <option value="" data-kib="" data-umur="0">-- Pilih Kategori Aset --</option>
-                                {if: !empty($kategori_aset)}
-                                {loop: $kategori_aset}
-                                <option value="{$value.kode_kategori}" data-kib="{$value.kib_default}" data-umur="{$value.umur_manfaat_default}" {if: $aset.kode_kategori_aset == $value.kode_kategori}selected{/if}>{$value.nama_kategori}</option>
-                                {/loop}
-                                {/if}
-                            </select>
                         </div>
 
                         <!-- Klasifikasi KIB -->
@@ -117,12 +123,12 @@
 
                         <!-- Linkage ke Master Barang -->
                         <div class="form-group">
-                            <label class="control-label">Pilih Item Barang Katalog <span class="text-danger">*</span></label>
+                            <label class="control-label">Pilih Barang Inventaris <span class="text-danger">*</span></label>
                             <select name="kode_item" id="form_kode_item" class="form-control" required>
-                                <option value="">-- Hubungkan dengan Data Barang --</option>
+                                <option value="">-- Pilih dari Master Inventaris --</option>
                                 {if: !empty($master_barang)}
                                 {loop: $master_barang}
-                                <option value="{$value.kode_item}" data-nama="{$value.nama_barang}" {if: $value.kode_item == $aset.kode_item}selected{/if}>[{$value.kode_item}] {$value.nama_barang}</option>
+                                <option value="{$value.kode}" data-nama="{$value.nama}" data-kib="{$value.kib_jenis}" {if: $value.kode == $aset.kode_item}selected{/if}>[{$value.kode_kelompok}.{$value.kode_jenis}.{$value.kode_barang}] {$value.nama}</option>
                                 {/loop}
                                 {/if}
                             </select>
@@ -174,12 +180,22 @@
                         </div>
 
                         <div class="row">
+                            <div class="col-md-4"><div class="form-group"><label>Tahun Beli</label><input type="number" name="tahun_beli" class="form-control" value="{$aset.tahun_beli}" min="1900" max="2100" placeholder="2026"></div></div>
+                            <div class="col-md-4"><div class="form-group"><label>Satuan</label><input type="text" name="satuan" class="form-control" value="{$aset.satuan}" placeholder="Buah"></div></div>
+                            <div class="col-md-4"><div class="form-group"><label>Jumlah</label><input type="number" name="jumlah" class="form-control" value="{$aset.jumlah}" min="1"></div></div>
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group">
                                     <label class="control-label">Harga Beli / Nilai Aset (Rp)</label>
                                     <input type="text" id="form_harga_beli" name="harga_beli" class="form-control" style="font-weight: bold;" value="{$aset.harga_beli}" placeholder="Rp. 0" required>
                                 </div>
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Keterangan Inventaris</label>
+                            <textarea name="keterangan_inventaris" class="form-control" rows="2" placeholder="Contoh: Sudah dipasang label / kondisi khusus">{$aset.keterangan_inventaris}</textarea>
                         </div>
 
                         <div class="row">
@@ -631,19 +647,34 @@
 
         // Initialize KIB panel on load
         toggleKibPanel();
+
+        function generateNomorInventaris() {
+            if ('{$mode}' !== 'add') return;
+            var data = {
+                kode_unit: $('#form_kode_unit').val(),
+                kode_item: $('#form_kode_item').val()
+            };
+            if (!data.kode_unit || !data.kode_item) {
+                $('#form_nomor_inventaris, #form_kode_aset').val('');
+                return;
+            }
+            $.post('{?=url([ADMIN, "logistik_non_medis", "generatenomorinventaris"])?}', data, function(response) {
+                if (response.status === 'success') {
+                    $('#form_nomor_inventaris').val(response.nomor_inventaris);
+                    $('#form_kode_aset').val(response.kode_aset);
+                }
+            }, 'json');
+        }
         
-        // Auto-fill KIB and Masa Manfaat from Kategori Aset
-        $('#form_kode_kategori_aset').on('change', function() {
+        // KIB mengikuti konfigurasi barang pada Master Inventaris.
+        $('#form_kode_item').on('change', function() {
             var selectedOption = $(this).find('option:selected');
             var kibDefault = selectedOption.data('kib');
-            var umurDefault = selectedOption.data('umur');
             
             if (kibDefault) {
                 $('#form_kib_jenis').val(kibDefault).trigger('change');
             }
-            if (umurDefault) {
-                $('input[name="masa_manfaat_tahun"]').val(umurDefault);
-            }
+            generateNomorInventaris();
         });
         
         // Initial price masking format
@@ -669,33 +700,12 @@
             if(barangName && $('#form_nama_aset').val() === '') {
                 $('#form_nama_aset').val(barangName);
             }
+            generateNomorInventaris();
         });
 
-        // Trigger Auto-Generate Code on Unit Selection (Only in Add Mode)
+        // Unit, kategori, dan barang menentukan nomor inventaris otomatis.
         $('#form_kode_unit').on('change', function() {
-            var kode_unit = $(this).val();
-            var mode = '{$mode}';
-            
-            if(mode === 'add' && kode_unit !== '') {
-                $.ajax({
-                    url: '{?=url([ADMIN, "logistik_non_medis", "generatekodeaset"])?}',
-                    type: 'POST',
-                    data: { kode_unit: kode_unit },
-                    dataType: 'json',
-                    success: function(response) {
-                        if(response.status === 'success') {
-                            $('#form_kode_aset').val(response.kode_aset);
-                        } else {
-                            alert('Gagal generate kode aset: ' + response.message);
-                        }
-                    },
-                    error: function() {
-                        alert('Gagal terhubung ke server untuk generate kode aset.');
-                    }
-                });
-            } else if (mode === 'add') {
-                $('#form_kode_aset').val('');
-            }
+            generateNomorInventaris();
         });
 
         // Live mask currency formatting for Price Input

@@ -76,7 +76,7 @@
                                 <option value="">-- Semua Unit --</option>
                                 {if: !empty($units)}
                                 {loop: $units}
-                                <option value="{$value.kode_unit}">{$value.nama_unit}</option>
+                                <option value="{$value.kode}">[{$value.kode}] {$value.nama}</option>
                                 {/loop}
                                 {/if}
                             </select>
@@ -131,19 +131,20 @@
                     <table class="table table-striped no-margin dataTable" id="table-aset">
                         <thead>
                             <tr>
-                                <th>Kode Aset</th>
-                                <th>Serial Number</th>
-                                <th>Nama Aset</th>
-                                <th>Unit Penugasan</th>
-                                <th>Tanggal Perolehan</th>
-                                <th>Harga Perolehan</th>
+                                <th>No. Inventaris</th>
+                                <th>Nama / Jenis Barang</th>
+                                <th>Merk / Type</th>
+                                <th>Lokasi</th>
+                                <th>Asal / Thn Beli</th>
+                                <th>Satuan / Jumlah</th>
                                 <th>Kondisi</th>
+                                <th>Harga</th>
                                 <th class="text-right" style="width: 160px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="display-aset">
                             <tr>
-                                <td colspan="8" class="text-center" style="padding: 40px 0;">
+                                <td colspan="9" class="text-center" style="padding: 40px 0;">
                                     <i class="fa fa-spinner fa-spin fa-2x"></i>
                                     <p>Memuat data aset...</p>
                                 </td>
@@ -410,13 +411,13 @@
                 filter_kondisi: filter_kondisi
             },
             beforeSend: function() {
-                $('#display-aset').html('<tr><td colspan="8" class="text-center" style="padding: 40px 0;"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Segar data...</p></td></tr>');
+                $('#display-aset').html('<tr><td colspan="9" class="text-center" style="padding: 40px 0;"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Segar data...</p></td></tr>');
             },
             success: function(response) {
                 $('#display-aset').html(response);
             },
             error: function() {
-                $('#display-aset').html('<tr><td colspan="8" class="text-center text-danger" style="padding: 40px 0;"><i class="fa fa-exclamation-triangle fa-2x"></i><p style="margin-top:10px;">Gagal memuat data dari server.</p></td></tr>');
+                $('#display-aset').html('<tr><td colspan="9" class="text-center text-danger" style="padding: 40px 0;"><i class="fa fa-exclamation-triangle fa-2x"></i><p style="margin-top:10px;">Gagal memuat data dari server.</p></td></tr>');
             }
         });
     }

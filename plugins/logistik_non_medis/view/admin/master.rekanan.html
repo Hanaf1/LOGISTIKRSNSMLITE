@@ -50,6 +50,7 @@
                         <button class="btn btn-dark" style="background-color: #4c5561; color: white; border-radius: 0; padding: 10px 20px;" onclick="openForm()">
                             <i class="fa fa-plus"></i> Tambah Rekanan Baru
                         </button>
+                        <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#modal-import-rekanan" style="border-radius: 0; padding: 10px 20px; margin-left: 5px;"><i class="fa fa-upload"></i> Import</button>
                     </div>
                     <div class="col-md-6">
                         <div class="input-group">
@@ -79,6 +80,32 @@
     <div class="modal-dialog modal-lg" role="document" style="width: 80%;">
         <div class="modal-content" style="border-radius: 0;">
             <div id="form"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Import Rekanan -->
+<div class="modal fade" id="modal-import-rekanan" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="form-import-rekanan" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Import Data Rekanan Jasa</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Pilih File CSV</label>
+                        <input type="file" name="file" class="form-control" accept=".csv" required>
+                        <p class="help-block">Pastikan format kolom sesuai dengan template CSV.</p>
+                    </div>
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'downloadTemplateCSV'])?}?type=rekanan" target="_blank" class="btn btn-default btn-sm"><i class="fa fa-download"></i> Download Template CSV</a>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-import-rekanan">Mulai Import</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -121,4 +148,38 @@ function deleteData(kode_rekanan) {
         });
     }
 }
+
+$(document).ready(function() {
+    $('#form-import-rekanan').on('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+        formData.append('type', 'rekanan');
+        var btn = $('#btn-submit-import-rekanan');
+        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Mengimpor...');
+        
+        $.ajax({
+            url: "{?=url([ADMIN, 'logistik_non_medis', 'postImportCSV'])?}",
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(res) {
+                var data = JSON.parse(res);
+                if (data.status == 'success') {
+                    alert(data.message);
+                    $('#modal-import-rekanan').modal('hide');
+                    loadData(1, $('#cari').val());
+                } else {
+                    alert(data.message);
+                }
+            },
+            error: function() {
+                alert('Terjadi kesalahan saat mengimpor data.');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('Mulai Import');
+            }
+        });
+    });
+});
 </script>

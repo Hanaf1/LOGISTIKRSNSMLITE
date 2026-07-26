@@ -3,6 +3,7 @@
     <tr>
         <td><strong>{$value.kode_unit}</strong></td>
         <td>{$value.nama_unit}</td>
+        <td>{$value.nama_parent}</td>
         <td>{$value.pj_unit}</td>
         <td>
             <small class="text-muted">{$value.gedung} - Lt.{$value.lantai}</small>
@@ -25,7 +26,7 @@
     {/loop}
 {else}
     <tr>
-        <td colspan="6" class="text-center text-muted">Data tidak ditemukan.</td>
+        <td colspan="7" class="text-center text-muted">Data tidak ditemukan.</td>
     </tr>
 {/if}
 

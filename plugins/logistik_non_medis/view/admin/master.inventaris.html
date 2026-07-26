@@ -1,0 +1,279 @@
+<article class="row">
+  <div class="col-md-12">
+    <ol class="breadcrumb" style="margin-bottom:12px;">
+      <li><a href="{?=url([ADMIN,'logistik_non_medis','manage'])?}"><i class="fa fa-home"></i> Logistik Non Medis</a></li>
+      <li>Master</li>
+      <li class="active">Master Inventaris</li>
+    </ol>
+    <div class="panel panel-default">
+      <div class="panel-heading"><h3 class="panel-title"><i class="fa fa-sitemap"></i> Master Inventaris</h3></div>
+      <div class="panel-body">
+        <div class="row text-center" style="margin-bottom:20px;">
+          <div class="col-sm-3"><div class="well well-sm"><strong style="font-size:24px;">{?=count($units)?}</strong><br>Master Unit</div></div>
+          <div class="col-sm-3"><div class="well well-sm"><strong style="font-size:24px;">{?=count($kategori_master)?}</strong><br>Master Kategori</div></div>
+          <div class="col-sm-3"><div class="well well-sm"><strong style="font-size:24px;">{?=count($kelompok_master)?}</strong><br>Master Kelompok</div></div>
+          <div class="col-sm-3"><div class="well well-sm"><strong style="font-size:24px;">{?=count($barang)?}</strong><br>Data Barang</div></div>
+        </div>
+
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="active"><a href="#tab-master-barang" role="tab" data-toggle="tab"><i class="fa fa-archive"></i> Master Data Barang Inventaris</a></li>
+          <li><a href="#tab-master-unit" role="tab" data-toggle="tab"><i class="fa fa-building"></i> Master Unit</a></li>
+          <li><a href="#tab-master-kategori" role="tab" data-toggle="tab"><i class="fa fa-tags"></i> Master Kategori</a></li>
+          <li><a href="#tab-master-kelompok" role="tab" data-toggle="tab"><i class="fa fa-list"></i> Master Kelompok</a></li>
+          <li><a href="#tab-master-jenis" role="tab" data-toggle="tab"><i class="fa fa-cubes"></i> Master Jenis Barang</a></li>
+          <li><a href="#tab-master-inventari" role="tab" data-toggle="tab"><i class="fa fa-info-circle"></i> Master Inventari</a></li>
+        </ul>
+
+        <div class="tab-content" style="padding-top:20px;">
+          <div class="tab-pane" id="tab-master-inventari">
+            <div class="alert alert-info" style="font-size:15px;">
+              <strong>Alur master inventaris:</strong> Unit dipilih saat registrasi aset, lalu barang inventaris dipilih dari kombinasi Kategori, Kelompok, Jenis, dan Nama Barang. Nomor inventaris dibuat otomatis oleh sistem.
+            </div>
+            <table class="table table-bordered">
+              <thead><tr><th style="width:180px;">Master</th><th>Fungsi</th><th style="width:180px;">Kode</th></tr></thead>
+              <tbody>
+                <tr><td>Master Unit</td><td>Lokasi/unit pemilik barang inventaris.</td><td><code>UU</code></td></tr>
+                <tr><td>Master Kategori</td><td>Kategori besar barang, misalnya Medis dan Non Medis.</td><td><code>A</code></td></tr>
+                <tr><td>Master Kelompok</td><td>Kelompok barang di dalam kategori.</td><td><code>BB</code></td></tr>
+                <tr><td>Master Jenis Barang</td><td>Jenis barang di dalam kelompok.</td><td><code>CC</code></td></tr>
+                <tr><td>Master Data Barang Inventaris</td><td>Nama barang hasil kombinasi kategori, kelompok, dan jenis.</td><td><code>DD</code></td></tr>
+                <tr><td>Nomor Urut</td><td>Dibuat otomatis saat registrasi aset.</td><td><code>NN</code></td></tr>
+              </tbody>
+            </table>
+            <div class="well text-center" style="font-size:18px;margin-bottom:0;"><code>UU A BB CC DD NN</code></div>
+          </div>
+
+          <div class="tab-pane" id="tab-master-unit">
+            <button class="btn btn-primary btn-sm pull-right btn-tambah-master" data-jenis="UNIT"><i class="fa fa-plus"></i> Tambah Unit</button>
+            <p class="text-muted">Kelola unit inventaris. Kode unit dipakai sebagai bagian awal nomor inventaris.</p>
+            <div class="table-responsive">
+              <table class="table table-bordered table-striped table-condensed">
+                <thead><tr><th style="width:120px;">Kode Unit</th><th>Nama Unit</th><th style="width:130px;">Aksi</th></tr></thead>
+                <tbody>
+                  {loop: $units}
+                  <tr><td><code>{$value.kode_inventaris}</code></td><td>{$value.nama}</td><td><button class="btn btn-xs btn-warning btn-edit-master" data-jenis="UNIT" data-id="{$value.id}"><i class="fa fa-pencil"></i> Edit</button> <button class="btn btn-xs btn-danger btn-hapus-master" data-jenis="UNIT" data-id="{$value.id}"><i class="fa fa-trash"></i></button></td></tr>
+                  {/loop}
+                  {if: empty($units)}<tr><td colspan="3" class="text-center text-muted">Data unit belum ada.</td></tr>{/if}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-master-kategori">
+            <button class="btn btn-primary btn-sm pull-right btn-tambah-master" data-jenis="KATEGORI"><i class="fa fa-plus"></i> Tambah Kategori</button>
+            <p class="text-muted">Kelola kategori utama inventaris.</p>
+            <div class="table-responsive">
+              <table class="table table-bordered table-striped table-condensed">
+                <thead><tr><th style="width:120px;">Kode</th><th>Nama Kategori</th><th style="width:130px;">Aksi</th></tr></thead>
+                <tbody>
+                  {loop: $kategori_master}
+                  <tr><td><code>{$value.kode_kategori}</code></td><td>{$value.nama_kategori}</td><td><button class="btn btn-xs btn-warning btn-edit-master" data-jenis="KATEGORI" data-kategori="{$value.kode_kategori}"><i class="fa fa-pencil"></i> Edit</button> <button class="btn btn-xs btn-danger btn-hapus-master" data-jenis="KATEGORI" data-kategori="{$value.kode_kategori}"><i class="fa fa-trash"></i></button></td></tr>
+                  {/loop}
+                  {if: empty($kategori_master)}<tr><td colspan="3" class="text-center text-muted">Data kategori belum ada.</td></tr>{/if}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-master-kelompok">
+            <button class="btn btn-primary btn-sm pull-right btn-tambah-master" data-jenis="KELOMPOK"><i class="fa fa-plus"></i> Tambah Kelompok</button>
+            <p class="text-muted">Kelola kelompok barang berdasarkan kategori.</p>
+            <div class="table-responsive">
+              <table class="table table-bordered table-striped table-condensed">
+                <thead><tr><th>Kategori</th><th style="width:120px;">Kode</th><th>Nama Kelompok</th><th style="width:130px;">Aksi</th></tr></thead>
+                <tbody>
+                  {loop: $kelompok_master}
+                  <tr><td>{$value.nama_kategori}</td><td><code>{$value.kode_kelompok}</code></td><td>{$value.nama_kelompok}</td><td><button class="btn btn-xs btn-warning btn-edit-master" data-jenis="KELOMPOK" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}"><i class="fa fa-pencil"></i> Edit</button> <button class="btn btn-xs btn-danger btn-hapus-master" data-jenis="KELOMPOK" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}"><i class="fa fa-trash"></i></button></td></tr>
+                  {/loop}
+                  {if: empty($kelompok_master)}<tr><td colspan="4" class="text-center text-muted">Data kelompok belum ada.</td></tr>{/if}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="tab-pane" id="tab-master-jenis">
+            <button class="btn btn-primary btn-sm pull-right btn-tambah-master" data-jenis="JENIS"><i class="fa fa-plus"></i> Tambah Jenis Barang</button>
+            <p class="text-muted">Kelola jenis barang berdasarkan kategori dan kelompok.</p>
+            <div class="table-responsive">
+              <table class="table table-bordered table-striped table-condensed">
+                <thead><tr><th>Kategori</th><th>Kelompok</th><th style="width:120px;">Kode</th><th>Nama Jenis</th><th style="width:130px;">Aksi</th></tr></thead>
+                <tbody>
+                  {loop: $jenis_master}
+                  <tr><td>{$value.nama_kategori}</td><td>{$value.nama_kelompok}</td><td><code>{$value.kode_jenis}</code></td><td>{$value.nama_jenis}</td><td><button class="btn btn-xs btn-warning btn-edit-master" data-jenis="JENIS" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}" data-jenis-kode="{$value.kode_jenis}"><i class="fa fa-pencil"></i> Edit</button> <button class="btn btn-xs btn-danger btn-hapus-master" data-jenis="JENIS" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}" data-jenis-kode="{$value.kode_jenis}"><i class="fa fa-trash"></i></button></td></tr>
+                  {/loop}
+                  {if: empty($jenis_master)}<tr><td colspan="5" class="text-center text-muted">Data jenis barang belum ada.</td></tr>{/if}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="tab-pane active" id="tab-master-barang">
+            <button class="btn btn-success btn-sm pull-right btn-tambah-master" data-jenis="BARANG"><i class="fa fa-plus"></i> Tambah Barang</button>
+            <p class="text-muted">Master data barang inventaris adalah kombinasi Kategori, Kelompok, Jenis, dan Nama Barang.</p>
+            <div class="row" style="margin-bottom:12px;">
+              <div class="col-sm-5"><input type="text" id="cari-master-barang" class="form-control" placeholder="Cari nama barang, kelompok, atau jenis..."></div>
+              <div class="col-sm-3"><select id="filter-jenis-master" class="form-control"><option value="">Semua Jenis Barang</option>{loop: $jenis_master}<option value="{$value.kode_kategori}|{$value.kode_kelompok}|{$value.kode_jenis}">{$value.nama_jenis}</option>{/loop}</select></div>
+            </div>
+            <div id="display-master-barang"><div class="text-center text-muted" style="padding:25px;"><i class="fa fa-spinner fa-spin"></i> Memuat data...</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+
+<div class="modal fade" id="modal-master-inventaris" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="form-master-inventaris">
+        <div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title">Master Inventaris</h4></div>
+        <div class="modal-body">
+          <input type="hidden" name="id" id="master-id">
+          <input type="hidden" name="jenis_master" id="master-jenis">
+          <input type="hidden" name="kode_kategori_lama" id="master-kategori-lama">
+          <input type="hidden" name="kode_kelompok_lama" id="master-kelompok-lama">
+          <input type="hidden" name="kode_jenis_lama" id="master-jenis-lama">
+
+          <div class="form-master form-unit">
+            <div class="form-group"><label>Nama Unit</label><input class="form-control" name="nama_unit" id="master-nama-unit"></div>
+            <div class="form-group"><label>Kode Unit (001-999)</label><input class="form-control" name="kode_unit_inventaris" id="master-kode-unit" maxlength="3"></div>
+          </div>
+
+          <div class="form-master form-kategori">
+            <div class="form-group"><label>Kode Kategori</label><input class="form-control" name="kode_kategori_input" id="master-kategori-input" maxlength="1"></div>
+            <div class="form-group"><label>Nama Kategori</label><input class="form-control" name="nama_kategori" id="master-nama-kategori"></div>
+          </div>
+
+          <div class="form-master form-kelompok">
+            <div class="form-group"><label>Kategori</label><select class="form-control" name="kode_kategori_kelompok" id="master-kategori-kelompok">{loop: $kategori_master}<option value="{$value.kode_kategori}">{$value.nama_kategori}</option>{/loop}</select></div>
+            <div class="form-group"><label>Kode Kelompok</label><input class="form-control" name="kode_kelompok_input" id="master-kelompok-input" maxlength="2"></div>
+            <div class="form-group"><label>Nama Kelompok</label><input class="form-control" name="nama_kelompok" id="master-nama-kelompok"></div>
+          </div>
+
+          <div class="form-master form-jenis">
+            <div class="form-group"><label>Kategori</label><select class="form-control" name="kode_kategori_jenis" id="master-kategori-jenis">{loop: $kategori_master}<option value="{$value.kode_kategori}">{$value.nama_kategori}</option>{/loop}</select></div>
+            <div class="form-group"><label>Kelompok</label><select class="form-control" name="kode_kelompok_jenis" id="master-kelompok-jenis"><option value="">-- Pilih Kelompok --</option>{loop: $kelompok_master}<option value="{$value.kode_kelompok}" data-kategori="{$value.kode_kategori}">{$value.nama_kelompok}</option>{/loop}</select></div>
+            <div class="form-group"><label>Kode Jenis</label><input class="form-control" name="kode_jenis_input" id="master-jenis-input" maxlength="2"></div>
+            <div class="form-group"><label>Nama Jenis Barang</label><input class="form-control" name="nama_jenis" id="master-nama-jenis"></div>
+          </div>
+
+          <div class="form-master form-barang">
+            <div class="form-group"><label>Kategori</label><select class="form-control" name="kode_kategori" id="master-kategori">{loop: $kategori_master}<option value="{$value.kode_kategori}">{$value.nama_kategori}</option>{/loop}</select></div>
+            <div class="form-group"><label>Kelompok</label><select class="form-control" name="kode_kelompok" id="master-kelompok"><option value="">-- Pilih Kelompok --</option>{loop: $kelompok_master}<option value="{$value.kode_kelompok}" data-kategori="{$value.kode_kategori}">{$value.nama_kelompok}</option>{/loop}</select></div>
+            <div class="form-group"><label>Jenis</label><select class="form-control" name="kode_jenis" id="master-jenis-kode"><option value="">-- Pilih Jenis --</option>{loop: $jenis_master}<option value="{$value.kode_jenis}" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}">{$value.nama_jenis}</option>{/loop}</select></div>
+            <div class="form-group"><label>Nama Barang Inventaris</label><input class="form-control" name="nama" id="master-nama-barang"><p class="help-block">Kode barang dibuat otomatis oleh sistem.</p></div>
+            <div class="form-group"><label>KIB (opsional)</label><select class="form-control" name="kib_jenis" id="master-kib"><option value="">Umum</option><option value="A">A - Tanah</option><option value="B">B - Peralatan</option><option value="C">C - Gedung</option><option value="D">D - Jalan/Jaringan</option><option value="E">E - Lainnya</option><option value="F">F - Konstruksi</option></select></div>
+          </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Batal</button><button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function onlyDigits(value, length) {
+  var cleaned = (value || '').toString().replace(/\D/g, '');
+  return cleaned ? cleaned.substring(0, length) : '';
+}
+function isiPilihanKelompokSelect(selector, kategori, selected) {
+  $(selector + ' option').each(function(){
+    var ok = !$(this).data('kategori') || $(this).data('kategori').toString() === (kategori || '').toString();
+    $(this).toggle(ok);
+  });
+  $(selector).val(selected || '');
+}
+function isiPilihanKelompok(kategori, selected) {
+  isiPilihanKelompokSelect('#master-kelompok', kategori, selected);
+  isiPilihanJenis(kategori, selected || '', '');
+}
+function isiPilihanJenis(kategori, kelompok, selected) {
+  $('#master-jenis-kode option').each(function(){
+    var ok = !$(this).data('kategori') || ($(this).data('kategori').toString() === (kategori || '').toString() && $(this).data('kelompok').toString() === (kelompok || '').toString());
+    $(this).toggle(ok);
+  });
+  $('#master-jenis-kode').val(selected || '');
+}
+function bukaMaster(jenis, data) {
+  $('#form-master-inventaris')[0].reset();
+  $('#master-id').val(data && data.id ? data.id : '');
+  $('#master-jenis').val(jenis);
+  $('#master-kategori-lama').val(data && data.kode_kategori ? data.kode_kategori : '');
+  $('#master-kelompok-lama').val(data && data.kode_kelompok ? data.kode_kelompok : '');
+  $('#master-jenis-lama').val(data && data.kode_jenis ? data.kode_jenis : '');
+  $('.form-master').hide().find(':input').prop('disabled', true);
+  $('.form-' + jenis.toLowerCase()).show().find(':input').prop('disabled', false);
+  $('.modal-title').text('Master ' + jenis.charAt(0) + jenis.slice(1).toLowerCase());
+
+  if (jenis === 'UNIT' && data) {
+    $('#master-nama-unit').val(data.nama);
+    $('#master-kode-unit').val(data.kode_inventaris);
+  } else if (jenis === 'KATEGORI' && data) {
+    $('#master-kategori-input').val(data.kode_kategori);
+    $('#master-nama-kategori').val(data.nama_kategori);
+  } else if (jenis === 'KELOMPOK') {
+    $('#master-kategori-kelompok').val(data && data.kode_kategori ? data.kode_kategori : $('#master-kategori-kelompok option:first').val());
+    if (data) { $('#master-kelompok-input').val(data.kode_kelompok); $('#master-nama-kelompok').val(data.nama_kelompok); }
+  } else if (jenis === 'JENIS') {
+    var kategoriJenis = data && data.kode_kategori ? data.kode_kategori : $('#master-kategori-jenis option:first').val();
+    $('#master-kategori-jenis').val(kategoriJenis);
+    isiPilihanKelompokSelect('#master-kelompok-jenis', kategoriJenis, data && data.kode_kelompok ? data.kode_kelompok : '');
+    if (data) { $('#master-jenis-input').val(data.kode_jenis); $('#master-nama-jenis').val(data.nama_jenis); }
+  } else if (jenis === 'BARANG') {
+    var kategoriBarang = data && data.kode_kategori ? data.kode_kategori : $('#master-kategori').val();
+    $('#master-kategori').val(kategoriBarang);
+    isiPilihanKelompok(kategoriBarang, data && data.kode_kelompok ? data.kode_kelompok : '');
+    if (data) {
+      isiPilihanJenis(data.kode_kategori, data.kode_kelompok, data.kode_jenis);
+      $('#master-nama-barang').val(data.nama);
+      $('#master-kib').val(data.kib_jenis);
+    }
+  }
+  $('#modal-master-inventaris').modal('show');
+}
+
+$('#master-kategori').on('change', function(){ isiPilihanKelompok($(this).val()); });
+$('#master-kelompok').on('change', function(){ isiPilihanJenis($('#master-kategori').val(), $(this).val()); });
+$('#master-kategori-jenis').on('change', function(){ isiPilihanKelompokSelect('#master-kelompok-jenis', $(this).val(), ''); });
+$('.btn-tambah-master').on('click', function(){ bukaMaster($(this).data('jenis'), null); });
+
+function loadMasterBarang(page) {
+  $.post('{?=url([ADMIN,"logistik_non_medis","displaymasterinventaris"])?}', {halaman:page || 1, cari:$('#cari-master-barang').val(), jenis:$('#filter-jenis-master').val()}, function(html){ $('#display-master-barang').html(html); });
+}
+loadMasterBarang(1);
+$('#cari-master-barang').on('keyup', function(){ clearTimeout(window.masterCariTimer); window.masterCariTimer = setTimeout(function(){ loadMasterBarang(1); }, 300); });
+$('#filter-jenis-master').on('change', function(){ loadMasterBarang(1); });
+$(document).on('click', '.page-master-barang', function(e){ e.preventDefault(); loadMasterBarang($(this).data('page')); });
+$(document).on('click', '.btn-edit-master', function(){
+  var btn = $(this);
+  $.post('{?=url([ADMIN,"logistik_non_medis","detailmasterinventaris"])?}', {
+    jenis_master: btn.data('jenis'),
+    id: btn.data('id') || '',
+    kode_kategori: btn.data('kategori') || '',
+    kode_kelompok: btn.data('kelompok') || '',
+    kode_jenis: btn.data('jenis-kode') || ''
+  }, function(d){
+    if (d && (d.id || d.kode_kategori || d.kode_kelompok || d.kode_jenis)) bukaMaster(btn.data('jenis'), d);
+    else alert(d.message || 'Data tidak ditemukan.');
+  }, 'json');
+});
+$('#form-master-inventaris').on('submit', function(e){
+  e.preventDefault();
+  $('#master-kode-unit').val(onlyDigits($('#master-kode-unit').val(), 3));
+  $('#master-kategori-input').val(onlyDigits($('#master-kategori-input').val(), 1));
+  $('#master-kelompok-input').val(onlyDigits($('#master-kelompok-input').val(), 2));
+  $('#master-jenis-input').val(onlyDigits($('#master-jenis-input').val(), 2));
+  $.post('{?=url([ADMIN,"logistik_non_medis","savemasterinventaris"])?}', $(this).serialize(), function(r){ if(r.status === 'success') location.reload(); else alert(r.message); }, 'json');
+});
+$(document).on('click', '.btn-hapus-master', function(){
+  var btn = $(this);
+  if(!confirm('Hapus data master ini? Data yang sudah dipakai tidak dapat dihapus.')) return;
+  $.post('{?=url([ADMIN,"logistik_non_medis","hapusmasterinventaris"])?}', {
+    jenis_master: btn.data('jenis'),
+    id: btn.data('id') || '',
+    kode_kategori: btn.data('kategori') || '',
+    kode_kelompok: btn.data('kelompok') || '',
+    kode_jenis: btn.data('jenis-kode') || ''
+  }, function(r){ if(r.status === 'success') location.reload(); else alert(r.message); }, 'json');
+});
+</script>

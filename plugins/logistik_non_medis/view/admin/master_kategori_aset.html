@@ -50,6 +50,7 @@
                         <button type="button" class="btn btn-primary" id="btn-tambah-kategori-aset">
                             <i class="fa fa-plus"></i> Tambah Kategori
                         </button>
+                        <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#modal-import-kategori-aset" style="margin-left: 5px;"><i class="fa fa-upload"></i> Import</button>
                     </div>
                     <div class="col-md-6">
                         <form class="searchbox-masterkategoriaset" onsubmit="event.preventDefault(); loadMasterKategoriAset(0);">
@@ -140,6 +141,32 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary" id="btn-save-kategori-aset">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Import Kategori Aset -->
+<div class="modal fade" id="modal-import-kategori-aset" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="form-import-kategori-aset" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Import Data Kategori Aset</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Pilih File CSV</label>
+                        <input type="file" name="file" class="form-control" accept=".csv" required>
+                        <p class="help-block">Pastikan format kolom sesuai dengan template CSV.</p>
+                    </div>
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'downloadTemplateCSV'])?}?type=kategori_aset" target="_blank" class="btn btn-default btn-sm"><i class="fa fa-download"></i> Download Template CSV</a>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-import-kategori-aset">Mulai Import</button>
                 </div>
             </form>
         </div>
@@ -264,6 +291,38 @@ $(document).ready(function() {
                 }
             });
         }
+    });
+
+    $('#form-import-kategori-aset').on('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+        formData.append('type', 'kategori_aset');
+        var btn = $('#btn-submit-import-kategori-aset');
+        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Mengimpor...');
+        
+        $.ajax({
+            url: "{?=url([ADMIN, 'logistik_non_medis', 'postImportCSV'])?}",
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(res) {
+                var data = JSON.parse(res);
+                if (data.status == 'success') {
+                    alert(data.message);
+                    $('#modal-import-kategori-aset').modal('hide');
+                    loadMasterKategoriAset(currentOffset);
+                } else {
+                    alert(data.message);
+                }
+            },
+            error: function() {
+                alert('Terjadi kesalahan saat mengimpor data.');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html('Mulai Import');
+            }
+        });
     });
 });
 </script>

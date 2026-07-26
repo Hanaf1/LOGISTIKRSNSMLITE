@@ -1,0 +1,34 @@
+﻿Transaksi;Tanggal (YYYY-MM-DD);Catatan Umum;Kode Barang;Jenis Mutasi (Masuk/Keluar/Penyesuaian);Jumlah;Catatan Item
+SO-JUN25/001;2026-06-25;Data awal akhir stok opname Juni;BRG0720260405;Penyesuaian;46;Hasil stok opname: Surat kontrol
+SO-JUN25/002;2026-06-25;Data awal akhir stok opname Juni;BRG0720260356;Penyesuaian;3;Hasil stok opname: Resep
+SO-JUN25/003;2026-06-25;Data awal akhir stok opname Juni;BRG0720260406;Penyesuaian;11;Hasil stok opname: Surat Pesanan
+SO-JUN25/004;2026-06-25;Data awal akhir stok opname Juni;BRG0720260074;Penyesuaian;28;Hasil stok opname: Fc ceklis
+SO-JUN25/005;2026-06-25;Data awal akhir stok opname Juni;BRG0720260403;Penyesuaian;15;Hasil stok opname: Suket sakit
+SO-JUN25/006;2026-06-25;Data awal akhir stok opname Juni;BRG0720260022;Penyesuaian;13;Hasil stok opname: Blanko laborat
+SO-JUN25/007;2026-06-25;Data awal akhir stok opname Juni;BRG0720260023;Penyesuaian;20;Hasil stok opname: Blanko radiologi
+SO-JUN25/008;2026-06-25;Data awal akhir stok opname Juni;BRG0720260322;Penyesuaian;16;Hasil stok opname: Permintaan barang
+SO-JUN25/009;2026-06-25;Data awal akhir stok opname Juni;BRG0720260407;Penyesuaian;9;Hasil stok opname: Surat rujuk
+SO-JUN25/010;2026-06-25;Data awal akhir stok opname Juni;BRG0720260435;Penyesuaian;96;Hasil stok opname: Tisu Besar
+SO-JUN25/011;2026-06-25;Data awal akhir stok opname Juni;BRG0720260436;Penyesuaian;7;Hasil stok opname: Tisu Kecil
+SO-JUN25/012;2026-06-25;Data awal akhir stok opname Juni;BRG0720260437;Penyesuaian;46;Hasil stok opname: Tisu makan
+SO-JUN25/013;2026-06-25;Data awal akhir stok opname Juni;BRG0720260042;Penyesuaian;31;Hasil stok opname: Copy resep
+SO-JUN25/014;2026-06-25;Data awal akhir stok opname Juni;BRG0720260034;Penyesuaian;3;Hasil stok opname: Byclean
+SO-JUN25/015;2026-06-25;Data awal akhir stok opname Juni;BRG0720260229;Penyesuaian;16;Hasil stok opname: Kapur barus
+SO-JUN25/016;2026-06-25;Data awal akhir stok opname Juni;BRG0720260028;Penyesuaian;5;Hasil stok opname: Botol semprot
+SO-JUN25/017;2026-06-25;Data awal akhir stok opname Juni;BRG0720260241;Penyesuaian;10;Hasil stok opname: F4
+SO-JUN25/018;2026-06-25;Data awal akhir stok opname Juni;BRG0720260238;Penyesuaian;12;Hasil stok opname: A4
+SO-JUN25/019;2026-06-25;Data awal akhir stok opname Juni;BRG0720260230;Penyesuaian;39;Hasil stok opname: Karbol
+SO-JUN25/020;2026-06-25;Data awal akhir stok opname Juni;BRG0720260288;Penyesuaian;5;Hasil stok opname: Liquid detergen
+SO-JUN25/021;2026-06-25;Data awal akhir stok opname Juni;BRG0720260378;Penyesuaian;6;Hasil stok opname: Softener
+SO-JUN25/022;2026-06-25;Data awal akhir stok opname Juni;BRG0720260364;Penyesuaian;22;Hasil stok opname: Sabun / Handsoap
+SO-JUN25/023;2026-06-25;Data awal akhir stok opname Juni;BRG0720260379;Penyesuaian;37;Hasil stok opname: Soklin
+SO-JUN25/024;2026-06-25;Data awal akhir stok opname Juni;BRG0720260308;Penyesuaian;21;Hasil stok opname: Parfume Laundry
+SO-JUN25/025;2026-06-25;Data awal akhir stok opname Juni;BRG0720260334;Penyesuaian;18;Hasil stok opname: Plastik hitam 80
+SO-JUN25/026;2026-06-25;Data awal akhir stok opname Juni;BRG0720260333;Penyesuaian;39;Hasil stok opname: Plastik hitam 40
+SO-JUN25/027;2026-06-25;Data awal akhir stok opname Juni;BRG0720260337;Penyesuaian;6;Hasil stok opname: Plastik kuning 80
+SO-JUN25/028;2026-06-25;Data awal akhir stok opname Juni;BRG0720260335;Penyesuaian;7;Hasil stok opname: Plastik kuning 40
+SO-JUN25/029;2026-06-25;Data awal akhir stok opname Juni;BRG0720260339;Penyesuaian;1;Hasil stok opname: Plastik laundry
+SO-JUN25/030;2026-06-25;Data awal akhir stok opname Juni;BRG0720260413;Penyesuaian;831;Hasil stok opname: Tas kecil
+SO-JUN25/031;2026-06-25;Data awal akhir stok opname Juni;BRG0720260408;Penyesuaian;618;Hasil stok opname: Tas besar
+SO-JUN25/032;2026-06-25;Data awal akhir stok opname Juni;BRG0720260282;Penyesuaian;10;Hasil stok opname: Lampu 7 watt
+SO-JUN25/033;2026-06-25;Data awal akhir stok opname Juni;BRG0720260280;Penyesuaian;39;Hasil stok opname: Lampu 12 watt

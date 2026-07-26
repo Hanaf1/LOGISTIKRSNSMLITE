@@ -1,182 +1,138 @@
+<div class="row" style="margin-bottom:15px;">
+  <div class="col-md-4">
+    <div class="panel panel-default" style="border-left:4px solid #337ab7;">
+      <div class="panel-body">
+        <div style="font-size:26px;font-weight:bold;color:#2f4050;">{$jumlah_data}</div>
+        <div style="font-size:12px;color:#777;text-transform:uppercase;font-weight:bold;">Total Item Inventaris</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="panel panel-default" style="border-left:4px solid #5cb85c;">
+      <div class="panel-body">
+        <div style="font-size:22px;font-weight:bold;color:#2f4050;">Rp. {?=number_format($total_nilai,0,',','.')?}</div>
+        <div style="font-size:12px;color:#777;text-transform:uppercase;font-weight:bold;">Nilai Pada Halaman Ini</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="panel panel-default" style="border-left:4px solid #f0ad4e;">
+      <div class="panel-body">
+        <div style="font-size:22px;font-weight:bold;color:#2f4050;">QR</div>
+        <div style="font-size:12px;color:#777;text-transform:uppercase;font-weight:bold;">Cetak Informasi Per Item</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row" style="margin-bottom:15px;">
+  <div class="col-md-7">
+    <div class="panel panel-default">
+      <div class="panel-heading"><strong>Grafik Kelompok Barang</strong></div>
+      <div class="panel-body"><canvas id="kibChartKelompok" height="110"></canvas></div>
+    </div>
+  </div>
+  <div class="col-md-5">
+    <div class="panel panel-default">
+      <div class="panel-heading"><strong>Komposisi Unit</strong></div>
+      <div class="panel-body"><canvas id="kibChartUnit" height="150"></canvas></div>
+    </div>
+  </div>
+</div>
+
 {if: !empty($asets)}
 <div class="table-responsive no-margin">
-    <table class="table table-striped table-hover no-margin dataTable">
-        <thead>
-            <tr>
-                <th style="width: 50px; text-align: center;">No</th>
-                <th>Identitas Aset</th>
-                
-                <!-- Specific KIB Headers -->
-                {if: $kib == 'A'}
-                <th>Luas</th>
-                <th>Hak Tanah</th>
-                <th>No. & Tgl Sertifikat</th>
-                <th>Penggunaan</th>
-                <th>Alamat / Lokasi</th>
-                {elseif: $kib == 'B'}
-                <th>Merk / Tipe</th>
-                <th>Ukuran</th>
-                <th>Bahan</th>
-                <th>SN / No. Rangka / No. Mesin</th>
-                <th>No. Polisi / BPKB</th>
-                {elseif: $kib == 'C'}
-                <th>Konstruksi</th>
-                <th>Luas Lantai</th>
-                <th>IMB / Dokumen</th>
-                <th>Lokasi Gedung</th>
-                {elseif: $kib == 'D'}
-                <th>Konstruksi</th>
-                <th>Dimensi (P x L)</th>
-                <th>Total Luas</th>
-                <th>Dokumen</th>
-                <th>Lokasi Fisik</th>
-                {elseif: $kib == 'E'}
-                <th>Judul / Nama</th>
-                <th>Pencipta / Penerbit</th>
-                <th>Dimensi</th>
-                <th>Bahan</th>
-                {elseif: $kib == 'F'}
-                <th>Rencana Bangunan</th>
-                <th>Rencana Luas</th>
-                <th style="width: 150px;">Progress Kerja</th>
-                <th>Tgl Mulai & Rencana Selesai</th>
-                <th>Lokasi Proyek</th>
-                {/if}
-                
-                <th style="text-align: right; width: 140px;">Nilai Perolehan</th>
-                <th style="text-align: center; width: 110px;">Kondisi</th>
-                <th style="text-align: center; width: 100px;">Aksi</th>
-            </tr>
-        </thead>
-        <tbody>
-            {loop: $asets}
-            <tr>
-                <td style="text-align: center; vertical-align: middle; font-weight: bold; color: #777;">{?= $key + $offset + 1 ?}</td>
-                <td style="vertical-align: middle;">
-                    <div style="font-weight: bold; font-family: monospace;">{$value.kode_aset}</div>
-                    <div style="font-size: 12px; color: #555;">{$value.nama_aset}</div>
-                    <div style="font-size: 11px; color: #888; margin-top: 2px;">
-                        <i class="fa fa-home"></i> {$value.nama_unit} &nbsp; 
-                        <i class="fa fa-tags"></i> {$value.nama_kategori_aset}
-                    </div>
-                </td>
-                
-                <!-- Specific KIB Data Fields -->
-                {if: $kib == 'A'}
-                <td style="vertical-align: middle;">{$value.kib_luas} m²</td>
-                <td style="vertical-align: middle;"><span class="label label-default">{$value.kib_hak}</span></td>
-                <td style="vertical-align: middle;">
-                    <div style="font-weight: bold; font-size:11px;">{$value.kib_no_sertifikat}</div>
-                    <div style="font-size: 10px; color:#777;">{if: !empty($value.kib_tgl_sertifikat)}{?=date('d-m-Y', strtotime($value.kib_tgl_sertifikat))?}{else}-{/if}</div>
-                </td>
-                <td style="vertical-align: middle; font-size: 12px;">{$value.kib_penggunaan}</td>
-                <td style="vertical-align: middle; font-size: 11px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{$value.kib_alamat}">{$value.kib_alamat}</td>
-                
-                {elseif: $kib == 'B'}
-                <td style="vertical-align: middle;">{$value.kib_merk}</td>
-                <td style="vertical-align: middle;">{$value.kib_ukuran}</td>
-                <td style="vertical-align: middle;">{$value.kib_bahan}</td>
-                <td style="vertical-align: middle; font-size: 11px; font-family: monospace;">
-                    <div><strong>SN:</strong> {$value.kib_no_pabrik}</div>
-                    <div><strong>Rngk:</strong> {$value.kib_no_rangka}</div>
-                    <div><strong>Msn:</strong> {$value.kib_no_mesin}</div>
-                </td>
-                <td style="vertical-align: middle; font-size: 11px; font-weight: bold;">
-                    <div>{$value.kib_no_polisi}</div>
-                    <div style="font-weight: normal; color:#777; font-size: 10px;">BPKB: {$value.kib_no_bpkb}</div>
-                </td>
-                
-                {elseif: $kib == 'C'}
-                <td style="vertical-align: middle;">
-                    <div>Bertingkat: <span class="label label-default" style="font-size:9px;">{$value.kib_bertingkat}</span></div>
-                    <div style="margin-top:2px;">Beton: <span class="label label-default" style="font-size:9px;">{$value.kib_beton}</span></div>
-                </td>
-                <td style="vertical-align: middle;">{$value.kib_luas} m²</td>
-                <td style="vertical-align: middle;">
-                    <div style="font-weight: bold; font-size:11px;">{$value.kib_no_sertifikat}</div>
-                    <div style="font-size: 10px; color:#777;">{if: !empty($value.kib_tgl_sertifikat)}{?=date('d-m-Y', strtotime($value.kib_tgl_sertifikat))?}{else}-{/if}</div>
-                </td>
-                <td style="vertical-align: middle; font-size: 11px;">{$value.kib_alamat}</td>
-                
-                {elseif: $kib == 'D'}
-                <td style="vertical-align: middle;">{$value.kib_konstruksi}</td>
-                <td style="vertical-align: middle;">{$value.kib_panjang}m x {$value.kib_lebar}m</td>
-                <td style="vertical-align: middle;">{$value.kib_luas} m²</td>
-                <td style="vertical-align: middle; font-size: 11px;">
-                    <div>No: {$value.kib_no_sertifikat}</div>
-                    <div style="color:#777;">Tanah: {$value.kib_status_tanah}</div>
-                </td>
-                <td style="vertical-align: middle; font-size: 11px;">{$value.kib_alamat}</td>
-                
-                {elseif: $kib == 'E'}
-                <td style="vertical-align: middle; font-weight: bold;">{$value.kib_judul}</td>
-                <td style="vertical-align: middle;">{$value.kib_pencipta}</td>
-                <td style="vertical-align: middle;">{$value.kib_ukuran}</td>
-                <td style="vertical-align: middle;">{$value.kib_bahan}</td>
-                
-                {elseif: $kib == 'F'}
-                <td style="vertical-align: middle;">{$value.kib_proyek_bangunan}</td>
-                <td style="vertical-align: middle;">{$value.kib_luas} m²</td>
-                <td style="vertical-align: middle;">
-                    <div class="progress" style="margin-bottom: 2px; height: 12px; box-shadow: none; border-radius: 2px; background: #e3e3e3;">
-                        <div class="progress-bar progress-bar-success" role="progressbar" {?= 'style="width: '.$value['kib_progress_persen'].'%; line-height: 12px; font-size: 9px; font-weight: bold;"' ?}></div>
-                    </div>
-                    <div style="font-size: 10px; font-weight: bold; color: #00a65a; text-align: center;">{$value.kib_progress_persen}% Selesai</div>
-                </td>
-                <td style="vertical-align: middle; font-size: 11px;">
-                    <div><strong>Mulai:</strong> {if: !empty($value.kib_tgl_mulai)}{?=date('d-m-Y', strtotime($value.kib_tgl_mulai))?}{else}-{/if}</div>
-                    <div><strong>Rencana:</strong> {if: !empty($value.kib_tgl_rencana_selesai)}{?=date('d-m-Y', strtotime($value.kib_tgl_rencana_selesai))?}{else}-{/if}</div>
-                </td>
-                <td style="vertical-align: middle; font-size: 11px;">{$value.kib_alamat}</td>
-                {/if}
-                
-                <td style="text-align: right; vertical-align: middle; font-weight: bold; color: #3c8dbc;">Rp. {?=number_format($value.harga_beli, 0, ',', '.')?}</td>
-                <td style="text-align: center; vertical-align: middle;">
-                    {if: $value.status_kondisi == 'Baik'}
-                    <span class="label label-success" style="font-size: 10px; display:inline-block; width:80px; padding:3px 0;"><i class="fa fa-check-circle"></i> Baik</span>
-                    {elseif: $value.status_kondisi == 'Rusak Ringan'}
-                    <span class="label label-warning" style="font-size: 10px; display:inline-block; width:80px; padding:3px 0;"><i class="fa fa-warning"></i> Rsk Ringan</span>
-                    {else}
-                    <span class="label label-danger" style="font-size: 10px; display:inline-block; width:80px; padding:3px 0;"><i class="fa fa-times-circle"></i> Rsk Berat</span>
-                    {/if}
-                </td>
-                <td style="text-align: center; vertical-align: middle;">
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-default btn-xs btn-detail-aset" data-id="{$value.id}" title="Lihat Detail KIB"><i class="fa fa-search text-primary"></i> Detail</button>
-                    </div>
-                </td>
-            </tr>
-            {/loop}
-        </tbody>
-    </table>
+  <table class="table table-striped table-hover no-margin">
+    <thead>
+      <tr>
+        <th width="50" class="text-center">No</th>
+        <th>Identitas Inventaris</th>
+        <th>Master Barang Inventaris</th>
+        <th>Unit</th>
+        <th class="text-center">Kondisi</th>
+        <th class="text-right">Nilai</th>
+        <th class="text-center" width="150">Aksi</th>
+      </tr>
+    </thead>
+    <tbody>
+      {loop: $asets}
+      <tr>
+        <td class="text-center" style="vertical-align:middle;">{?= $key + $offset + 1 ?}</td>
+        <td style="vertical-align:middle;">
+          <div style="font-weight:bold;font-family:monospace;">{if: !empty($value.nomor_inventaris)}{$value.nomor_inventaris}{else}{$value.kode_aset}{/if}</div>
+          <div style="font-size:13px;color:#444;">{$value.nama_aset}</div>
+          <div style="font-size:11px;color:#888;">Kode aset: {$value.kode_aset} {if: !empty($value.nomor_dokumen)} | Dok: {$value.nomor_dokumen}{/if}</div>
+        </td>
+        <td style="vertical-align:middle;">
+          <div style="font-weight:bold;color:#2f4050;">{if: !empty($value.nama_master_inventaris)}{$value.nama_master_inventaris}{else}{$value.nama_barang}{/if}</div>
+          <div style="font-size:11px;color:#777;">
+            {if: !empty($value.kode_inventaris_master)}
+              <span class="label label-default">{$value.kode_inventaris_master}</span>
+            {/if}
+            {if: !empty($value.nama_kelompok)} {$value.nama_kelompok}{else}Belum terhubung master{/if}
+            {if: !empty($value.nama_jenis)} / {$value.nama_jenis}{/if}
+          </div>
+        </td>
+        <td style="vertical-align:middle;">{if: !empty($value.nama_unit)}{$value.nama_unit}{else}-{/if}</td>
+        <td class="text-center" style="vertical-align:middle;">
+          {if: $value.status_kondisi == 'Baik'}
+          <span class="label label-success">Baik</span>
+          {elseif: $value.status_kondisi == 'Rusak Ringan'}
+          <span class="label label-warning">Rusak Ringan</span>
+          {else}
+          <span class="label label-danger">Rusak Berat</span>
+          {/if}
+        </td>
+        <td class="text-right" style="vertical-align:middle;font-weight:bold;">Rp. {?=number_format($value.harga_beli,0,',','.')?}</td>
+        <td class="text-center" style="vertical-align:middle;">
+          <div class="btn-group">
+            <button type="button" class="btn btn-default btn-xs btn-detail-aset" data-id="{$value.id}" title="Detail"><i class="fa fa-search"></i></button>
+            <a href="{?=url([ADMIN,'logistik_non_medis','asetprintlabel',$value['kode_aset']])?}" target="_blank" class="btn btn-info btn-xs" title="Cetak QR"><i class="fa fa-qrcode"></i> QR</a>
+          </div>
+        </td>
+      </tr>
+      {/loop}
+    </tbody>
+  </table>
 </div>
 
-<!-- Pagination Panel -->
 {if: !empty($halaman)}
-<div class="row" style="margin-top: 15px;">
-    <div class="col-md-12 text-center">
-        <ul class="pagination pagination-sm" style="margin: 0;">
-            {$halaman}
-        </ul>
-    </div>
+<div class="row" style="margin-top:15px;">
+  <div class="col-md-12 text-center">
+    <ul class="pagination pagination-sm" style="margin:0;">{$halaman}</ul>
+  </div>
 </div>
 {/if}
-
 {else}
-<div class="text-center" style="padding: 40px 20px; color: #999; border: 1px dashed #ddd; margin-top: 10px; border-radius: 4px; background: #fafafa;">
-    <i class="fa fa-folder-open-o fa-3x" style="color: #ccc; margin-bottom: 10px;"></i>
-    <h4 style="margin: 0 0 5px 0; font-weight: bold; color: #555;">Data KIB {$kib} Kosong</h4>
-    <p style="margin: 0; font-size: 12px; color: #888;">Belum ada aset terdaftar pada golongan KIB {$kib} atau hasil pencarian tidak ditemukan.</p>
+<div class="text-center" style="padding:40px 20px;color:#999;border:1px dashed #ddd;border-radius:4px;background:#fafafa;">
+  <i class="fa fa-folder-open-o fa-3x" style="color:#ccc;margin-bottom:10px;"></i>
+  <h4 style="margin:0 0 5px;font-weight:bold;color:#555;">Data inventaris kosong</h4>
+  <p style="margin:0;font-size:12px;color:#888;">Tidak ada aset sesuai filter unit, kelompok, atau jenis barang.</p>
 </div>
 {/if}
 
 <script>
-    // Click page handler for AJAX pagination links
-    $('.pagination a').on('click', function(e) {
-        e.preventDefault();
-        var page = $(this).attr('data-page');
-        if (page) {
-            loadKib(page);
-        }
+(function(){
+  if (!window.Chart) return;
+  var colors = ['#337ab7','#5cb85c','#f0ad4e','#d9534f','#5bc0de','#777','#8e44ad','#16a085'];
+  var kelompokLabels = {$chart_kelompok_labels};
+  var kelompokData = {$chart_kelompok_data};
+  var unitLabels = {$chart_unit_labels};
+  var unitData = {$chart_unit_data};
+
+  if ($('#kibChartKelompok').length) {
+    new Chart($('#kibChartKelompok')[0].getContext('2d'), {
+      type: 'bar',
+      data: { labels: kelompokLabels, datasets: [{ label: 'Jumlah Item', data: kelompokData, backgroundColor: '#337ab7' }] },
+      options: { responsive: true, legend: { display: false }, scales: { yAxes: [{ ticks: { beginAtZero: true, precision: 0 } }] } }
     });
+  }
+  if ($('#kibChartUnit').length) {
+    new Chart($('#kibChartUnit')[0].getContext('2d'), {
+      type: 'doughnut',
+      data: { labels: unitLabels, datasets: [{ data: unitData, backgroundColor: colors }] },
+      options: { responsive: true, legend: { position: 'bottom' } }
+    });
+  }
+})();
 </script>

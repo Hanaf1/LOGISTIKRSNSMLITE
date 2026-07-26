@@ -1,0 +1,57 @@
+<table class="table table-striped table-hover table-bordered table-report" id="table-opnamev2">
+    <thead>
+        <tr>
+            <th colspan="11" class="text-center" style="font-size: 16px; padding: 10px;">
+                STOK OPNAME BHP<br>
+                PERIODE: {?=date('d M Y', strtotime($tgl_awal))?} - {?=date('d M Y', strtotime($tgl_akhir))?}
+            </th>
+        </tr>
+        <tr>
+            <th rowspan="2" class="text-center">NAMA BARANG</th>
+            <th rowspan="2" class="text-center">SATUAN</th>
+            <th rowspan="2" class="text-center">HARGA SATUAN</th>
+            <th colspan="2" class="text-center">STOK AWAL</th>
+            <th colspan="2" class="text-center">MASUK</th>
+            <th colspan="2" class="text-center">KELUAR</th>
+            <th colspan="2" class="text-center">STOK AKHIR</th>
+        </tr>
+        <tr>
+            <th class="text-center">JML</th>
+            <th class="text-center">HARGA</th>
+            <th class="text-center">JML</th>
+            <th class="text-center">HARGA</th>
+            <th class="text-center">JML</th>
+            <th class="text-center">HARGA</th>
+            <th class="text-center">JML</th>
+            <th class="text-center">HARGA</th>
+        </tr>
+    </thead>
+    <tbody>
+        {if: empty($results)}
+        <tr>
+            <td colspan="11" class="text-center">Tidak ada pergerakan stok pada periode ini.</td>
+        </tr>
+        {else}
+            {loop: $results as $kategori => $items}
+            <tr>
+                <td colspan="11" class="group-header">{$kategori}</td>
+            </tr>
+            {loop: $items as $item}
+            <tr>
+                <td>{$item.nama_barang}</td>
+                <td class="text-center">{$item.satuan}</td>
+                <td class="text-right">{?=number_format($item.harga_satuan, 0, ',', '.')?}</td>
+                <td class="text-center">{$item.stok_awal_jml}</td>
+                <td class="text-right">{?=number_format($item.stok_awal_harga, 0, ',', '.')?}</td>
+                <td class="text-center">{$item.masuk_jml}</td>
+                <td class="text-right">{?=number_format($item.masuk_harga, 0, ',', '.')?}</td>
+                <td class="text-center">{$item.keluar_jml}</td>
+                <td class="text-right">{?=number_format($item.keluar_harga, 0, ',', '.')?}</td>
+                <td class="text-center">{$item.stok_akhir_jml}</td>
+                <td class="text-right">{?=number_format($item.stok_akhir_harga, 0, ',', '.')?}</td>
+            </tr>
+            {/loop}
+            {/loop}
+        {/if}
+    </tbody>
+</table>

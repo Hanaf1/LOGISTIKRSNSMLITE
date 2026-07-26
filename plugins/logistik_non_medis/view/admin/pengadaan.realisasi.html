@@ -1,0 +1,161 @@
+<div class="row" id="realisasi-belanja">
+    <div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-heading clearfix">
+                <h3 class="panel-title text-center" style="width: 100%; font-weight: bold;">
+                    REALISASI BELANJA BHP LOGISTIK RUTIN<br>
+                    <small>BULAN <span id="label-bulan-tahun">{?=date('F Y')?}</span></small>
+                </h3>
+            </div>
+            <div class="panel-body">
+                
+                <!-- Filter Section -->
+                <div class="row" style="margin-bottom: 20px;">
+                    <div class="col-md-4">
+                        <form class="form-inline">
+                            <div class="form-group">
+                                <label>Bulan: </label>
+                                <select class="form-control input-sm" id="filter-bulan">
+                                    <option value="01">Januari</option>
+                                    <option value="02">Februari</option>
+                                    <option value="03">Maret</option>
+                                    <option value="04">April</option>
+                                    <option value="05">Mei</option>
+                                    <option value="06">Juni</option>
+                                    <option value="07">Juli</option>
+                                    <option value="08">Agustus</option>
+                                    <option value="09">September</option>
+                                    <option value="10">Oktober</option>
+                                    <option value="11">November</option>
+                                    <option value="12">Desember</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tahun: </label>
+                                <input type="number" class="form-control input-sm" id="filter-tahun" value="{?=date('Y')?}" style="width: 80px;">
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm"><i class="fa fa-search"></i> Tampilkan</button>
+                            <button type="button" class="btn btn-success btn-sm"><i class="fa fa-file-excel-o"></i> Export Excel</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Detail Transaksi (Kiri) -->
+                    <div class="col-md-8">
+                        <h4 class="text-primary"><i class="fa fa-list"></i> Detail Transaksi Realisasi</h4>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped table-hover table-condensed">
+                                <thead>
+                                    <tr class="info">
+                                        <th width="5%">No</th>
+                                        <th width="12%">TANGGAL</th>
+                                        <th width="15%">Nama Toko</th>
+                                        <th width="25%">Nama Barang</th>
+                                        <th width="10%">Satuan</th>
+                                        <th width="8%">Jumlah</th>
+                                        <th width="12%">Harga Satuan</th>
+                                        <th width="13%">Jumlah Harga</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Contoh baris data kategori ATK -->
+                                    <tr style="background-color: #f9f9f9; font-weight: bold;">
+                                        <td colspan="8" class="text-center">ATK</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">1</td>
+                                        <td>04/08/2026</td>
+                                        <td>Modern</td>
+                                        <td>kertas thermal 80*80</td>
+                                        <td>roll</td>
+                                        <td class="text-center">5</td>
+                                        <td class="text-right">16.000</td>
+                                        <td class="text-right">80.000</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">2</td>
+                                        <td>08/08/2026</td>
+                                        <td>Ungu Store</td>
+                                        <td>tinta epson 664 Black</td>
+                                        <td>buah</td>
+                                        <td class="text-center">2</td>
+                                        <td class="text-right">82.000</td>
+                                        <td class="text-right">164.000</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted"><em>(Data transaksi akan dimuat otomatis dari penerimaan barang)</em></td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="warning">
+                                        <th colspan="7" class="text-right">TOTAL TRANSAKSI BULAN INI</th>
+                                        <th class="text-right">244.000</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Rekap Anggaran vs Realisasi (Kanan) -->
+                    <div class="col-md-4">
+                        <h4 class="text-success"><i class="fa fa-pie-chart"></i> Rekap Anggaran vs Realisasi</h4>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-condensed">
+                                <thead>
+                                    <tr class="success">
+                                        <th rowspan="2" class="text-center" style="vertical-align: middle;">Kategori</th>
+                                        <th colspan="2" class="text-center">Bulan Ini</th>
+                                    </tr>
+                                    <tr class="success">
+                                        <th class="text-center">Anggaran</th>
+                                        <th class="text-center">Realisasi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>ATK</td>
+                                        <td class="text-right">17.149.000</td>
+                                        <td class="text-right">13.320.400</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Cetakan</td>
+                                        <td class="text-right">11.644.000</td>
+                                        <td class="text-right">8.061.250</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Kebersihan</td>
+                                        <td class="text-right">14.420.000</td>
+                                        <td class="text-right">10.242.364</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="info" style="font-weight: bold;">
+                                        <td>Total</td>
+                                        <td class="text-right">43.213.000</td>
+                                        <td class="text-right">31.624.014</td>
+                                    </tr>
+                                    <tr class="danger" style="font-weight: bold;">
+                                        <td colspan="2">Penggunaan (%)</td>
+                                        <td class="text-right">73.18 %</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div class="alert alert-warning" style="font-size: 12px; padding: 10px;">
+                            <i class="fa fa-info-circle"></i> Data Realisasi otomatis diambil dari Penerimaan Barang yang sudah diposting.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        var currentMonth = "{?=date('m')?}";
+        $('#filter-bulan').val(currentMonth);
+    });
+</script>

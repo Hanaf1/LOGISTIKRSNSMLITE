@@ -5,6 +5,7 @@
 <form id="form-master-unit" method="POST">
     <div class="modal-body">
         <input type="hidden" name="id" value="{$unit.id}">
+        <input type="hidden" id="unit-current-level" value="{$unit.current_level}">
         <div class="row">
             <div class="col-md-4">
                 <div class="form-group">
@@ -23,11 +24,11 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label>Struktur Induk (Parent)</label>
-                    <select name="parent_id" class="form-control select2">
+                    <select name="parent_id" id="parent_id" class="form-control select2-unit">
                         <option value="0">-- Tingkat Utama (Root) --</option>
                         {loop: $units}
                             {if: $value.id != $unit.id}
-                                <option value="{$value.id}" {if: $unit.parent_id == $value.id}selected{/if}>{$value.nama_unit} ({$value.kode_unit})</option>
+                                <option value="{$value.id}" data-level="{$value.level}" {if: $unit.parent_id == $value.id}selected{/if}>{$value.prefix}{$value.nama_unit} ({$value.kode_unit})</option>
                             {/if}
                         {/loop}
                     </select>
@@ -35,11 +36,53 @@
             </div>
             <div class="col-md-6">
                 <div class="form-group">
-                    <label>Penanggung Jawab (PJ)</label>
-                    <input type="text" name="pj_unit" class="form-control" value="{$unit.pj_unit}" placeholder="Nama Pejabat/PJ Unit">
+                    <label>PJ Akun Logistik Non Medis</label>
+                    <!-- Badge petunjuk filter aktif -->
+                    <div id="pj-filter-info" class="text-info" style="font-size:11px; margin-bottom:4px; display:none;">
+                        <i class="fa fa-filter"></i> <span id="pj-filter-label"></span>
+                        &nbsp;<a href="#" id="pj-show-all" style="font-size:11px;">(Tampilkan semua)</a>
+                    </div>
+                    <select name="pj_unit" id="pj_unit" class="form-control select2-unit">
+                        <option value="" data-role="">-- Tidak Ada / Kosongkan --</option>
+                        {loop: $all_users}
+                            <option value="{$value.username}"
+                                data-role="{$value.logistik_role}"
+                                {if: $unit.pj_unit == $value.username}selected{/if}>
+                                {$value.fullname} ({$value.username})
+                            </option>
+                        {/loop}
+                    </select>
                 </div>
             </div>
         </div>
+
+        <div class="row" id="role-pj-row" {if: empty($unit.pj_unit)}style="display:none;"{/if}>
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label>Role Akun di Logistik Non Medis</label>
+                    <div style="margin-bottom: 8px;">
+                        <span class="text-muted" style="font-size: 12px;">Role saat ini:</span>
+                        <span id="current-role-badge" class="label label-info" style="font-size: 13px; padding: 4px 10px;">
+                            {if: $unit.role_pj == 'kepala_bidang'}Kepala Bidang
+                            {elseif: $unit.role_pj == 'kepala_sie'}Kepala Seksi
+                            {elseif: $unit.role_pj == 'kepala_unit'}Kepala Unit
+                            {elseif: $unit.role_pj == 'unit'}Staf Unit
+                            {else}Belum diatur
+                            {/if}
+                        </span>
+                    </div>
+                    <select name="role_pj" id="role_pj" class="form-control">
+                        <option value="">-- Tidak diatur --</option>
+                        <option value="kepala_bidang" {if: $unit.role_pj == 'kepala_bidang'}selected{/if}>Kepala Bidang (Kabid)</option>
+                        <option value="kepala_sie" {if: $unit.role_pj == 'kepala_sie'}selected{/if}>Kepala Seksi (Kasie)</option>
+                        <option value="kepala_unit" {if: $unit.role_pj == 'kepala_unit'}selected{/if}>Kepala Unit (Ka. Unit)</option>
+                        <option value="unit" {if: $unit.role_pj == 'unit'}selected{/if}>Staf Unit</option>
+                    </select>
+                    <p class="help-block"><small>Role akan otomatis disinkronkan ke Hak Akses Logistik saat simpan.</small></p>
+                </div>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
@@ -75,3 +118,125 @@
         <button type="submit" class="btn btn-primary" id="btn-save-unit">Simpan</button>
     </div>
 </form>
+
+<script>
+$(document).ready(function() {
+    // Select2 initialization is handled by shown.bs.modal event in logistik.js
+
+    // Mapping id parent -> level dari data units
+    var unitLevelMap = {};
+    // {loop: $units}
+        unitLevelMap['{$value.id}'] = parseInt('{$value.level}') || 0;
+    // {/loop}
+
+    // =========================================================
+    // FILTER PJ berdasarkan level unit (parent yang dipilih)
+    // =========================================================
+    // PJ Unit = staf yang mengurus akun logistik (bukan approver)
+    // Ka. Unit (approver layer 1) dikelola via Hak Akses Pengguna
+    //
+    // Aturan filter:
+    //   level 1 (kabid)  -> PJ = kepala_bidang (kabid bertanggung jawab sendiri)
+    //   level 2 (kasie)  -> PJ = kepala_sie
+    //   level 3+ (unit)  -> PJ = staf unit (role 'unit') + user tanpa role logistik
+
+    var showAllPJ = false; // flag jika user klik "tampilkan semua"
+
+    function getTargetLevel(parentId) {
+        if (parentId == '0') return 0;
+        var pLevel = unitLevelMap[parentId];
+        if (pLevel === undefined) return 99;
+        return pLevel;
+    }
+
+    function getAllowedRoles(targetLevel) {
+        if (targetLevel == 0) return ['kepala_bidang', '']; // Edit level 1 (Kabid)
+        if (targetLevel == 1) return ['kepala_sie', ''];    // Edit level 2 (Kasie)
+        if (targetLevel == 2) return ['kepala_unit', ''];   // Edit level 3 (Ka. Unit)
+        return ['unit', '']; // Edit level 4+ (Staf)
+    }
+
+    function getLevelLabel(targetLevel) {
+        if (targetLevel == 0) return 'Menampilkan: <strong>Kepala Bidang</strong>';
+        if (targetLevel == 1) return 'Menampilkan: <strong>Kepala Seksi (Kasie)</strong>';
+        if (targetLevel == 2) return 'Menampilkan: <strong>Kepala Unit (Ka. Unit)</strong>';
+        return 'Menampilkan: <strong>Staf Unit</strong> — yang bertugas mengurus akun logistik non medis';
+    }
+
+    function filterPJOptions(parentId) {
+        if (showAllPJ) return; // skip filter jika user minta tampilkan semua
+
+        var targetLevel  = getTargetLevel(parentId);
+        var allowedRoles = getAllowedRoles(targetLevel);
+        var currentVal   = $('#pj_unit').val() || '';
+
+        // Filter options: sembunyikan yang tidak cocok, KECUALI yang sedang terpilih
+        $('#pj_unit option').each(function() {
+            var role = $(this).attr('data-role') || '';
+            var val  = $(this).val();
+            // Selalu tampilkan: option kosong, option yang cocok filter, DAN option yang sedang terpilih
+            if (val === '' || allowedRoles.indexOf(role) !== -1 || val === currentVal) {
+                $(this).show().prop('disabled', false);
+            } else {
+                $(this).hide().prop('disabled', true);
+            }
+        });
+
+        // Refresh Select2 tanpa kehilangan value
+        if ($('#pj_unit').data('select2')) {
+            $('#pj_unit').select2('destroy');
+        }
+        var $modal = $('#form-master-unit').closest('.modal');
+        $('#pj_unit').select2({ width: '100%', dropdownParent: $modal });
+        // Pastikan value tetap terpilih setelah reinit
+        if (currentVal) {
+            $('#pj_unit').val(currentVal).trigger('change.select2');
+        }
+
+        // Tampilkan info filter
+        $('#pj-filter-info').show();
+        $('#pj-filter-label').html(getLevelLabel(targetLevel));
+    }
+
+    // Tombol "tampilkan semua" -> reset filter
+    $('#pj-show-all').on('click', function(e) {
+        e.preventDefault();
+        showAllPJ = true;
+        $('#pj_unit option').show().prop('disabled', false);
+        if ($('#pj_unit').data('select2')) {
+            $('#pj_unit').select2('destroy');
+        }
+        var $modal = $('#form-master-unit').closest('.modal');
+        $('#pj_unit').select2({ width: '100%', dropdownParent: $modal });
+        $('#pj-filter-info').html('<i class="fa fa-eye"></i> <span class="text-muted">Semua user ditampilkan</span>');
+    });
+
+    // Saat parent berubah -> filter ulang
+    $('#parent_id').on('change', function() {
+        showAllPJ = false; // reset flag saat parent berubah
+        filterPJOptions($(this).val());
+    });
+
+    // Saat PJ dipilih, tampilkan row Role PJ
+    $('#pj_unit').on('change', function() {
+        if ($(this).val()) {
+            $('#role-pj-row').slideDown(200);
+        } else {
+            $('#role-pj-row').slideUp(200);
+            $('#role_pj').val('');
+        }
+    });
+
+    // === Inisialisasi awal ===
+    // Jalankan filter berdasarkan parent yang sudah terpilih
+    var initParent = $('#parent_id').val();
+    if (initParent !== undefined) {
+        filterPJOptions(initParent);
+    }
+
+    // Tampilkan role-pj-row jika ada PJ terpilih
+    if ($('#pj_unit').val()) {
+        $('#role-pj-row').show();
+    }
+});
+</script>

@@ -17,13 +17,12 @@
 
         <div class="form-group" id="unit-group">
             <label for="kode_unit">Unit Kerja Terkait</label>
-            <select name="kode_unit" id="kode_unit-select" class="form-control select2" style="width: 100%;">
-                <option value="">-- Semua Unit / Logistik Staff --</option>
+            <select name="kode_unit[]" id="kode_unit-select" class="form-control select2" style="width: 100%;" multiple="multiple">
                 {loop: $units}
-                    <option value="{$value.kode_unit}" {if: $user.logistik_kode_unit == $value.kode_unit}selected{/if}>{$value.kode_unit} - {$value.nama_unit}</option>
+                    <option value="{$value.kode_unit}" {if: in_array($value.kode_unit, $user.logistik_kode_unit)}selected{/if}>{$value.kode_unit} - {$value.nama_unit}</option>
                 {/loop}
             </select>
-            <p class="help-block"><small>* Khusus role <strong>Unit</strong>, mereka wajib terhubung ke salah satu unit kerja di atas untuk memfilter data permintaan mereka.</small></p>
+            <p class="help-block"><small>* Khusus role <strong>Unit</strong>, mereka wajib terhubung ke salah satu unit kerja di atas untuk memfilter data permintaan mereka. Bisa pilih lebih dari satu unit.</small></p>
         </div>
     </div>
     <div class="modal-footer">
@@ -34,7 +33,12 @@
 
 <script>
 $(document).ready(function() {
-    $('.select2').select2({ width: '100%' });
+    $('#kode_unit-select').select2({
+        width: '100%',
+        dropdownParent: $('#modal-hakakses'),
+        placeholder: '-- Pilih Unit / Kosongkan --',
+        allowClear: true
+    });
 
     // Conditional requirement: if Role is Unit, make sure unit select is recommended.
     $('#role-select').change(function() {

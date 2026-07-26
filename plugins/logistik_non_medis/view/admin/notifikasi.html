@@ -1,0 +1,290 @@
+<div id="logistikNotifPanel" class="logistik-notif-panel">
+    <button type="button" class="logistik-notif-toggle" title="Notifikasi Logistik">
+        <i class="fa fa-bell"></i>
+        <span id="notifBadge" class="logistik-notif-badge" style="display:none;">0</span>
+    </button>
+    <div class="logistik-notif-box" style="display:none;">
+        <div class="logistik-notif-head">
+            <strong><i class="fa fa-bell"></i> Notifikasi Logistik</strong>
+            <button type="button" class="btn btn-xs btn-default" id="notifMarkAllRead"><i class="fa fa-check"></i> Tandai semua dibaca</button>
+        </div>
+        <ul class="nav nav-tabs logistik-notif-tabs" role="tablist">
+            <li class="active"><a href="#notifUnread" role="tab" data-toggle="tab">Belum Dibaca <span id="notifUnreadCount" class="badge">0</span></a></li>
+            <li><a href="#notifRead" role="tab" data-toggle="tab">Sudah Dibaca</a></li>
+        </ul>
+        <div class="tab-content logistik-notif-content">
+            <div class="tab-pane active" id="notifUnread">
+                <div id="notifUnreadList" class="logistik-notif-list"></div>
+            </div>
+            <div class="tab-pane" id="notifRead">
+                <div id="notifReadList" class="logistik-notif-list"></div>
+            </div>
+        </div>
+        <div class="logistik-notif-foot">
+            <span id="notifRealtimeStatus">Realtime: fallback polling</span>
+        </div>
+    </div>
+</div>
+
+<audio id="audioNotif" preload="auto">
+    <source src="{?=url()?}/assets/sound/success.mp3?v=4" type="audio/mpeg">
+</audio>
+
+<style>
+.logistik-notif-panel {
+    position: fixed;
+    right: 14px;
+    bottom: 52px;
+    z-index: 9998;
+    font-size: 13px;
+}
+.logistik-notif-toggle {
+    width: 42px;
+    height: 42px;
+    border: 0;
+    border-radius: 50%;
+    background: #45525f;
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(0,0,0,.22);
+    position: relative;
+}
+.logistik-notif-badge {
+    position: absolute;
+    top: -5px;
+    right: -4px;
+    min-width: 20px;
+    padding: 3px 5px;
+    border-radius: 10px;
+    background: #d9534f;
+    color: #fff;
+    font-size: 11px;
+    line-height: 1;
+}
+.logistik-notif-box {
+    position: absolute;
+    right: 0;
+    bottom: 50px;
+    width: 390px;
+    max-width: calc(100vw - 28px);
+    background: #fff;
+    border: 1px solid #d9dee4;
+    box-shadow: 0 8px 28px rgba(0,0,0,.22);
+}
+.logistik-notif-head {
+    padding: 11px 12px;
+    border-bottom: 1px solid #e8ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+.logistik-notif-tabs {
+    padding: 0 8px;
+}
+.logistik-notif-tabs > li > a {
+    padding: 9px 10px;
+}
+.logistik-notif-content {
+    max-height: 330px;
+    overflow-y: auto;
+}
+.logistik-notif-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid #edf0f2;
+    cursor: pointer;
+}
+.logistik-notif-item.unread {
+    background: #fffdf4;
+    border-left: 4px solid #f0ad4e;
+}
+.logistik-notif-item.read {
+    background: #fff;
+    color: #777;
+    border-left: 4px solid #dce1e5;
+}
+.logistik-notif-title {
+    font-weight: 700;
+    color: #3f4b55;
+    margin-bottom: 4px;
+}
+.logistik-notif-message {
+    color: #586571;
+    line-height: 1.4;
+}
+.logistik-notif-time {
+    color: #98a1aa;
+    margin-top: 5px;
+    font-size: 11px;
+}
+.logistik-notif-empty {
+    padding: 22px 12px;
+    text-align: center;
+    color: #98a1aa;
+}
+.logistik-notif-foot {
+    padding: 7px 12px;
+    border-top: 1px solid #e8ecef;
+    color: #87919b;
+    font-size: 11px;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+    var notifCheckInterval = 10000;
+    var websocket;
+    var pusherStarted = false;
+    var lastRealtimeMode = '';
+
+    function escapeHtml(text) {
+        return $('<div>').text(text || '').html();
+    }
+
+    function formatNotifTime(value) {
+        return value || '';
+    }
+
+    function playNotificationSound() {
+        var audio = document.getElementById('audioNotif');
+        if (!audio) return;
+        audio.volume = 1.0;
+        audio.currentTime = 0;
+        var promise = audio.play();
+        if (promise && promise.catch) promise.catch(function() {});
+    }
+
+    function renderList(selector, rows, isRead) {
+        if (!rows || !rows.length) {
+            $(selector).html('<div class="logistik-notif-empty">Tidak ada notifikasi.</div>');
+            return;
+        }
+        var html = rows.map(function(row) {
+            var cls = isRead ? 'read' : 'unread';
+            var icon = isRead ? 'fa-check-circle' : 'fa-bell';
+            return '<div class="logistik-notif-item ' + cls + '" data-id="' + row.id + '" data-url="' + escapeHtml(row.url || '') + '">' +
+                '<div class="logistik-notif-title"><i class="fa ' + icon + '"></i> ' + escapeHtml(row.tipe || 'logistik') + '</div>' +
+                '<div class="logistik-notif-message">' + escapeHtml(row.pesan) + '</div>' +
+                '<div class="logistik-notif-time">' + escapeHtml(formatNotifTime(row.tgl_dibuat)) + '</div>' +
+            '</div>';
+        }).join('');
+        $(selector).html(html);
+    }
+
+    function updateBadge(count) {
+        count = parseInt(count || 0);
+        $('#notifUnreadCount').text(count);
+        if (count > 0) $('#notifBadge').text(count).show();
+        else $('#notifBadge').hide();
+    }
+
+    function checkNotifikasi(playSoundIfNew) {
+        $.ajax({
+            url: mlite.url + '/' + mlite.admin + '/logistik_non_medis/ceknotifikasi?t=' + mlite.token,
+            type: 'GET',
+            dataType: 'json',
+            success: function(res) {
+                if (res.status !== 'success') return;
+                var lastId = parseInt(localStorage.getItem('logistik_notif_last_id') || 0);
+                if (playSoundIfNew !== false && res.max_id > lastId) {
+                    playNotificationSound();
+                    localStorage.setItem('logistik_notif_last_id', res.max_id);
+                    $('.logistik-notif-box').show();
+                }
+                updateBadge(res.count);
+                renderList('#notifUnreadList', res.data, false);
+                renderList('#notifReadList', res.read, true);
+                setupRealtime(res.realtime || {});
+            }
+        });
+    }
+
+    function setupRealtime(config) {
+        if (!config || lastRealtimeMode === config.mode) return;
+        lastRealtimeMode = config.mode || 'workerman';
+        if (config.mode === 'pusher' && config.pusher_key) {
+            startPusher(config);
+        } else {
+            connectWorkerman();
+        }
+    }
+
+    function startPusher(config) {
+        if (pusherStarted) return;
+        pusherStarted = true;
+        $('#notifRealtimeStatus').text('Realtime: Pusher');
+        if (!window.Pusher) {
+            $.getScript('https://js.pusher.com/8.4.0/pusher.min.js').done(function() {
+                bindPusher(config);
+            }).fail(function() {
+                $('#notifRealtimeStatus').text('Realtime: Pusher gagal, polling aktif');
+            });
+        } else {
+            bindPusher(config);
+        }
+    }
+
+    function bindPusher(config) {
+        try {
+            var pusher = new Pusher(config.pusher_key, {
+                cluster: config.pusher_cluster || 'ap1'
+            });
+            (config.pusher_channels || []).forEach(function(channelName) {
+                pusher.subscribe(channelName).bind('logistik-notification', function() {
+                    checkNotifikasi(true);
+                });
+            });
+        } catch (e) {
+            $('#notifRealtimeStatus').text('Realtime: Pusher gagal, polling aktif');
+        }
+    }
+
+    function connectWorkerman() {
+        if (!window.WebSocket || websocket) return;
+        $('#notifRealtimeStatus').text('Realtime: Workerman');
+        var wsUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.hostname + ':3892';
+        try {
+            websocket = new WebSocket(wsUrl);
+            websocket.onmessage = function(event) {
+                try {
+                    var payload = JSON.parse(event.data);
+                    if (payload.type === 'logistik_notification') checkNotifikasi(true);
+                } catch (e) {}
+            };
+            websocket.onclose = function() {
+                websocket = null;
+                setTimeout(connectWorkerman, 5000);
+            };
+            websocket.onerror = function() {
+                try { websocket.close(); } catch (e) {}
+            };
+        } catch (e) {
+            websocket = null;
+            $('#notifRealtimeStatus').text('Realtime: polling aktif');
+            setTimeout(connectWorkerman, 5000);
+        }
+    }
+
+    $('.logistik-notif-toggle').on('click', function() {
+        $('.logistik-notif-box').toggle();
+        checkNotifikasi(false);
+    });
+
+    $('#notifMarkAllRead').on('click', function() {
+        $.post(mlite.url + '/' + mlite.admin + '/logistik_non_medis/tandainotifdibaca?t=' + mlite.token, {id: 'all'}, function() {
+            checkNotifikasi(false);
+        });
+    });
+
+    $(document).on('click', '.logistik-notif-item.unread', function() {
+        var id = $(this).data('id');
+        var url = $(this).data('url');
+        $.post(mlite.url + '/' + mlite.admin + '/logistik_non_medis/tandainotifdibaca?t=' + mlite.token, {id: id}, function() {
+            checkNotifikasi(false);
+            if (url) window.location.hash = url;
+        });
+    });
+
+    checkNotifikasi(false);
+    setInterval(function() { checkNotifikasi(true); }, notifCheckInterval);
+});
+</script>

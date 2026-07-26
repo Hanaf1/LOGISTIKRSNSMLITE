@@ -66,7 +66,7 @@
         }
         .asset-code {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 800;
             margin: 2px 0;
             color: #000;
@@ -122,7 +122,7 @@
         
         <!-- Left Side: QR Code -->
         <div class="qr-section">
-            <img class="qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={?=urlencode($scan_url)?}" alt="Aset QR Code">
+            <img class="qr-image" src="{$qr_image_url}" alt="Aset QR Code">
             <div class="qr-subtext">SCAN UNTUK DETAIL</div>
         </div>
         
@@ -130,7 +130,7 @@
         <div class="info-section">
             <div>
                 <div class="header-brand">INVENTARIS ASET NON-MEDIS</div>
-                <div class="asset-code">{$aset.kode_aset}</div>
+                <div class="asset-code">Kode Inventaris: {$aset.kode_label_inventaris}</div>
                 <div class="asset-name">{$aset.nama_aset}</div>
             </div>
             

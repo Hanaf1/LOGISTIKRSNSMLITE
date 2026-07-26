@@ -3,12 +3,177 @@
     <h4 class="modal-title">Detail Permintaan Barang (SPPB)</h4>
 </div>
 <div class="modal-body">
+    
+    <!-- STEPPER UI -->
+    <style>
+        .sppb-stepper {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            position: relative;
+            margin-bottom: 30px;
+            padding: 0 20px;
+        }
+        .sppb-stepper::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 40px;
+            right: 40px;
+            height: 3px;
+            background: #e0e0e0;
+            z-index: 1;
+        }
+        .stepper-item {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            flex: 1;
+        }
+        .stepper-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid #e0e0e0;
+            color: #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .stepper-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #777;
+            line-height: 1.2;
+        }
+        /* Active & Completed State */
+        .stepper-item.completed .stepper-circle {
+            border-color: #2196F3;
+            background: #2196F3;
+            color: #fff;
+        }
+        .stepper-item.active .stepper-circle {
+            border-color: #ff9800;
+            color: #fff;
+            background: #ff9800;
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+            z-index: 10;
+        }
+        .stepper-item.completed .stepper-title {
+            color: #333;
+        }
+        .stepper-item.active .stepper-title {
+            color: #ff9800;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        /* Connecting Line Fill */
+        .stepper-item.completed + .stepper-item::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: 50%;
+            width: 100%;
+            height: 3px;
+            background: #2196F3;
+            z-index: -1;
+        }
+        
+        /* Rejected State */
+        .sppb-stepper.rejected .stepper-item.active .stepper-circle {
+            border-color: #F44336;
+            color: #F44336;
+        }
+        .sppb-stepper.rejected .stepper-item.completed .stepper-circle {
+            border-color: #F44336;
+            background: #F44336;
+        }
+        .sppb-stepper.rejected .stepper-item.completed + .stepper-item::after {
+            background: #F44336;
+        }
+    </style>
+    
+    {if: $sppb.jenis_permintaan == 'Non Rutin'}
+    <div class="sppb-stepper {if: $stepper_rejected}rejected{/if}">
+        <!-- Step 1 -->
+        <div class="stepper-item {if: $stepper_step > 1}completed{elseif: $stepper_step == 1 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-pencil-square-o"></i></div>
+            <div class="stepper-title">Pengajuan</div>
+        </div>
+        <!-- Step 2 -->
+        <div class="stepper-item {if: $stepper_step > 2}completed{elseif: $stepper_step == 2 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-user"></i></div>
+            <div class="stepper-title">Ka. Unit</div>
+        </div>
+        <!-- Step 3 -->
+        <div class="stepper-item {if: $stepper_step > 3}completed{elseif: $stepper_step == 3 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-user-md"></i></div>
+            <div class="stepper-title">Ka. Sie</div>
+        </div>
+        <!-- Step 4 -->
+        <div class="stepper-item {if: $stepper_step > 4}completed{elseif: $stepper_step == 4 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-users"></i></div>
+            <div class="stepper-title">Ka. Bidang</div>
+        </div>
+        <!-- Step 5 -->
+        <div class="stepper-item {if: $stepper_step > 5}completed{elseif: $stepper_step == 5 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-check-square-o"></i></div>
+            <div class="stepper-title">Logistik</div>
+        </div>
+        <!-- Step 6 -->
+        <div class="stepper-item {if: $stepper_step > 6}completed{elseif: $stepper_step == 6 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-shopping-cart"></i></div>
+            <div class="stepper-title">Pengadaan</div>
+        </div>
+        <!-- Step 7 -->
+        <div class="stepper-item {if: $stepper_step > 7}completed{elseif: $stepper_step == 7 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-flag-checkered"></i></div>
+            <div class="stepper-title">Siap Diambil</div>
+        </div>
+    </div>
+    {else}
+    <div class="sppb-stepper {if: $stepper_rejected}rejected{/if}">
+        <!-- Step 1 -->
+        <div class="stepper-item {if: $stepper_step > 1}completed{elseif: $stepper_step == 1 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-pencil-square-o"></i></div>
+            <div class="stepper-title">Pengajuan</div>
+        </div>
+        <!-- Step 2 -->
+        <div class="stepper-item {if: $stepper_step > 2}completed{elseif: $stepper_step == 2 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-users"></i></div>
+            <div class="stepper-title">Persetujuan</div>
+        </div>
+        <!-- Step 3 -->
+        <div class="stepper-item {if: $stepper_step > 3}completed{elseif: $stepper_step == 3 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-check-square-o"></i></div>
+            <div class="stepper-title">Verifikasi Gudang</div>
+        </div>
+        <!-- Step 4 -->
+        <div class="stepper-item {if: $stepper_step > 4}completed{elseif: $stepper_step == 4 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-truck"></i></div>
+            <div class="stepper-title">Distribusi</div>
+        </div>
+        <!-- Step 5 -->
+        <div class="stepper-item {if: $stepper_step > 5}completed{elseif: $stepper_step == 5 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-flag-checkered"></i></div>
+            <div class="stepper-title">Selesai</div>
+        </div>
+    </div>
+    {/if}
+
     <div class="row">
         <div class="col-md-6">
             <table class="table table-condensed">
                 <tr><th width="150">No. SPPB</th><td>: <strong>{$sppb.no_sppb}</strong></td></tr>
                 <tr><th>Tgl. Permintaan</th><td>: {?=date('d/m/Y', strtotime($sppb.tgl_sppb))?}</td></tr>
                 <tr><th>Unit Pengaju</th><td>: {$sppb.nama_unit}</td></tr>
+                <tr><th>Jenis Permintaan</th><td>: {if: $sppb.jenis_permintaan == 'Non Rutin'}<span class="label label-warning">Non Rutin</span>{else}<span class="label label-primary">Rutin</span>{/if}</td></tr>
             </table>
         </div>
         <div class="col-md-6">
@@ -22,14 +187,20 @@
                         <span class="label label-warning">Disetujui Ka. Unit</span>
                     {elseif: $sppb.status == 'Disetujui Ka. Sie'}
                         <span class="label label-primary">Disetujui Ka. Sie</span>
-                    {elseif: $sppb.status == 'Disetujui Unit'}
-                        <span class="label label-success">Disetujui Unit</span>
-                    {elseif: $sppb.status == 'Terverifikasi'}
-                        <span class="label label-success">Terverifikasi</span>
+                    {elseif: $sppb.status == 'Disetujui Kabid' || $sppb.status == 'Disetujui Unit'}
+                        <span class="label label-success">Disetujui Kabid</span>
+                    {elseif: $sppb.status == 'Proses Logistik' || $sppb.status == 'Terverifikasi'}
+                        <span class="label label-info" style="background:#17a2b8;"><i class="fa fa-cogs"></i> Proses Logistik</span>
+                    {elseif: $sppb.status == 'Proses Pengadaan' && $sppb.jenis_permintaan == 'Non Rutin'}
+                        <span class="label label-warning" style="background:#e67e22;"><i class="fa fa-shopping-cart"></i> Proses Pengadaan</span>
+                    {elseif: $sppb.status == 'Proses Pengadaan'}
+                        <span class="label label-info" style="background:#3498db;"><i class="fa fa-truck"></i> Distribusi</span>
+                    {elseif: $sppb.status == 'Siap Ambil'}
+                        <span class="label label-success" style="background:#27ae60;"><i class="fa fa-check-circle"></i> Siap Ambil</span>
                     {elseif: $sppb.status == 'Selesai'}
                         <span class="label label-success"><i class="fa fa-check"></i> Selesai</span>
                     {elseif: $sppb.status == 'Ditolak'}
-                        <span class="label label-danger">Ditolak</span>
+                        <span class="label label-danger">Ditolak{if: !empty($sppb.ditolak_pada_status)} ({$sppb.ditolak_pada_status}){/if}</span>
                     {/if}
                 </td></tr>
                 <tr><th>User Input</th><td>: {$sppb.user_input} <small class="text-muted">({$sppb.tgl_input})</small></td></tr>
@@ -42,8 +213,13 @@
                 {if: $sppb.user_approve_ka_bidang}
                 <tr><th>Approve Ka. Bidang</th><td>: {$sppb.user_approve_ka_bidang} <small class="text-muted">({$sppb.tgl_approve_ka_bidang})</small></td></tr>
                 {/if}
-                {if: $sppb.status == 'Ditolak' && !empty($sppb.alasan_penolakan)}
+                {if: $sppb.status == 'Ditolak'}
+                {if: !empty($sppb.ditolak_pada_status)}
+                <tr><th>Ditolak Pada</th><td>: <span class="text-danger"><strong>{$sppb.ditolak_pada_status}</strong></span></td></tr>
+                {/if}
+                {if: !empty($sppb.alasan_penolakan)}
                 <tr><th>Alasan Penolakan</th><td>: <span class="text-danger">{$sppb.alasan_penolakan}</span></td></tr>
+                {/if}
                 {/if}
             </table>
         </div>
@@ -86,7 +262,7 @@
                     </td>
                     <td><span class="label label-default">{$value.status}</span></td>
                     <td>
-                        {if: $value.status == 'Diajukan'}
+                        {if: $value.status == 'Diajukan' && $sppb.jenis_permintaan != 'Rutin'}
                             <button class="btn btn-success btn-xs" onclick="setItemStatus('{$value.no_sppb}', '{$value.kode_item}', 'Disetujui Unit')" title="Setujui"><i class="fa fa-check"></i></button>
                             <button class="btn btn-danger btn-xs" onclick="setItemStatus('{$value.no_sppb}', '{$value.kode_item}', 'Ditolak')" title="Tolak"><i class="fa fa-times"></i></button>
                         {/if}
@@ -99,22 +275,31 @@
 </div>
 <div class="modal-footer">
     <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
-    {if: $sppb.status == 'Diajukan' && ($role == 'kepala_unit' || $role == 'admin' || $role == 'logistik')}
+    {if: $sppb.status == 'Diajukan' && $sppb.jenis_permintaan != 'Rutin' && ($role == 'kepala_unit' || $role == 'admin' || $role == 'logistik')}
         <button type="button" class="btn btn-primary" onclick="approveUnit('{$sppb.no_sppb}', 'Kepala Unit')">Setujui Ka. Unit</button>
         <button type="button" class="btn btn-danger" onclick="rejectUnit('{$sppb.no_sppb}')">Tolak</button>
     {/if}
-    {if: $sppb.status == 'Disetujui Ka. Unit' && ($role == 'kepala_sie' || $role == 'admin' || $role == 'logistik')}
+    {if: $sppb.status == 'Disetujui Ka. Unit' && $sppb.jenis_permintaan != 'Rutin' && ($role == 'kepala_sie' || $role == 'admin' || $role == 'logistik')}
         <button type="button" class="btn btn-warning" onclick="approveUnit('{$sppb.no_sppb}', 'Kepala Sie')">Setujui Ka. Sie</button>
         <button type="button" class="btn btn-danger" onclick="rejectUnit('{$sppb.no_sppb}')">Tolak</button>
     {/if}
-    {if: $sppb.status == 'Disetujui Ka. Sie' && ($role == 'kepala_bidang' || $role == 'admin' || $role == 'logistik')}
+    {if: $sppb.status == 'Disetujui Ka. Sie' && $sppb.jenis_permintaan != 'Rutin' && ($role == 'kepala_bidang' || $role == 'admin' || $role == 'logistik')}
         <button type="button" class="btn btn-success" onclick="approveUnit('{$sppb.no_sppb}', 'Kepala Bidang')">Setujui Ka. Bidang</button>
         <button type="button" class="btn btn-danger" onclick="rejectUnit('{$sppb.no_sppb}')">Tolak</button>
     {/if}
-    {if: $sppb.status == 'Disetujui Unit' && ($role == 'admin' || $role == 'logistik')}
-        <button type="button" class="btn btn-success" onclick="verifikasiLogistik('{$sppb.no_sppb}')">Verifikasi Logistik</button>
+    {if: ($sppb.status == 'Disetujui Kabid' || $sppb.status == 'Disetujui Unit') && ($role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-info" style="background:#17a2b8;" onclick="verifikasiLogistik('{$sppb.no_sppb}')"><i class="fa fa-cogs"></i> Proses Logistik</button>
     {/if}
-    <a href="{?=url(ADMIN.'/logistik_non_medis/cetaksppb/'.$sppb.no_sppb)?}" target="_blank" class="btn btn-info"><i class="fa fa-print"></i> Cetak</a>
+    {if: $sppb.status == 'Proses Logistik' && ($role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-warning" onclick="openProsesLogistikModal('{$sppb.no_sppb}')"><i class="fa fa-list-alt"></i> {if: $sppb.jenis_permintaan == 'Non Rutin'}Review & Proses ke Pengadaan{else}Review & Tandai Siap Ambil{/if}</button>
+    {/if}
+    {if: $sppb.status == 'Proses Pengadaan' && ($role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-success" onclick="siapAmbil('{$sppb.no_sppb}')"><i class="fa fa-check-circle"></i> Tandai Siap Ambil</button>
+    {/if}
+    {if: $sppb.status == 'Siap Ambil'}
+        <button type="button" class="btn btn-primary" onclick="selesaikanSppb('{$sppb.no_sppb}')"><i class="fa fa-flag-checkered"></i> Konfirmasi Ambil / Selesai</button>
+    {/if}
+    <a href="{?=url(ADMIN.'/logistik_non_medis/cetaksppb?no_sppb='.$sppb.no_sppb)?}" target="_blank" class="btn btn-info"><i class="fa fa-print"></i> Cetak</a>
 </div>
 
 <script>
