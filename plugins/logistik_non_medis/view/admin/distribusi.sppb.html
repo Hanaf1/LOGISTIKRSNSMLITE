@@ -53,21 +53,23 @@
         <i class="fa fa-chevron-right separator"></i>
         <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}#distribusi">Distribusi</a>
         <i class="fa fa-chevron-right separator"></i>
-        <span class="active">{if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Permintaan Pengadaan (Non Rutin){else}Permintaan BHP Mingguan{/if}{else}Permintaan Barang (SPPB){/if}</span>
+        <span class="active">{if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Pengadaan Non Rutin{else}Pengadaan Rutin{/if}{else}Permintaan Barang (SPPB){/if}</span>
     </div>
     <div class="row">
         <div class="col-md-12">
             <div class="panel panel-default">
                 <div class="panel-heading" style="overflow: hidden;">
-                    <h3 class="panel-title pull-left" style="line-height: 34px;"><i class="fa fa-shopping-cart"></i> Permintaan Barang (SPPB) {if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Non Rutin{else}Rutin{/if}{/if}</h3>
-                    {if: $role != 'kepala_unit' && $role != 'kepala_sie' && $role != 'kepala_bidang'}
+                    <h3 class="panel-title pull-left" style="line-height: 34px;"><i class="fa fa-shopping-cart"></i> {if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Pengadaan Non Rutin{else}Pengadaan Rutin{/if}{else}Permintaan Barang (SPPB){/if}</h3>
+                    {if: !empty($can_create_sppb) || (!empty($can_manage_distribusi_controls) && (empty($jenis_page) || $jenis_page == 'Rutin'))}
                     <div class="btn-group pull-right">
                         {if: !empty($can_manage_distribusi_controls)}
                         {if: empty($jenis_page) || $jenis_page == 'Rutin'}
                         <button class="btn btn-warning" data-toggle="modal" data-target="#modal-import-sppb" style="margin-right: 5px;"><i class="fa fa-upload"></i> Import SPPB Mingguan</button>
                         {/if}
                         {/if}
+                        {if: !empty($can_create_sppb)}
                         <button class="btn btn-primary" id="btn-tambah"><i class="fa fa-plus"></i> Tambah Permintaan</button>
+                        {/if}
                     </div>
                     {/if}
                 </div>
@@ -104,12 +106,16 @@
                                     <option value="">-- Semua Status --</option>
                                     <option value="Draft">Draft</option>
                                     <option value="Diajukan">Diajukan (Butuh Persetujuan Ka. Unit)</option>
-                                    <option value="Disetujui Ka. Unit">Disetujui Ka. Unit (Butuh Persetujuan Ka. Sie)</option>
-                                    <option value="Disetujui Ka. Sie">Disetujui Ka. Sie (Butuh Persetujuan Ka. Bidang)</option>
+                                    <option value="Disetujui Ka. Sie">ACC KASI (Butuh ACC KABID)</option>
                                     <option value="Disetujui Kabid">Disetujui Kabid</option>
-                                    <option value="Proses Logistik">Proses Logistik</option>
+                                    <option value="Diserahkan ke Kasie Umum">Diserahkan ke Kasie Umum</option>
+                                    <option value="Verifikasi Kasie Umum">Verifikasi Kasie Umum</option>
+                                    <option value="Logistik Umum & Rekap">Logistik Umum & Rekap</option>
+                                    <option value="Konsul Pengajuan ke Kabid Umum">Konsul Pengajuan ke Kabid Umum</option>
+                                    <option value="Pengajuan Dana ke Bendahara">Pengajuan Dana ke Bendahara</option>
                                     <option value="Proses Pengadaan">Proses Pengadaan</option>
-                                    <option value="Siap Ambil">Siap Ambil</option>
+                                    <option value="Siap Diserahkan">Siap Diserahkan</option>
+                                    <option value="Tidak ACC">Tidak ACC</option>
                                     <option value="Selesai">Selesai</option>
                                     <option value="Ditolak">Ditolak</option>
                                 </select>
@@ -131,6 +137,78 @@
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div id="detail-content"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-selesai-sppb" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title"><i class="fa fa-archive"></i><i class="fa fa-long-arrow-right" style="margin:0 6px;"></i><i class="fa fa-user"></i> Konfirmasi Pengambilan Barang</h4>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="selesai_no_sppb">
+                <div class="form-group">
+                    <label>No. SPPB</label>
+                    <input type="text" class="form-control" id="selesai_no_sppb_display" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Nama Pengambil Barang <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="selesai_diambil_oleh" placeholder="Contoh: Budi / Unit Gizi" autocomplete="off">
+                    <p class="help-block">Tanggal dan jam pengambilan otomatis memakai waktu sistem.</p>
+                </div>
+                <div class="alert alert-info" style="margin-bottom:0;">
+                    <i class="fa fa-info-circle"></i> Setelah disimpan, status permintaan berubah menjadi <strong>Selesai</strong>.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" id="btn-submit-selesai-sppb">
+                    <i class="fa fa-check"></i> Simpan Pengambilan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-stok-fisik-sppb" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title"><i class="fa fa-balance-scale"></i> Penyesuaian Stok Fisik</h4>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    Stok sistem tidak cukup. Isi <strong>stok fisik total yang tersedia</strong> setelah dicek di lapangan agar pengambilan bisa dilanjutkan.
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th style="width:32%;">Barang</th>
+                                <th class="text-right" style="width:15%;">Diminta</th>
+                                <th class="text-right" style="width:15%;">Stok Sistem</th>
+                                <th class="text-right" style="width:15%;">Kurang</th>
+                                <th style="width:23%;">Stok Fisik Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stok-fisik-items"></tbody>
+                    </table>
+                </div>
+                <p class="help-block" style="margin-bottom:0;">
+                    Setelah disimpan, sistem mencatat penyesuaian stok sebagai Opname lalu mencatat barang keluar untuk SPPB ini.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" id="btn-submit-stok-fisik-sppb">
+                    <i class="fa fa-check"></i> Simpan Penyesuaian & Pengambilan
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -387,7 +465,7 @@ function rejectUnit(no_sppb) {
 }
 
 function verifikasiLogistik(no_sppb) {
-    if(confirm('Verifikasi kuota dan setujui permintaan ini untuk diproses gudang?')) {
+    if(confirm('Lanjutkan pengajuan sesuai alur Non Rutin berikutnya?')) {
         $.post('{?=url(ADMIN."/logistik_non_medis/verifikasisppb")?}', {no_sppb: no_sppb}, function(data) {
             var res = JSON.parse(data);
             if(res.status == 'success') {
@@ -398,6 +476,24 @@ function verifikasiLogistik(no_sppb) {
             }
         });
     }
+}
+
+function keputusanDanaSppb(no_sppb, keputusan) {
+    var postData = {no_sppb: no_sppb, keputusan: keputusan};
+    if (keputusan !== 'acc') {
+        var alasan = prompt('Masukkan alasan Tidak ACC / konfirmasi ke unit terkait:');
+        if (alasan === null) return;
+        postData.alasan = alasan;
+    }
+    $.post('{?=url(ADMIN."/logistik_non_medis/keputusandanasppb")?}', postData, function(data) {
+        var res = JSON.parse(data);
+        if(res.status == 'success') {
+            loadDisplay();
+            if($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
+        } else {
+            alert(res.message);
+        }
+    });
 }
 </script>
 

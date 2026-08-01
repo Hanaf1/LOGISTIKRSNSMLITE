@@ -41,7 +41,40 @@
             <td>Tanggal</td><td>: {?=date('d/m/Y', strtotime($sppb.tgl_sppb))?}</td>
             <td>Status</td><td>: {$sppb.status}</td>
         </tr>
+        {if: !empty($sppb.diambil_oleh)}
+        <tr>
+            <td>Diambil Oleh</td><td>: {$sppb.diambil_oleh}</td>
+            <td>Tgl. Diambil</td><td>: {if: !empty($sppb.tgl_diambil)}{?=date('d/m/Y H:i', strtotime($sppb.tgl_diambil))?}{else}-{/if}</td>
+        </tr>
+        {/if}
     </table>
+
+    {if: $sppb.jenis_permintaan == 'Non Rutin'}
+    <table class="info-table">
+        <tr>
+            <td width="20%"><strong>Latar Belakang dan Tujuan</strong></td>
+            <td width="30%">: {if: !empty($sppb.latar_belakang_tujuan)}{?=nl2br($sppb.latar_belakang_tujuan)?}{else}-{/if}</td>
+            <td width="20%"><strong>Sasaran Kegunaan</strong></td>
+            <td width="30%">: {if: !empty($sppb.sasaran_kegunaan)}{?=nl2br($sppb.sasaran_kegunaan)?}{else}-{/if}</td>
+        </tr>
+        <tr>
+            <td><strong>Rencana Digunakan</strong></td>
+            <td>: {if: !empty($sppb.rencana_digunakan)}{$sppb.rencana_digunakan}{else}-{/if}</td>
+            <td><strong>Sifat Permintaan</strong></td>
+            <td>: {$sppb.sifat_permintaan}</td>
+        </tr>
+        <tr>
+            <td><strong>Diajukan Oleh</strong></td>
+            <td>: {if: !empty($sppb.diajukan_oleh)}{$sppb.diajukan_oleh}{else}-{/if}</td>
+            <td><strong>Ka Unit</strong></td>
+            <td>: {if: !empty($sppb.ka_unit)}{$sppb.ka_unit}{else}-{/if}</td>
+        </tr>
+        <tr>
+            <td><strong>Penanggung Jawab</strong></td>
+            <td colspan="3">: {if: !empty($sppb.penanggung_jawab_1)}{$sppb.penanggung_jawab_1}{else}-{/if}{if: !empty($sppb.penanggung_jawab_2)} / {$sppb.penanggung_jawab_2}{/if}</td>
+        </tr>
+    </table>
+    {/if}
 
     <table class="items-table">
         <thead>

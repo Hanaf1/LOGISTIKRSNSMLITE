@@ -96,7 +96,25 @@
         }
         .sppb-stepper.rejected .stepper-item.completed + .stepper-item::after {
             background: #F44336;
-        }
+    }
+    .sppb-detail-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid #e5e5e5;
+    }
+    .sppb-detail-table {
+        min-width: 980px;
+        margin-bottom: 0;
+    }
+    .sppb-detail-table th,
+    .sppb-detail-table td {
+        vertical-align: middle !important;
+        white-space: normal;
+        word-break: break-word;
+    }
+    .sppb-detail-table .cell-number {
+        white-space: nowrap;
+    }
     </style>
     
     {if: $sppb.jenis_permintaan == 'Non Rutin'}
@@ -109,32 +127,52 @@
         <!-- Step 2 -->
         <div class="stepper-item {if: $stepper_step > 2}completed{elseif: $stepper_step == 2 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-user"></i></div>
-            <div class="stepper-title">Ka. Unit</div>
+            <div class="stepper-title">ACC KASI</div>
         </div>
         <!-- Step 3 -->
         <div class="stepper-item {if: $stepper_step > 3}completed{elseif: $stepper_step == 3 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-user-md"></i></div>
-            <div class="stepper-title">Ka. Sie</div>
+            <div class="stepper-title">ACC KABID</div>
         </div>
         <!-- Step 4 -->
         <div class="stepper-item {if: $stepper_step > 4}completed{elseif: $stepper_step == 4 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-users"></i></div>
-            <div class="stepper-title">Ka. Bidang</div>
+            <div class="stepper-title">Kasie Umum</div>
         </div>
         <!-- Step 5 -->
         <div class="stepper-item {if: $stepper_step > 5}completed{elseif: $stepper_step == 5 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-check-square-o"></i></div>
-            <div class="stepper-title">Logistik</div>
+            <div class="stepper-title">Verifikasi</div>
         </div>
         <!-- Step 6 -->
         <div class="stepper-item {if: $stepper_step > 6}completed{elseif: $stepper_step == 6 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-shopping-cart"></i></div>
-            <div class="stepper-title">Pengadaan</div>
+            <div class="stepper-title">Logistik & Rekap</div>
         </div>
         <!-- Step 7 -->
         <div class="stepper-item {if: $stepper_step > 7}completed{elseif: $stepper_step == 7 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-money"></i></div>
+            <div class="stepper-title">Konsul Kabid Umum</div>
+        </div>
+        <!-- Step 8 -->
+        <div class="stepper-item {if: $stepper_step > 8}completed{elseif: $stepper_step == 8 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-bank"></i></div>
+            <div class="stepper-title">Bendahara</div>
+        </div>
+        <!-- Step 9 -->
+        <div class="stepper-item {if: $stepper_step > 9}completed{elseif: $stepper_step == 9 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-shopping-cart"></i></div>
+            <div class="stepper-title">Proses Pengadaan</div>
+        </div>
+        <!-- Step 10 -->
+        <div class="stepper-item {if: $stepper_step > 10}completed{elseif: $stepper_step == 10 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-handshake-o"></i></div>
+            <div class="stepper-title">Siap Diserahkan</div>
+        </div>
+        <!-- Step 11 -->
+        <div class="stepper-item {if: $stepper_step > 11}completed{elseif: $stepper_step == 11 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-flag-checkered"></i></div>
-            <div class="stepper-title">Siap Diambil</div>
+            <div class="stepper-title">Diterima/Selesai</div>
         </div>
     </div>
     {else}
@@ -182,13 +220,35 @@
                     {if: $sppb.status == 'Draft'}
                         <span class="label label-default">Draft</span>
                     {elseif: $sppb.status == 'Diajukan'}
-                        <span class="label label-info">Diajukan</span>
+                        <span class="label label-info">{if: $sppb.jenis_permintaan == 'Non Rutin'}Pengajuan / Butuh ACC KASI{else}Diajukan{/if}</span>
                     {elseif: $sppb.status == 'Disetujui Ka. Unit'}
                         <span class="label label-warning">Disetujui Ka. Unit</span>
                     {elseif: $sppb.status == 'Disetujui Ka. Sie'}
-                        <span class="label label-primary">Disetujui Ka. Sie</span>
+                        <span class="label label-primary">{if: $sppb.jenis_permintaan == 'Non Rutin'}ACC KASI / Butuh ACC KABID{else}Disetujui Ka. Sie{/if}</span>
                     {elseif: $sppb.status == 'Disetujui Kabid' || $sppb.status == 'Disetujui Unit'}
-                        <span class="label label-success">Disetujui Kabid</span>
+                        <span class="label label-success">ACC KABID</span>
+                    {elseif: $sppb.status == 'Diserahkan ke Kasie Umum'}
+                        <span class="label label-info" style="background:#5bc0de;">Diserahkan ke KASIE Umum & Administrasi</span>
+                    {elseif: $sppb.status == 'Verifikasi Kasie Umum'}
+                        <span class="label label-info" style="background:#428bca;">Verifikasi & Koordinasi KASIE Umum</span>
+                    {elseif: $sppb.status == 'Diteruskan ke Logistik Umum'}
+                        <span class="label label-info" style="background:#17a2b8;">Logistik Umum & Rekap</span>
+                    {elseif: $sppb.status == 'Rekap Logistik'}
+                        <span class="label label-info" style="background:#17a2b8;">Logistik Umum & Rekap</span>
+                    {elseif: $sppb.status == 'Logistik Umum & Rekap'}
+                        <span class="label label-info" style="background:#17a2b8;">Logistik Umum & Rekap</span>
+                    {elseif: $sppb.status == 'Konsultasi Dana'}
+                        <span class="label label-warning" style="background:#e67e22;">Konsul Pengajuan ke Kabid Umum</span>
+                    {elseif: $sppb.status == 'Konsul Pengajuan ke Kabid Umum'}
+                        <span class="label label-warning" style="background:#e67e22;">Konsul Pengajuan ke Kabid Umum</span>
+                    {elseif: $sppb.status == 'Diserahkan ke Keuangan'}
+                        <span class="label label-success" style="background:#2e7d32;">Pengajuan Dana ke Bendahara</span>
+                    {elseif: $sppb.status == 'Pengajuan Dana ke Bendahara'}
+                        <span class="label label-success" style="background:#2e7d32;">Pengajuan Dana ke Bendahara</span>
+                    {elseif: $sppb.status == 'Tidak ACC'}
+                        <span class="label label-danger">Tidak ACC</span>
+                    {elseif: $sppb.status == 'Siap Diserahkan'}
+                        <span class="label label-success" style="background:#27ae60;"><i class="fa fa-handshake-o"></i> Siap Diserahkan</span>
                     {elseif: $sppb.status == 'Proses Logistik' || $sppb.status == 'Terverifikasi'}
                         <span class="label label-info" style="background:#17a2b8;"><i class="fa fa-cogs"></i> Proses Logistik</span>
                     {elseif: $sppb.status == 'Proses Pengadaan' && $sppb.jenis_permintaan == 'Non Rutin'}
@@ -213,6 +273,9 @@
                 {if: $sppb.user_approve_ka_bidang}
                 <tr><th>Approve Ka. Bidang</th><td>: {$sppb.user_approve_ka_bidang} <small class="text-muted">({$sppb.tgl_approve_ka_bidang})</small></td></tr>
                 {/if}
+                {if: !empty($sppb.diambil_oleh)}
+                <tr><th>Diambil Oleh</th><td>: {$sppb.diambil_oleh} <small class="text-muted">{if: !empty($sppb.tgl_diambil)}({?=date('d/m/Y H:i', strtotime($sppb.tgl_diambil))?}){/if}</small></td></tr>
+                {/if}
                 {if: $sppb.status == 'Ditolak'}
                 {if: !empty($sppb.ditolak_pada_status)}
                 <tr><th>Ditolak Pada</th><td>: <span class="text-danger"><strong>{$sppb.ditolak_pada_status}</strong></span></td></tr>
@@ -230,18 +293,56 @@
         {if: !empty($sppb.keterangan)}{?=nl2br($sppb.keterangan)?}{else}-{/if}
     </div>
 
+    {if: $sppb.jenis_permintaan == 'Non Rutin'}
+    <table class="table table-bordered">
+        <tr class="active">
+            <th colspan="4">Informasi Non Rutin</th>
+        </tr>
+        <tr>
+            <th width="20%">Latar Belakang dan Tujuan</th>
+            <td width="30%">{if: !empty($sppb.latar_belakang_tujuan)}{?=nl2br($sppb.latar_belakang_tujuan)?}{else}-{/if}</td>
+            <th width="20%">Sasaran Kegunaan</th>
+            <td width="30%">{if: !empty($sppb.sasaran_kegunaan)}{?=nl2br($sppb.sasaran_kegunaan)?}{else}-{/if}</td>
+        </tr>
+        <tr>
+            <th>Rencana Digunakan</th>
+            <td>{if: !empty($sppb.rencana_digunakan)}{$sppb.rencana_digunakan}{else}-{/if}</td>
+            <th>Sifat Permintaan</th>
+            <td>{if: $sppb.sifat_permintaan == 'Urgent'}<span class="label label-danger">Urgent</span>{else}<span class="label label-default">Biasa</span>{/if}</td>
+        </tr>
+        <tr>
+            <th>Diajukan Oleh</th>
+            <td>{if: !empty($sppb.diajukan_oleh)}{$sppb.diajukan_oleh}{else}-{/if}</td>
+            <th>Ka Unit</th>
+            <td>{if: !empty($sppb.ka_unit)}{$sppb.ka_unit}{else}-{/if}</td>
+        </tr>
+        <tr>
+            <th>Penanggung Jawab</th>
+            <td colspan="3">
+                {if: !empty($sppb.penanggung_jawab_1)}{$sppb.penanggung_jawab_1}{else}-{/if}
+                {if: !empty($sppb.penanggung_jawab_2)} / {$sppb.penanggung_jawab_2}{/if}
+            </td>
+        </tr>
+    </table>
+    {/if}
+
     <h4>Daftar Barang</h4>
-    <table class="table table-bordered table-striped">
+    <div class="sppb-detail-table-wrap">
+    <table class="table table-bordered table-striped sppb-detail-table">
         <thead>
             <tr class="active">
                 <th width="50">No</th>
                 <th width="150">Kode Barang</th>
                 <th>Nama Barang</th>
+                {if: $sppb.jenis_permintaan == 'Non Rutin'}<th>Spesifikasi</th>{/if}
                 <th width="80" class="text-right">Jumlah Minta</th>
                 <th width="80">Satuan</th>
+                {if: $sppb.jenis_permintaan == 'Non Rutin'}<th width="120" class="text-right">Estimasi Harga</th><th width="120" class="text-right">Subtotal</th>{/if}
                 <th width="100">Jumlah ACC</th>
                 <th width="100">Status Item</th>
+                {if: $can_approve_sppb}
                 <th width="100">Aksi</th>
+                {/if}
                 <th>Catatan Item</th>
             </tr>
         </thead>
@@ -249,55 +350,83 @@
             {loop: $sppb.items}
                 <tr>
                     <td>{?= $value.index + 1 ?}</td>
-                    <td>{$value.kode_item}</td>
-                    <td>{$value.nama_barang}</td>
-                    <td class="text-right">{$value.jumlah}</td>
-                    <td>{$value.satuan}</td>
                     <td>
-                        {if: $value.status == 'Diajukan'}
+                        {$value.kode_item}
+                        {if: $value.item_sumber == 'manual'}<br><span class="label label-warning">Barang Baru</span>{/if}
+                    </td>
+                    <td>{$value.nama_barang}</td>
+                    {if: $sppb.jenis_permintaan == 'Non Rutin'}<td>{if: !empty($value.spesifikasi_manual)}{$value.spesifikasi_manual}{else}-{/if}</td>{/if}
+                    <td class="text-right cell-number">{$value.jumlah}</td>
+                    <td>{$value.satuan}</td>
+                    {if: $sppb.jenis_permintaan == 'Non Rutin'}
+                    <td class="text-right cell-number">Rp {?=number_format($value['estimasi_harga'] ?? 0, 0, ',', '.')?}</td>
+                    <td class="text-right cell-number">Rp {?=number_format(($value['estimasi_harga'] ?? 0) * ($value['jumlah'] ?? 0), 0, ',', '.')?}</td>
+                    {/if}
+                    <td>
+                        {if: $value.status == 'Diajukan' && $can_approve_sppb}
                             <input type="number" id="acc_{$value.kode_item}" class="form-control input-sm" value="{$value.jumlah}" style="width: 80px;">
+                        {elseif: $value.status == 'Diajukan'}
+                            -
                         {else}
                             {$value.jumlah_disetujui}
                         {/if}
                     </td>
                     <td><span class="label label-default">{$value.status}</span></td>
+                    {if: $can_approve_sppb}
                     <td>
-                        {if: $value.status == 'Diajukan' && $sppb.jenis_permintaan != 'Rutin'}
+                        {if: $value.status == 'Diajukan' && $sppb.jenis_permintaan != 'Rutin' && $can_approve_sppb}
                             <button class="btn btn-success btn-xs" onclick="setItemStatus('{$value.no_sppb}', '{$value.kode_item}', 'Disetujui Unit')" title="Setujui"><i class="fa fa-check"></i></button>
                             <button class="btn btn-danger btn-xs" onclick="setItemStatus('{$value.no_sppb}', '{$value.kode_item}', 'Ditolak')" title="Tolak"><i class="fa fa-times"></i></button>
+                        {else}
+                            -
                         {/if}
                     </td>
+                    {/if}
                     <td>{$value.keterangan}</td>
                 </tr>
             {/loop}
         </tbody>
     </table>
+    </div>
 </div>
 <div class="modal-footer">
     <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
-    {if: $sppb.status == 'Diajukan' && $sppb.jenis_permintaan != 'Rutin' && ($role == 'kepala_unit' || $role == 'admin' || $role == 'logistik')}
-        <button type="button" class="btn btn-primary" onclick="approveUnit('{$sppb.no_sppb}', 'Kepala Unit')">Setujui Ka. Unit</button>
+    {if: $sppb.status == 'Diajukan' && $sppb.jenis_permintaan != 'Rutin' && $can_approve_sppb}
+        <button type="button" class="btn btn-primary" onclick="approveUnit('{$sppb.no_sppb}', 'KASI')">ACC KASI</button>
         <button type="button" class="btn btn-danger" onclick="rejectUnit('{$sppb.no_sppb}')">Tolak</button>
     {/if}
-    {if: $sppb.status == 'Disetujui Ka. Unit' && $sppb.jenis_permintaan != 'Rutin' && ($role == 'kepala_sie' || $role == 'admin' || $role == 'logistik')}
+    {if: $sppb.status == 'Disetujui Ka. Unit' && $sppb.jenis_permintaan != 'Rutin' && $can_approve_sppb}
         <button type="button" class="btn btn-warning" onclick="approveUnit('{$sppb.no_sppb}', 'Kepala Sie')">Setujui Ka. Sie</button>
         <button type="button" class="btn btn-danger" onclick="rejectUnit('{$sppb.no_sppb}')">Tolak</button>
     {/if}
-    {if: $sppb.status == 'Disetujui Ka. Sie' && $sppb.jenis_permintaan != 'Rutin' && ($role == 'kepala_bidang' || $role == 'admin' || $role == 'logistik')}
-        <button type="button" class="btn btn-success" onclick="approveUnit('{$sppb.no_sppb}', 'Kepala Bidang')">Setujui Ka. Bidang</button>
+    {if: $sppb.status == 'Disetujui Ka. Sie' && $sppb.jenis_permintaan != 'Rutin' && $can_approve_sppb}
+        <button type="button" class="btn btn-success" onclick="approveUnit('{$sppb.no_sppb}', 'KABID')">ACC KABID</button>
         <button type="button" class="btn btn-danger" onclick="rejectUnit('{$sppb.no_sppb}')">Tolak</button>
     {/if}
-    {if: ($sppb.status == 'Disetujui Kabid' || $sppb.status == 'Disetujui Unit') && ($role == 'admin' || $role == 'logistik')}
-        <button type="button" class="btn btn-info" style="background:#17a2b8;" onclick="verifikasiLogistik('{$sppb.no_sppb}')"><i class="fa fa-cogs"></i> Proses Logistik</button>
+    {if: (($sppb.status == 'Disetujui Kabid' || $sppb.status == 'Disetujui Unit') || ($sppb.status == 'Diajukan' && $sppb.jenis_permintaan == 'Rutin')) && ($role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-info" style="background:#17a2b8;" onclick="verifikasiLogistik('{$sppb.no_sppb}')"><i class="fa fa-arrow-right"></i> {if: $sppb.jenis_permintaan == 'Non Rutin'}Serahkan ke KASIE Umum & Administrasi{else}Proses Logistik{/if}</button>
     {/if}
-    {if: $sppb.status == 'Proses Logistik' && ($role == 'admin' || $role == 'logistik')}
-        <button type="button" class="btn btn-warning" onclick="openProsesLogistikModal('{$sppb.no_sppb}')"><i class="fa fa-list-alt"></i> {if: $sppb.jenis_permintaan == 'Non Rutin'}Review & Proses ke Pengadaan{else}Review & Tandai Siap Ambil{/if}</button>
+    {if: in_array($sppb.status, ['Diserahkan ke Kasie Umum','Verifikasi Kasie Umum','Diteruskan ke Logistik Umum','Rekap Logistik','Logistik Umum & Rekap']) && $sppb.jenis_permintaan == 'Non Rutin' && ($role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-warning" onclick="lanjutAlurNonRutin('{$sppb.no_sppb}')"><i class="fa fa-arrow-right"></i> Lanjutkan Tahap</button>
     {/if}
-    {if: $sppb.status == 'Proses Pengadaan' && ($role == 'admin' || $role == 'logistik')}
+    {if: in_array($sppb.status, ['Konsultasi Dana','Konsul Pengajuan ke Kabid Umum']) && $sppb.jenis_permintaan == 'Non Rutin' && ($role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-success" onclick="keputusanDanaSppb('{$sppb.no_sppb}', 'acc')"><i class="fa fa-check"></i> ACC Konsul Kabid Umum</button>
+        <button type="button" class="btn btn-danger" onclick="keputusanDanaSppb('{$sppb.no_sppb}', 'tidak_acc')"><i class="fa fa-times"></i> Tidak ACC</button>
+    {/if}
+    {if: $sppb.status == 'Proses Logistik' && $sppb.jenis_permintaan != 'Non Rutin' && ($role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-warning" onclick="openProsesLogistikModal('{$sppb.no_sppb}')"><i class="fa fa-list-alt"></i> Review & Tandai Siap Ambil</button>
+    {/if}
+    {if: $sppb.status == 'Proses Pengadaan' && $sppb.jenis_permintaan != 'Non Rutin' && ($role == 'admin' || $role == 'logistik')}
         <button type="button" class="btn btn-success" onclick="siapAmbil('{$sppb.no_sppb}')"><i class="fa fa-check-circle"></i> Tandai Siap Ambil</button>
     {/if}
-    {if: $sppb.status == 'Siap Ambil'}
-        <button type="button" class="btn btn-primary" onclick="selesaikanSppb('{$sppb.no_sppb}')"><i class="fa fa-flag-checkered"></i> Konfirmasi Ambil / Selesai</button>
+    {if: in_array($sppb.status, ['Diserahkan ke Keuangan','Pengajuan Dana ke Bendahara']) && $sppb.jenis_permintaan == 'Non Rutin' && ($role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-success" onclick="siapAmbil('{$sppb.no_sppb}')"><i class="fa fa-shopping-cart"></i> Proses Pengadaan</button>
+    {/if}
+    {if: $sppb.status == 'Proses Pengadaan' && $sppb.jenis_permintaan == 'Non Rutin' && ($role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-success" onclick="siapAmbil('{$sppb.no_sppb}')"><i class="fa fa-handshake-o"></i> Siap Diserahkan</button>
+    {/if}
+    {if: in_array($sppb.status, ['Siap Ambil','Siap Diserahkan']) && ($role == 'admin' || $role == 'logistik')}
+        <button type="button" class="btn btn-primary" onclick="selesaikanSppb('{$sppb.no_sppb}')"><i class="fa fa-archive"></i><i class="fa fa-long-arrow-right" style="margin:0 6px;"></i><i class="fa fa-user"></i> {if: $sppb.jenis_permintaan == 'Non Rutin'}Diterima / Selesai{else}Konfirmasi Ambil / Selesai{/if}</button>
     {/if}
     <a href="{?=url(ADMIN.'/logistik_non_medis/cetaksppb?no_sppb='.$sppb.no_sppb)?}" target="_blank" class="btn btn-info"><i class="fa fa-print"></i> Cetak</a>
 </div>

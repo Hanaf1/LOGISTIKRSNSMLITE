@@ -149,32 +149,52 @@
         <!-- Step 2 -->
         <div class="stepper-item {if: $stepper_step > 2}completed{elseif: $stepper_step == 2 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-user"></i></div>
-            <div class="stepper-title">Ka. Unit</div>
+            <div class="stepper-title">ACC KASI</div>
         </div>
         <!-- Step 3 -->
         <div class="stepper-item {if: $stepper_step > 3}completed{elseif: $stepper_step == 3 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-user-md"></i></div>
-            <div class="stepper-title">Ka. Sie</div>
+            <div class="stepper-title">ACC KABID</div>
         </div>
         <!-- Step 4 -->
         <div class="stepper-item {if: $stepper_step > 4}completed{elseif: $stepper_step == 4 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-users"></i></div>
-            <div class="stepper-title">Ka. Bidang</div>
+            <div class="stepper-title">Kasie Umum</div>
         </div>
         <!-- Step 5 -->
         <div class="stepper-item {if: $stepper_step > 5}completed{elseif: $stepper_step == 5 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-check-square-o"></i></div>
-            <div class="stepper-title">Logistik</div>
+            <div class="stepper-title">Verifikasi</div>
         </div>
         <!-- Step 6 -->
         <div class="stepper-item {if: $stepper_step > 6}completed{elseif: $stepper_step == 6 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-shopping-cart"></i></div>
-            <div class="stepper-title">Pengadaan</div>
+            <div class="stepper-title">Logistik & Rekap</div>
         </div>
         <!-- Step 7 -->
         <div class="stepper-item {if: $stepper_step > 7}completed{elseif: $stepper_step == 7 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-money"></i></div>
+            <div class="stepper-title">Konsul Kabid Umum</div>
+        </div>
+        <!-- Step 8 -->
+        <div class="stepper-item {if: $stepper_step > 8}completed{elseif: $stepper_step == 8 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-bank"></i></div>
+            <div class="stepper-title">Bendahara</div>
+        </div>
+        <!-- Step 9 -->
+        <div class="stepper-item {if: $stepper_step > 9}completed{elseif: $stepper_step == 9 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-shopping-cart"></i></div>
+            <div class="stepper-title">Proses Pengadaan</div>
+        </div>
+        <!-- Step 10 -->
+        <div class="stepper-item {if: $stepper_step > 10}completed{elseif: $stepper_step == 10 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-handshake-o"></i></div>
+            <div class="stepper-title">Siap Diserahkan</div>
+        </div>
+        <!-- Step 11 -->
+        <div class="stepper-item {if: $stepper_step > 11}completed{elseif: $stepper_step == 11 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-flag-checkered"></i></div>
-            <div class="stepper-title">Siap Diambil</div>
+            <div class="stepper-title">Diterima/Selesai</div>
         </div>
     </div>
     {else}
@@ -223,7 +243,7 @@
                         <select name="kode_unit" id="kode_unit" class="form-control select2" required {if: $mode == 'edit' || ($role == 'unit' && !empty($user_kode_unit))}disabled{/if}>
                             <option value="">-- Pilih Unit --</option>
                             {loop: $units}
-                                <option value="{$value.kode_unit}" {if: $sppb.kode_unit == $value.kode_unit}selected{/if}>{$value.kode_unit} - {$value.nama_unit}</option>
+                                <option value="{$value.kode_unit}" data-ka-unit="{?=htmlspecialchars($value['ka_unit_parent'] ?? '', ENT_QUOTES, 'UTF-8')?}" {if: $sppb.kode_unit == $value.kode_unit}selected{/if}>{$value.kode_unit} - {$value.nama_unit}</option>
                             {/loop}
                         </select>
                         {if: $mode == 'edit' || ($role == 'unit' && !empty($user_kode_unit))}<input type="hidden" name="kode_unit" value="{$sppb.kode_unit}">{/if}
@@ -241,6 +261,66 @@
                 </div>
             </div>
 
+            {if: $sppb.jenis_permintaan == 'Non Rutin'}
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Latar Belakang dan Tujuan <span class="text-danger">*</span></label>
+                        <textarea name="latar_belakang_tujuan" class="form-control" rows="3" required>{?=htmlspecialchars($sppb['latar_belakang_tujuan'] ?? '', ENT_QUOTES, 'UTF-8')?}</textarea>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Sasaran Kegunaan <span class="text-danger">*</span></label>
+                        <textarea name="sasaran_kegunaan" class="form-control" rows="3" required>{?=htmlspecialchars($sppb['sasaran_kegunaan'] ?? '', ENT_QUOTES, 'UTF-8')?}</textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Rencana Digunakan <span class="text-danger">*</span></label>
+                        <input type="text" name="rencana_digunakan" class="form-control" value="{?=htmlspecialchars($sppb['rencana_digunakan'] ?? '', ENT_QUOTES, 'UTF-8')?}" required>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Sifat Permintaan <span class="text-danger">*</span></label>
+                        <select name="sifat_permintaan" class="form-control" required>
+                            <option value="Biasa" {if: empty($sppb.sifat_permintaan) || $sppb.sifat_permintaan == 'Biasa'}selected{/if}>Biasa</option>
+                            <option value="Urgent" {if: $sppb.sifat_permintaan == 'Urgent'}selected{/if}>Urgent</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>Diajukan Oleh <span class="text-danger">*</span></label>
+                        <input type="text" name="diajukan_oleh" class="form-control" value="{?=htmlspecialchars($sppb['diajukan_oleh'] ?? '', ENT_QUOTES, 'UTF-8')?}" required>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>Ka Unit</label>
+                        <input type="text" name="ka_unit_display" id="ka_unit_display" class="form-control" value="{?=htmlspecialchars($sppb['ka_unit'] ?? '', ENT_QUOTES, 'UTF-8')?}" readonly>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Penanggung Jawab 1 <span class="text-danger">*</span></label>
+                        <input type="text" name="penanggung_jawab_1" class="form-control" value="{?=htmlspecialchars($sppb['penanggung_jawab_1'] ?? '', ENT_QUOTES, 'UTF-8')?}" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Penanggung Jawab 2</label>
+                        <input type="text" name="penanggung_jawab_2" class="form-control" value="{?=htmlspecialchars($sppb['penanggung_jawab_2'] ?? '', ENT_QUOTES, 'UTF-8')?}">
+                    </div>
+                </div>
+            </div>
+            {/if}
+
             <div class="row">
                 <div class="col-md-12">
                     <div class="form-group">
@@ -256,9 +336,12 @@
                 <table class="table table-bordered" id="table-items">
                     <thead>
                         <tr class="active">
-                            <th width="300">Pilih Barang</th>
+                            {if: $sppb.jenis_permintaan == 'Non Rutin'}<th width="120">Jenis Item</th>{/if}
+                            <th width="300">{if: $sppb.jenis_permintaan == 'Non Rutin'}Barang / Usulan Baru{else}Pilih Barang{/if}</th>
+                            {if: $sppb.jenis_permintaan == 'Non Rutin'}<th width="220">Spesifikasi</th>{/if}
                             <th width="120">Jumlah</th>
                             <th width="120">Satuan</th>
+                            {if: $sppb.jenis_permintaan == 'Non Rutin'}<th width="150">Estimasi Harga</th><th width="150">Subtotal</th>{/if}
                             <th>Keterangan Item</th>
                             <th width="50"></th>
                         </tr>
@@ -267,13 +350,47 @@
                         {if: !empty($sppb.items)}
                             {loop: $sppb.items}
                                 <tr>
+                                    {if: $sppb.jenis_permintaan == 'Non Rutin'}
                                     <td>
-                                        <select name="kode_item[]" class="form-control select-item" required>
-                                            <option value="{$value.kode_item}" selected>{$value.nama_barang}</option>
+                                        <select name="item_sumber[]" class="form-control item-source">
+                                            <option value="master" {if: $value.item_sumber != 'manual'}selected{/if}>Master</option>
+                                            <option value="manual" {if: $value.item_sumber == 'manual'}selected{/if}>Barang Baru</option>
                                         </select>
                                     </td>
+                                    {/if}
+                                    <td>
+                                        <div class="master-item-wrap" {if: $sppb.jenis_permintaan == 'Non Rutin' && $value.item_sumber == 'manual'}style="display:none"{/if}>
+                                            <select name="kode_item[]" class="form-control select-item">
+                                                <option value="{$value.kode_item}" selected>{$value.nama_barang}</option>
+                                            </select>
+                                        </div>
+                                        {if: $sppb.jenis_permintaan == 'Non Rutin'}
+                                        <div class="manual-item-wrap" {if: $value.item_sumber != 'manual'}style="display:none"{/if}>
+                                            <input type="hidden" name="kode_item[]" class="manual-kode" value="">
+                                            <input type="text" name="nama_barang_manual[]" class="form-control manual-name" value="{?=htmlspecialchars($value['nama_barang_manual'] ?? '', ENT_QUOTES, 'UTF-8')?}" placeholder="Nama barang baru">
+                                        </div>
+                                        {else}
+                                        <input type="hidden" name="item_sumber[]" value="master">
+                                        <input type="hidden" name="nama_barang_manual[]" value="">
+                                        {/if}
+                                    </td>
+                                    {if: $sppb.jenis_permintaan == 'Non Rutin'}
+                                    <td><textarea name="spesifikasi_manual[]" class="form-control manual-spec" rows="1" placeholder="Merk/tipe/ukuran/spesifikasi">{?=htmlspecialchars($value['spesifikasi_manual'] ?? '', ENT_QUOTES, 'UTF-8')?}</textarea></td>
+                                    {/if}
                                     <td><input type="number" step="any" name="jumlah[]" class="form-control" value="{$value.jumlah}" required></td>
-                                    <td><input type="text" name="satuan[]" class="form-control" value="{$value.satuan}" readonly></td>
+                                    <td>
+                                        {if: $sppb.jenis_permintaan == 'Non Rutin'}
+                                        <select name="satuan[]" class="form-control select-satuan" data-current="{$value.satuan}" required>
+                                            {$satuan_options}
+                                        </select>
+                                        {else}
+                                        <input type="text" name="satuan[]" class="form-control" value="{$value.satuan}" readonly>
+                                        {/if}
+                                    </td>
+                                    {if: $sppb.jenis_permintaan == 'Non Rutin'}
+                                    <td><input type="number" step="any" name="estimasi_harga[]" class="form-control input-estimasi" value="{?=$value['estimasi_harga'] ?? 0?}" min="0"></td>
+                                    <td><input type="text" class="form-control input-subtotal-estimasi" value="{?=number_format(($value['estimasi_harga'] ?? 0) * ($value['jumlah'] ?? 0), 0, ',', '.')?}" readonly></td>
+                                    {/if}
                                     <td><input type="text" name="keterangan_item[]" class="form-control" value="{?=htmlspecialchars($value['keterangan_item'] ?? '', ENT_QUOTES, 'UTF-8')?}"></td>
                                     <td class="text-center"><button type="button" class="btn btn-danger btn-sm btn-remove"><i class="fa fa-times"></i></button></td>
                                 </tr>
@@ -294,7 +411,14 @@
     </div>
 </div>
 
+<select id="satuan-options-source" style="display:none">
+    {$satuan_options}
+</select>
+
 <script>
+var isNonRutin = "{$sppb.jenis_permintaan}" === "Non Rutin";
+var satuanOptions = $('#satuan-options-source').html();
+
 $(document).ready(function() {
     $('.datepicker').datetimepicker({
         format: 'YYYY-MM-DD',
@@ -302,6 +426,7 @@ $(document).ready(function() {
     });
 
     $('.select2').select2({ width: '100%' });
+    updateKaUnitDisplay();
 
     initSelect2Item($('.select-item'));
 
@@ -311,6 +436,18 @@ $(document).ready(function() {
 
     $('#item-rows').on('click', '.btn-remove', function() {
         $(this).closest('tr').remove();
+    });
+
+    $('#item-rows').on('change', '.item-source', function() {
+        toggleItemSource($(this).closest('tr'));
+    });
+
+    $('#item-rows').on('input', 'input[name="jumlah[]"], .input-estimasi', function() {
+        hitungSubtotalEstimasi($(this).closest('tr'));
+    });
+
+    $('#kode_unit').on('change', function() {
+        updateKaUnitDisplay();
     });
 
     $('#btn-cancel').click(function() {
@@ -342,19 +479,72 @@ $(document).ready(function() {
     });
 
     if($('#item-rows tr').length == 0) addRow();
+    $('.select-satuan').each(function() {
+        var current = $(this).data('current');
+        if (current) $(this).val(current);
+    });
+    $('#item-rows tr').each(function() {
+        toggleItemSource($(this));
+    });
 });
 
 function addRow() {
-    var html = '<tr>' +
-               '<td><select name="kode_item[]" class="form-control select-item" required></select></td>' +
+    var html;
+    if (isNonRutin) {
+        html = '<tr>' +
+               '<td><select name="item_sumber[]" class="form-control item-source"><option value="master">Master</option><option value="manual" selected>Barang Baru</option></select></td>' +
+               '<td>' +
+               '<div class="master-item-wrap" style="display:none"><select name="kode_item[]" class="form-control select-item"></select></div>' +
+               '<div class="manual-item-wrap"><input type="hidden" name="kode_item[]" class="manual-kode" value=""><input type="text" name="nama_barang_manual[]" class="form-control manual-name" placeholder="Nama barang baru"></div>' +
+               '</td>' +
+               '<td><textarea name="spesifikasi_manual[]" class="form-control manual-spec" rows="1" placeholder="Merk/tipe/ukuran/spesifikasi"></textarea></td>' +
                '<td><input type="number" step="any" name="jumlah[]" class="form-control" value="1" required></td>' +
-               '<td><input type="text" name="satuan[]" class="form-control" readonly></td>' +
+               '<td><select name="satuan[]" class="form-control select-satuan" required>' + satuanOptions + '</select></td>' +
+               '<td><input type="number" step="any" name="estimasi_harga[]" class="form-control input-estimasi" value="0" min="0"></td>' +
+               '<td><input type="text" class="form-control input-subtotal-estimasi" value="0" readonly></td>' +
                '<td><input type="text" name="keterangan_item[]" class="form-control"></td>' +
                '<td class="text-center"><button type="button" class="btn btn-danger btn-sm btn-remove"><i class="fa fa-times"></i></button></td>' +
                '</tr>';
+    } else {
+        html = '<tr>' +
+               '<td><input type="hidden" name="item_sumber[]" value="master"><input type="hidden" name="nama_barang_manual[]" value=""><select name="kode_item[]" class="form-control select-item" required></select></td>' +
+               '<td><input type="number" step="any" name="jumlah[]" class="form-control" value="1" required></td>' +
+               '<td><input type="text" name="satuan[]" class="form-control" readonly></td>' +
+               '<input type="hidden" name="estimasi_harga[]" value="0">' +
+               '<td><input type="text" name="keterangan_item[]" class="form-control"></td>' +
+               '<td class="text-center"><button type="button" class="btn btn-danger btn-sm btn-remove"><i class="fa fa-times"></i></button></td>' +
+               '</tr>';
+    }
     var $row = $(html);
     $('#item-rows').append($row);
     initSelect2Item($row.find('.select-item'));
+    toggleItemSource($row);
+}
+
+function toggleItemSource($row) {
+    if (!isNonRutin) return;
+    var source = $row.find('.item-source').val() || 'manual';
+    var isManual = source === 'manual';
+    $row.find('.master-item-wrap').toggle(!isManual);
+    $row.find('.manual-item-wrap').toggle(isManual);
+    $row.find('.select-item').prop('required', !isManual);
+    $row.find('.select-item').prop('disabled', isManual);
+    $row.find('.manual-kode').prop('disabled', !isManual);
+    $row.find('.manual-name').prop('required', isManual);
+    $row.find('.manual-name').prop('disabled', !isManual);
+    $row.find('.manual-spec').prop('readonly', !isManual);
+    $row.find('select[name="satuan[]"]').prop('disabled', false);
+    if (isManual) {
+        $row.find('.select-item').val(null).trigger('change');
+    }
+    hitungSubtotalEstimasi($row);
+}
+
+function hitungSubtotalEstimasi($row) {
+    if (!isNonRutin) return;
+    var qty = parseFloat($row.find('input[name="jumlah[]"]').val()) || 0;
+    var harga = parseFloat($row.find('.input-estimasi').val()) || 0;
+    $row.find('.input-subtotal-estimasi').val((qty * harga).toLocaleString('id-ID'));
 }
 
 function initSelect2Item($el) {
@@ -380,7 +570,13 @@ function initSelect2Item($el) {
         }
     }).on('select2:select', function (e) {
         var data = e.params.data;
-        $(this).closest('tr').find('input[name="satuan[]"]').val(data.satuan);
+        $(this).closest('tr').find('[name="satuan[]"]').val(data.satuan).trigger('change');
     });
+}
+
+function updateKaUnitDisplay() {
+    if (!isNonRutin) return;
+    var kaUnit = $('#kode_unit option:selected').data('ka-unit') || '';
+    $('#ka_unit_display').val(kaUnit);
 }
 </script>

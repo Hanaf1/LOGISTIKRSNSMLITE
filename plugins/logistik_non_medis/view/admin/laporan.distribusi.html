@@ -477,7 +477,7 @@
                                         <select id="frek-kategori" class="form-control select2" style="width: 100%;">
                                             <option value="">-- Semua Kategori --</option>
                                             {loop: $kategori as $k}
-                                            <option value="{$k.kategori}">{$k.kategori}</option>
+                                            <option value="{$k.kode_kategori}">{$k.nama_kategori}</option>
                                             {/loop}
                                         </select>
                                     </div>
@@ -646,6 +646,16 @@
     border: none !important;
     border-bottom: 3px solid transparent !important;
     transition: all 0.2s ease-in-out;
+    color: #495057 !important;
+    opacity: 1 !important;
+}
+
+.custom-tabs > li:not(.active) > a {
+    color: #5f6875 !important;
+}
+
+.custom-tabs > li > a .fa {
+    color: inherit !important;
 }
 
 .tab-pane {
@@ -745,7 +755,8 @@ $(document).ready(function() {
             '.table > tbody > tr > td { border-top: 1px solid ' + themeColors.wellBorder + ' !important; }' +
             '.table-striped > tbody > tr:nth-of-type(odd) { background-color: ' + (isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)') + ' !important; }' +
             '.table-hover > tbody > tr:hover { background-color: ' + (isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)') + ' !important; }' +
-            '.custom-tabs > li > a { color: ' + themeColors.muted + ' !important; }' +
+            '.custom-tabs > li > a { color: ' + (isDark ? '#e9edf4' : '#495057') + ' !important; opacity: 1 !important; }' +
+            '.custom-tabs > li:not(.active) > a { color: ' + (isDark ? '#cfd6df' : '#5f6875') + ' !important; }' +
             '.custom-tabs > li.active > a, .custom-tabs > li.active > a:hover, .custom-tabs > li.active > a:focus {' +
             '    color: ' + themeColors.primary + ' !important;' +
             '    border-bottom: 3px solid ' + themeColors.primary + ' !important;' +
@@ -815,7 +826,18 @@ $(document).ready(function() {
 
     function parseReportResponse(response, tableSelector, colspan) {
         try {
-            return typeof response === 'string' ? JSON.parse(response) : response;
+            if (typeof response !== 'string') return response;
+            var text = response.trim();
+            try {
+                return JSON.parse(text);
+            } catch (innerError) {
+                var first = text.indexOf('{');
+                var last = text.lastIndexOf('}');
+                if (first !== -1 && last !== -1 && last > first) {
+                    return JSON.parse(text.substring(first, last + 1));
+                }
+                throw innerError;
+            }
         } catch (error) {
             $(tableSelector).html('<tr><td colspan="' + colspan + '" class="text-center text-danger"><i class="fa fa-exclamation-circle"></i> Data laporan tidak dapat diproses. Silakan muat ulang halaman.</td></tr>');
             return null;
@@ -1000,9 +1022,14 @@ $(document).ready(function() {
             kode_unit: kode_unit,
             kategori: kategori
         }, function(response) {
-            var data = JSON.parse(response);
+            var data = parseReportResponse(response, '#tbody-pemakaian-unit', 6);
+            if (!data) return;
             $('#tbody-pemakaian-unit').html(data.html);
             renderPemakaianChart(data.chart_labels, data.chart_data);
+        }).fail(function(xhr) {
+            var message = xhr.responseText ? xhr.responseText.replace(/<[^>]*>/g, '').substring(0, 180) : 'Request gagal.';
+            $('#tbody-pemakaian-unit').html('<tr><td colspan="6" class="text-center text-danger"><i class="fa fa-exclamation-circle"></i> Gagal memuat pemakaian per unit. ' + message + '</td></tr>');
+            renderPemakaianChart([], []);
         });
     }
 
@@ -1075,6 +1102,10 @@ $(document).ready(function() {
             if (!data) return;
             $('#tbody-tren-konsumsi').html(data.html);
             renderTrenChart(data.chart_labels, data.chart_qty, data.chart_val);
+        }).fail(function(xhr) {
+            var message = xhr.responseText ? xhr.responseText.replace(/<[^>]*>/g, '').substring(0, 180) : 'Request gagal.';
+            $('#tbody-tren-konsumsi').html('<tr><td colspan="4" class="text-center text-danger"><i class="fa fa-exclamation-circle"></i> Gagal memuat tren konsumsi. ' + message + '</td></tr>');
+            renderTrenChart([], [], []);
         });
     }
 
@@ -1198,6 +1229,10 @@ $(document).ready(function() {
             if (!data) return;
             $('#tbody-frekuensi-volume').html(data.html);
             renderFrekVolChart(data.chart_labels, data.chart_freq, data.chart_vol);
+        }).fail(function(xhr) {
+            var message = xhr.responseText ? xhr.responseText.replace(/<[^>]*>/g, '').substring(0, 180) : 'Request gagal.';
+            $('#tbody-frekuensi-volume').html('<tr><td colspan="6" class="text-center text-danger"><i class="fa fa-exclamation-circle"></i> Gagal memuat frekuensi dan volume. ' + message + '</td></tr>');
+            renderFrekVolChart([], [], []);
         });
     }
 
@@ -1281,6 +1316,10 @@ $(document).ready(function() {
             if (!data) return;
             $('#tbody-unit-terboros').html(data.html);
             renderBorosChart(data.chart_labels, data.chart_data);
+        }).fail(function(xhr) {
+            var message = xhr.responseText ? xhr.responseText.replace(/<[^>]*>/g, '').substring(0, 180) : 'Request gagal.';
+            $('#tbody-unit-terboros').html('<tr><td colspan="5" class="text-center text-danger"><i class="fa fa-exclamation-circle"></i> Gagal memuat unit terboros. ' + message + '</td></tr>');
+            renderBorosChart([], []);
         });
     }
 

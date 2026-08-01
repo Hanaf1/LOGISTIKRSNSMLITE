@@ -36,13 +36,33 @@
                             {if: $value.status == 'Draft'}
                                 <span class="label label-default">Draft</span>
                             {elseif: $value.status == 'Diajukan'}
-                                <span class="label label-info">Diajukan</span>
+                                <span class="label label-info">{if: $value.jenis_permintaan == 'Non Rutin'}Pengajuan / Butuh ACC KASI{else}Diajukan{/if}</span>
                             {elseif: $value.status == 'Disetujui Ka. Unit'}
                                 <span class="label label-warning">Disetujui Ka. Unit</span>
                             {elseif: $value.status == 'Disetujui Ka. Sie'}
-                                <span class="label label-primary">Disetujui Ka. Sie</span>
+                                <span class="label label-primary">{if: $value.jenis_permintaan == 'Non Rutin'}ACC KASI / Butuh ACC KABID{else}Disetujui Ka. Sie{/if}</span>
                             {elseif: $value.status == 'Disetujui Kabid' || $value.status == 'Disetujui Unit'}
-                                <span class="label label-success">Disetujui Kabid</span>
+                                <span class="label label-success">ACC KABID</span>
+                            {elseif: $value.status == 'Diserahkan ke Kasie Umum'}
+                                <span class="label label-info" style="background:#5bc0de;">Diserahkan ke KASIE Umum & Administrasi</span>
+                            {elseif: $value.status == 'Verifikasi Kasie Umum'}
+                                <span class="label label-info" style="background:#428bca;">Verifikasi & Koordinasi KASIE Umum</span>
+                            {elseif: $value.status == 'Diteruskan ke Logistik Umum'}
+                                <span class="label label-info" style="background:#17a2b8;">Logistik Umum & Rekap</span>
+                            {elseif: $value.status == 'Rekap Logistik'}
+                                <span class="label label-info" style="background:#17a2b8;">Logistik Umum & Rekap</span>
+                            {elseif: $value.status == 'Logistik Umum & Rekap'}
+                                <span class="label label-info" style="background:#17a2b8;">Logistik Umum & Rekap</span>
+                            {elseif: $value.status == 'Konsultasi Dana'}
+                                <span class="label label-warning" style="background:#e67e22;">Konsul Pengajuan ke Kabid Umum</span>
+                            {elseif: $value.status == 'Konsul Pengajuan ke Kabid Umum'}
+                                <span class="label label-warning" style="background:#e67e22;">Konsul Pengajuan ke Kabid Umum</span>
+                            {elseif: $value.status == 'Diserahkan ke Keuangan'}
+                                <span class="label label-success" style="background:#2e7d32;">Pengajuan Dana ke Bendahara</span>
+                            {elseif: $value.status == 'Pengajuan Dana ke Bendahara'}
+                                <span class="label label-success" style="background:#2e7d32;">Pengajuan Dana ke Bendahara</span>
+                            {elseif: $value.status == 'Tidak ACC'}
+                                <span class="label label-danger">Tidak ACC</span>
                             {elseif: $value.status == 'Proses Logistik' || $value.status == 'Terverifikasi'}
                                 <span class="label label-info" style="background:#17a2b8;"><i class="fa fa-cogs"></i> Proses Logistik</span>
                             {elseif: $value.status == 'Proses Pengadaan' && $value.jenis_permintaan == 'Non Rutin'}
@@ -51,8 +71,13 @@
                                 <span class="label label-info" style="background:#3498db;"><i class="fa fa-truck"></i> Distribusi</span>
                             {elseif: $value.status == 'Siap Ambil'}
                                 <span class="label label-success" style="background:#27ae60;"><i class="fa fa-check-circle"></i> Siap Ambil</span>
+                            {elseif: $value.status == 'Siap Diserahkan'}
+                                <span class="label label-success" style="background:#27ae60;"><i class="fa fa-handshake-o"></i> Siap Diserahkan</span>
                             {elseif: $value.status == 'Selesai'}
                                 <span class="label label-success"><i class="fa fa-check"></i> Selesai</span>
+                                {if: !empty($value.diambil_oleh)}
+                                    <br><small class="text-muted">Diambil: {$value.diambil_oleh}</small>
+                                {/if}
                             {elseif: $value.status == 'Ditolak'}
                                 <span class="label label-danger" title="{$value.ditolak_pada_status}">
                                     <i class="fa fa-times-circle"></i> Ditolak{if: !empty($value.ditolak_pada_status)} ({$value.ditolak_pada_status}){/if}
@@ -65,33 +90,43 @@
                         </td>
                         <td class="text-center">
                             <div class="btn-group">
-                                {if: $value.status == 'Draft' || $value.status == 'Diajukan'}
+                                {if: $value.can_edit}
                                     <button class="btn btn-xs btn-default" onclick="editSPPB('{$value.no_sppb}')" title="Edit"><i class="fa fa-pencil"></i></button>
+                                {/if}
+                                {if: $value.can_delete}
                                     <button class="btn btn-xs btn-danger" onclick="hapusSPPB('{$value.no_sppb}')" title="Hapus"><i class="fa fa-trash"></i></button>
                                 {/if}
-                                {if: $value.status == 'Diajukan' && $value.jenis_permintaan != 'Rutin' && ($role == 'kepala_unit' || $role == 'admin' || $role == 'logistik')}
+                                {if: $value.can_approve_ka_unit}
                                     <button class="btn btn-xs btn-primary" onclick="approveUnit('{$value.no_sppb}', 'Kepala Unit')" title="Setujui Ka. Unit"><i class="fa fa-check-circle"></i></button>
                                     <button class="btn btn-xs btn-danger" onclick="rejectUnit('{$value.no_sppb}')" title="Tolak Permintaan"><i class="fa fa-times-circle"></i></button>
                                 {/if}
-                                {if: $value.status == 'Disetujui Ka. Unit' && $value.jenis_permintaan != 'Rutin' && ($role == 'kepala_sie' || $role == 'admin' || $role == 'logistik')}
-                                    <button class="btn btn-xs btn-warning" onclick="approveUnit('{$value.no_sppb}', 'Kepala Sie')" title="Setujui Ka. Sie"><i class="fa fa-check-circle"></i></button>
+                                {if: $value.can_approve_ka_sie}
+                                    <button class="btn btn-xs btn-warning" onclick="approveUnit('{$value.no_sppb}', 'KASI')" title="ACC KASI"><i class="fa fa-check-circle"></i></button>
                                     <button class="btn btn-xs btn-danger" onclick="rejectUnit('{$value.no_sppb}')" title="Tolak Permintaan"><i class="fa fa-times-circle"></i></button>
                                 {/if}
-                                {if: $value.status == 'Disetujui Ka. Sie' && $value.jenis_permintaan != 'Rutin' && ($role == 'kepala_bidang' || $role == 'admin' || $role == 'logistik')}
-                                    <button class="btn btn-xs btn-success" onclick="approveUnit('{$value.no_sppb}', 'Kepala Bidang')" title="Setujui Ka. Bidang"><i class="fa fa-check-circle"></i></button>
+                                {if: $value.can_approve_ka_bidang}
+                                    <button class="btn btn-xs btn-success" onclick="approveUnit('{$value.no_sppb}', 'KABID')" title="ACC KABID"><i class="fa fa-check-circle"></i></button>
                                     <button class="btn btn-xs btn-danger" onclick="rejectUnit('{$value.no_sppb}')" title="Tolak Permintaan"><i class="fa fa-times-circle"></i></button>
                                 {/if}
-                                {if: (($value.status == 'Disetujui Kabid' || $value.status == 'Disetujui Unit') || ($value.status == 'Diajukan' && $value.jenis_permintaan == 'Rutin')) && ($role == 'admin' || $role == 'logistik')}
-                                    <button class="btn btn-xs btn-success" onclick="verifikasiLogistik('{$value.no_sppb}')" title="Proses Logistik"><i class="fa fa-cogs"></i></button>
+                                {if: $value.can_proses_logistik}
+                                    <button class="btn btn-xs btn-success" onclick="verifikasiLogistik('{$value.no_sppb}')" title="{if: $value.jenis_permintaan == 'Non Rutin'}Serahkan ke KASIE Umum & Administrasi{else}Proses Logistik{/if}"><i class="fa fa-arrow-right"></i></button>
                                 {/if}
-                                {if: $value.status == 'Proses Logistik' && ($role == 'admin' || $role == 'logistik')}
-                                    <button class="btn btn-xs btn-warning" onclick="openProsesLogistikModal('{$value.no_sppb}')" title="{if: $value.jenis_permintaan == 'Non Rutin'}Review & Proses ke Pengadaan{else}Review & Tandai Siap Ambil{/if}"><i class="fa fa-list-alt"></i></button>
+                                {if: $value.can_review_logistik}
+                                    {if: $value.jenis_permintaan == 'Non Rutin'}
+                                        <button class="btn btn-xs btn-warning" onclick="lanjutAlurNonRutin('{$value.no_sppb}')" title="Lanjutkan tahap Non Rutin"><i class="fa fa-arrow-right"></i></button>
+                                    {else}
+                                        <button class="btn btn-xs btn-warning" onclick="openProsesLogistikModal('{$value.no_sppb}')" title="Review & Tandai Siap Ambil"><i class="fa fa-list-alt"></i></button>
+                                    {/if}
                                 {/if}
-                                {if: $value.status == 'Proses Pengadaan' && ($role == 'admin' || $role == 'logistik')}
-                                    <button class="btn btn-xs btn-success" onclick="siapAmbil('{$value.no_sppb}')" title="Tandai Siap Ambil"><i class="fa fa-check-circle"></i></button>
+                                {if: $value.can_keputusan_dana}
+                                    <button class="btn btn-xs btn-success" onclick="keputusanDanaSppb('{$value.no_sppb}', 'acc')" title="ACC Konsul Kabid Umum dan ajukan dana ke Bendahara"><i class="fa fa-check"></i></button>
+                                    <button class="btn btn-xs btn-danger" onclick="keputusanDanaSppb('{$value.no_sppb}', 'tidak_acc')" title="Tidak ACC"><i class="fa fa-times"></i></button>
                                 {/if}
-                                {if: $value.status == 'Siap Ambil' && ($role == 'admin' || $role == 'logistik' || $role == 'unit')}
-                                    <button class="btn btn-xs btn-primary" onclick="selesaikanSppb('{$value.no_sppb}')" title="Konfirmasi Selesai/Ambil"><i class="fa fa-flag-checkered"></i></button>
+                                {if: $value.can_siap_ambil}
+                                    <button class="btn btn-xs btn-success" onclick="siapAmbil('{$value.no_sppb}')" title="{if: $value.jenis_permintaan == 'Non Rutin'}Lanjutkan tahap pengadaan / siap diserahkan{else}Tandai Siap Ambil{/if}"><i class="fa fa-check-circle"></i></button>
+                                {/if}
+                                {if: $value.can_selesaikan}
+                                    <button class="btn btn-xs btn-primary" onclick="selesaikanSppb('{$value.no_sppb}')" title="Konfirmasi Serah Terima Barang"><i class="fa fa-archive"></i><i class="fa fa-long-arrow-right" style="margin:0 2px;"></i><i class="fa fa-user"></i></button>
                                 {/if}
                                 <button class="btn btn-xs btn-info" onclick="detailSPPB('{$value.no_sppb}')" title="Detail"><i class="fa fa-eye"></i></button>
                             </div>
@@ -140,6 +175,24 @@
 
 <script>
 var _currentProsesLogistikSppb = '';
+
+function lanjutAlurNonRutin(no_sppb) {
+    if (!confirm('Lanjutkan ke tahap berikutnya sesuai SPO Non Rutin?')) return;
+    $.post('{?=url(ADMIN."/logistik_non_medis/proseslogistiksppb")?}', {no_sppb: no_sppb}, function(res) {
+        try {
+            var data = JSON.parse(res);
+            if (data.status === 'success') {
+                loadDisplay();
+                if ($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
+                showNotif('success', 'Tahap Non Rutin berhasil dilanjutkan.');
+            } else {
+                showNotif('error', data.message || 'Gagal memproses.');
+            }
+        } catch(e) {
+            showNotif('error', 'Kesalahan server.');
+        }
+    });
+}
 
 function openProsesLogistikModal(no_sppb) {
     _currentProsesLogistikSppb = no_sppb;
@@ -204,7 +257,7 @@ function submitProsesLogistik() {
 }
 
 function siapAmbil(no_sppb) {
-    if (!confirm('Tandai permintaan ini sebagai "Siap Ambil"? Artinya barang sudah diterima dari supplier.')) return;
+    if (!confirm('Lanjutkan ke tahap berikutnya?')) return;
     $.post('{?=url(ADMIN."/logistik_non_medis/siapambilsppb")?}', {no_sppb: no_sppb}, function(res) {
         try {
             var data = JSON.parse(res);
@@ -220,20 +273,131 @@ function siapAmbil(no_sppb) {
 }
 
 function selesaikanSppb(no_sppb) {
-    if (!confirm('Konfirmasi bahwa unit sudah mengambil barang ini? Status akan berubah ke Selesai.')) return;
-    $.post('{?=url(ADMIN."/logistik_non_medis/selesaikansppb")?}', {no_sppb: no_sppb}, function(res) {
+    $('#selesai_no_sppb').val(no_sppb);
+    $('#selesai_no_sppb_display').val(no_sppb);
+    $('#selesai_diambil_oleh').val('');
+    $('#stok-fisik-items').empty();
+    $('#modal-selesai-sppb').modal('show');
+    setTimeout(function() { $('#selesai_diambil_oleh').focus(); }, 400);
+}
+
+function sppbEscapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, function(ch) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch];
+    });
+}
+
+function sppbFormatQty(value) {
+    var num = parseFloat(value || 0);
+    if (isNaN(num)) num = 0;
+    return num.toLocaleString('id-ID', {maximumFractionDigits: 2});
+}
+
+function sppbParseJsonResponse(res) {
+    if (typeof res === 'object') return res;
+    var text = String(res || '').trim();
+    try {
+        return JSON.parse(text);
+    } catch(e) {
+        var first = text.indexOf('{');
+        var last = text.lastIndexOf('}');
+        if (first !== -1 && last !== -1 && last > first) {
+            return JSON.parse(text.substring(first, last + 1));
+        }
+        throw e;
+    }
+}
+
+function openStokFisikModal(items) {
+    var rows = '';
+    $.each(items || [], function(_, item) {
+        var qty = parseFloat(item.qty || 0);
+        var stokSistem = parseFloat(item.stok_sistem || 0);
+        var kurang = parseFloat(item.kurang || (qty - stokSistem));
+        rows += '<tr>' +
+            '<td><strong>' + sppbEscapeHtml(item.nama_barang) + '</strong><br><small class="text-muted">' + sppbEscapeHtml(item.kode_item) + '</small></td>' +
+            '<td class="text-right">' + sppbFormatQty(qty) + '</td>' +
+            '<td class="text-right">' + sppbFormatQty(stokSistem) + '</td>' +
+            '<td class="text-right text-danger">' + sppbFormatQty(kurang) + '</td>' +
+            '<td><input type="number" min="' + qty + '" step="0.01" class="form-control stok-fisik-input" data-kode="' + sppbEscapeHtml(item.kode_item) + '" data-qty="' + qty + '" value="' + qty + '"></td>' +
+            '</tr>';
+    });
+    $('#stok-fisik-items').html(rows);
+    $('#modal-selesai-sppb').modal('hide');
+    setTimeout(function() {
+        $('#modal-stok-fisik-sppb').modal('show');
+        setTimeout(function() { $('#stok-fisik-items .stok-fisik-input:first').focus().select(); }, 400);
+    }, 250);
+}
+
+function submitSelesaiSppb(stokFisik) {
+    var btn = stokFisik ? $('#btn-submit-stok-fisik-sppb') : $('#btn-submit-selesai-sppb');
+    var no_sppb = $('#selesai_no_sppb').val();
+    var diambilOleh = $('#selesai_diambil_oleh').val().trim();
+
+    if (diambilOleh === '') {
+        showNotif('error', 'Nama pengambil barang wajib diisi.');
+        $('#selesai_diambil_oleh').focus();
+        return;
+    }
+
+    btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+    var postData = {no_sppb: no_sppb, diambil_oleh: diambilOleh};
+    if (stokFisik) postData.stok_fisik = stokFisik;
+
+    $.post('{?=url(ADMIN."/logistik_non_medis/selesaikansppb")?}', postData, function(res) {
         try {
-            var data = JSON.parse(res);
+            var data = sppbParseJsonResponse(res);
             if (data.status === 'success') {
+                $('#modal-selesai-sppb').modal('hide');
+                $('#modal-stok-fisik-sppb').modal('hide');
                 loadDisplay();
                 if ($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
                 showNotif('success', 'Permintaan selesai!');
+            } else if (data.status === 'need_adjustment') {
+                openStokFisikModal(data.items || []);
             } else {
                 showNotif('error', data.message || 'Gagal.');
             }
-        } catch(e) { showNotif('error', 'Kesalahan server.'); }
+        } catch(e) { showNotif('error', 'Respons server tidak valid. Silakan refresh halaman.'); }
+        if (stokFisik) {
+            btn.prop('disabled', false).html('<i class="fa fa-check"></i> Simpan Penyesuaian & Pengambilan');
+        } else {
+            btn.prop('disabled', false).html('<i class="fa fa-check"></i> Simpan Pengambilan');
+        }
     });
 }
+
+$(document).off('click.selesaiSppb', '#btn-submit-selesai-sppb').on('click.selesaiSppb', '#btn-submit-selesai-sppb', function() {
+    submitSelesaiSppb(null);
+});
+
+$(document).off('click.stokFisikSppb', '#btn-submit-stok-fisik-sppb').on('click.stokFisikSppb', '#btn-submit-stok-fisik-sppb', function() {
+    var stokFisik = {};
+    var valid = true;
+    $('#stok-fisik-items .stok-fisik-input').each(function() {
+        var input = $(this);
+        var kode = input.data('kode');
+        var qty = parseFloat(input.data('qty') || 0);
+        var nilai = parseFloat(input.val() || 0);
+        if (isNaN(nilai) || nilai < qty) {
+            valid = false;
+            input.focus();
+            showNotif('error', 'Stok fisik minimal sama dengan jumlah diminta.');
+            return false;
+        }
+        stokFisik[kode] = nilai;
+    });
+    if (!valid) return;
+    submitSelesaiSppb(stokFisik);
+});
+
+$(document).off('keypress.selesaiSppb', '#selesai_diambil_oleh').on('keypress.selesaiSppb', '#selesai_diambil_oleh', function(e) {
+    if (e.which == 13) {
+        e.preventDefault();
+        $('#btn-submit-selesai-sppb').click();
+    }
+});
 
 function showNotif(type, msg) {
     var cls = type === 'success' ? 'alert-success' : 'alert-danger';

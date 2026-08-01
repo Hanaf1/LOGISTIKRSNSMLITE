@@ -3,15 +3,17 @@
     <h4 class="modal-title">Usulan Perencanaan Kebutuhan (RKBU)</h4>
 </div>
 <form id="formPerencanaan" method="post" action="#">
+    <input type="hidden" name="kode_perencanaan_original" value="{$perencanaan.kode_perencanaan}">
     <div class="modal-body">
         <div class="row">
             <div class="col-md-5">
                 <div class="form-group">
-                    <label>Unit/Departemen</label>
-                    <select name="kode_unit" id="form_kode_unit" class="form-control select2-main" required style="width: 100%;">
-                        <option value="">-- Pilih Unit --</option>
-                        {loop: $units as $u}
-                        <option value="{$u.kode_unit}" {if: $u.kode_unit == $perencanaan.kode_unit}selected{/if}>{$u.nama_unit}</option>
+                    <label>Kelompok Barang</label>
+                    <input type="hidden" name="kode_unit" value="{$perencanaan.kode_unit}">
+                    <select name="kelompok_barang" id="form_kelompok_barang" class="form-control select2-main" required style="width: 100%;">
+                        <option value="">-- Pilih Kelompok Barang --</option>
+                        {loop: $kelompok_barang as $kelompok}
+                        <option value="{$kelompok}" {if: $kelompok == $perencanaan.kelompok_barang}selected{/if}>{$kelompok}</option>
                         {/loop}
                     </select>
                 </div>
@@ -94,12 +96,24 @@
 <script>
 var rowCount = 0;
 var activeRowIndex = -1;
+var itemsPerencanaan = {?=json_encode($items)?};
 
 // Set form action using mlite global
 $('#formPerencanaan').attr('action', mlite.url + '/' + mlite.admin + '/logistik_non_medis/formperencanaan?t=' + mlite.token);
 
 // Initialize select2
 $('.select2-main').select2({ dropdownParent: $('#modalForm') });
+
+$('#form_kelompok_barang').on('change', function() {
+    $('.item-select').each(function() {
+        var currentValue = $(this).val();
+        $(this).html(buildItemOptions(currentValue));
+        if ($(this).find('option:selected').length === 0 || $(this).find('option:selected').prop('disabled')) {
+            $(this).val('');
+        }
+        $(this).trigger('change.select2');
+    });
+});
 
 // Select current month
 var currentMonth = "{?=isset($perencanaan['bulan']) ? $perencanaan['bulan'] : date('m')?}";
@@ -128,17 +142,14 @@ function addTableRow(data = null) {
         <tr id="row_${index}">
             <td>
                 <select name="items[${index}][kode_item]" class="form-control select2-row item-select" data-index="${index}" required style="width: 100%;">
-                    <option value="">-- Cari Barang --</option>
-                    {loop: $items as $item}
-                    <option value="{$item.kode_item}" data-harga="{$item.harga_referensi}" ${kode_item == '{$item.kode_item}' ? 'selected' : ''}>{$item.nama_barang} ({$item.kode_item})</option>
-                    {/loop}
+                    ${buildItemOptions(kode_item)}
                 </select>
             </td>
             <td>
-                <input type="text" name="items[${index}][harga_referensi]" class="form-control rupiah-input" id="harga_${index}" value="${harga ? formatRupiah(harga, 'Rp. ') : ''}" placeholder="Rp. 0">
+                <input type="number" name="items[${index}][pemakaian_lalu]" class="form-control" value="${data ? (data.pemakaian_lalu || 0) : 0}" readonly>
             </td>
             <td>
-                <input type="number" name="items[${index}][pemakaian_lalu]" class="form-control" value="${data ? (data.pemakaian_lalu || 0) : 0}" readonly>
+                <input type="text" name="items[${index}][harga_referensi]" class="form-control rupiah-input" id="harga_${index}" value="${harga ? formatRupiah(harga, 'Rp. ') : ''}" placeholder="Rp. 0">
             </td>
             <td>
                 <select name="items[${index}][prioritas]" class="form-control">
@@ -166,6 +177,37 @@ function addTableRow(data = null) {
             $(`#harga_${index}`).val(formatRupiah(p.toString(), 'Rp. '));
         }
     });
+}
+
+function buildItemOptions(selectedKode) {
+    var selectedKelompok = $('#form_kelompok_barang').val();
+    var html = '<option value="">-- Cari Barang --</option>';
+    if (!selectedKelompok) {
+        return html + '<option value="" disabled>Pilih kelompok barang dulu</option>';
+    }
+
+    $.each(itemsPerencanaan, function(_, item) {
+        var kategori = item.kelompok_barang || item.kategori || '';
+        if (kategori !== selectedKelompok && item.kode_item !== selectedKode) {
+            return;
+        }
+
+        var selected = item.kode_item === selectedKode ? ' selected' : '';
+        html += '<option value="' + escapeHtml(item.kode_item) + '" data-harga="' + escapeHtml(item.harga_referensi || 0) + '"' + selected + '>' +
+            escapeHtml(item.nama_barang || '') + ' (' + escapeHtml(item.kode_item || '') + ')' +
+            '</option>';
+    });
+
+    return html;
+}
+
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 // Global Rupiah Listener

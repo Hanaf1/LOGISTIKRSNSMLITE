@@ -170,7 +170,7 @@ $(document).ready(function() {
             tbody.append('<tr><td colspan="5" class="text-center">Belum ada rincian barang.</td></tr>');
         } else {
             items.forEach(function(item, index) {
-                var nama = barangMap[item.kode_item] || item.kode_item;
+                var nama = item.nama_barang || barangMap[item.kode_item] || item.kode_item;
                 var subtotal = parseFloat(item.qty_pesan) * parseFloat(item.harga_satuan);
                 item.subtotal = subtotal; // update object
                 total_nilai += subtotal;
@@ -276,7 +276,7 @@ $(document).ready(function() {
         });
     });
 
-    $('#btn-tambahkan-pr').click(function() {
+    $('#btn-tambahkan-perencanaan, #btn-tambahkan-pr').click(function() {
         $('.chk-pr:checked').each(function() {
             var pr = $(this).data('pr');
             // Check if already in items
@@ -286,6 +286,7 @@ $(document).ready(function() {
                     id_pr: pr.id,
                     no_pr: pr.no_pr,
                     kode_item: pr.kode_item,
+                    nama_barang: pr.nama_barang,
                     qty_pesan: pr.jumlah,
                     qty_diterima: 0,
                     harga_satuan: pr.harga_referensi,
