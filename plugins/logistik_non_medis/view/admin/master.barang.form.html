@@ -24,6 +24,13 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Tipe Barang / Klasifikasi <span class="text-danger">*</span></label>
+                    <select name="tipe_barang" class="form-control" required>
+                        <option value="Habis Pakai" {if: $barang.tipe_barang == 'Habis Pakai' || empty($barang.tipe_barang)}selected{/if}>Habis Pakai (Consumable - Sabun, ATK, Lampu)</option>
+                        <option value="Aset" {if: $barang.tipe_barang == 'Aset'}selected{/if}>Aset (Capital Asset - AC, Printer, Komputer)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Satuan Dasar</label>
                     <select name="satuan_dasar" class="form-control select2" style="width:100%" id="select-satuan-dasar" required>
                         <option value="">-- Pilih Satuan --</option>

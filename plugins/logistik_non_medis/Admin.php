@@ -116,6 +116,7 @@ class Admin extends AdminModule
 
           $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
           $role = $userRoleData['role'] ?? 'unit';
+
           $permsData = $this->db('rsns_custom_logistik_non_medis_role_permissions')->where('role', $role)->oneArray();
           $permissions = explode(',', $permsData['permissions'] ?? 'manage');
 
@@ -385,6 +386,7 @@ class Admin extends AdminModule
         'masterrekanan' => 'Data Rekanan Jasa',
         'mastercoa' => 'Kode Akun (COA)',
         'pengadaanperencanaan' => 'Perencanaan Pengadaan',
+        'pengadaanpr' => 'Permintaan (PR)',
         'pengadaanvendor' => 'Manajemen Vendor',
         'pengadaanpo' => 'Purchase Order (PO)',
         'pengadaanekatalog' => 'E-Katalog',
@@ -525,6 +527,7 @@ class Admin extends AdminModule
 
   public function postSaveRolePermissions()
   {
+      $this->_initUserRoles();
       $permissions = $_POST['permissions'] ?? [];
 
       $roles = ['admin', 'logistik', 'gudang', 'aset', 'unit', 'kepala_unit', 'kepala_sie', 'kepala_bidang'];
@@ -560,6 +563,7 @@ class Admin extends AdminModule
     $username = $this->core->getUserInfo('username', null, true);
     $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
     $role = $userRoleData['role'] ?? 'unit';
+    
     $permsData = $this->db('rsns_custom_logistik_non_medis_role_permissions')->where('role', $role)->oneArray();
     $permissions = explode(',', $permsData['permissions'] ?? 'manage');
     $hakakses_access = in_array('hakakses', $permissions);
@@ -894,6 +898,16 @@ class Admin extends AdminModule
           $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_master_barang` ADD `default_kode_lokasi` varchar(50) DEFAULT NULL AFTER `dokumen` ");
       }
 
+      $check_tipe = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_master_barang` LIKE 'tipe_barang'")->fetch();
+      if (!$check_tipe) {
+          $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_master_barang` ADD `tipe_barang` enum('Habis Pakai','Aset') NOT NULL DEFAULT 'Habis Pakai' AFTER `kategori` ");
+      }
+
+      $check_jenis = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_master_barang` LIKE 'jenis_item'")->fetch();
+      if (!$check_jenis) {
+          $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_master_barang` ADD `jenis_item` enum('Rutin','Non Rutin') NOT NULL DEFAULT 'Rutin' AFTER `kategori` ");
+      }
+
       $upload_dir = UPLOADS . '/logistik_non_medis';
       if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
       if (!is_dir($upload_dir . '/foto')) mkdir($upload_dir . '/foto', 0777, true);
@@ -994,6 +1008,8 @@ class Admin extends AdminModule
               'deskripsi' => '',
               'spesifikasi' => '',
               'kategori' => '',
+              'tipe_barang' => 'Habis Pakai',
+              'jenis_item' => 'Rutin',
               'sub_kategori' => '',
               'satuan_dasar' => '',
               'satuan_konversi' => '',
@@ -1039,32 +1055,34 @@ class Admin extends AdminModule
           'sub_kategori' => $_POST['sub_kategori'] ?? '',
           'satuan_dasar' => $_POST['satuan_dasar'] ?? '',
           'satuan_konversi' => $_POST['satuan_konversi'] ?? '',
-          'harga_referensi' => str_replace(['Rp.', '.'], '', $_POST['harga_referensi'] ?? 0),
+          'harga_referensi' => preg_replace('/[^0-9]/', '', $_POST['harga_referensi'] ?? '0'),
           'stok_min' => $_POST['stok_min'] ?? 0,
           'stok_max' => $_POST['stok_max'] ?? 0,
           'safety_stock' => $_POST['safety_stock'] ?? 0,
-          'default_kode_lokasi' => $_POST['default_kode_lokasi'] ?? NULL,
+          'default_kode_lokasi' => !empty($_POST['default_kode_lokasi']) ? $_POST['default_kode_lokasi'] : NULL,
           'status' => $_POST['status'] ?? 'Aktif'
       ];
 
-      // Logging Feature
-      $user = $this->core->getUserInfo('username', null, true);
-      $tanggal_log = date('Y-m-d H:i:s');
-      $ip = $_SERVER['REMOTE_ADDR'];
-      $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-      $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-      $log_lokasi = ''.$hostname.' | '.$ip.'';
-      $logdata = ''.$data['kode_item'].' | '.$data['barcode'].' | '.$data['nama_barang'].' | '.$data['deskripsi'].' | '.$data['spesifikasi'].' | '.$data['kategori'].' | '.$data['sub_kategori'].' | '.$data['satuan_dasar'].' | '.$data['satuan_konversi'].' | '.$data['harga_referensi'].' | '.$data['status'].' | '.$user.'';
+      // Logging Feature (wrapped in try-catch so it won't crash saving)
+      try {
+          $user = $this->core->getUserInfo('username', null, true);
+          $tanggal_log = date('Y-m-d H:i:s');
+          $ip = $_SERVER['REMOTE_ADDR'];
+          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+          $log_lokasi = ''.$hostname.' | '.$ip.'';
+          $logdata = ''.$data['kode_item'].' | '.$data['barcode'].' | '.$data['nama_barang'].' | '.$data['deskripsi'].' | '.$data['spesifikasi'].' | '.$data['kategori'].' | '.$data['sub_kategori'].' | '.$data['satuan_dasar'].' | '.$data['satuan_konversi'].' | '.$data['harga_referensi'].' | '.$data['status'].' | '.$user.'';
 
-      $this->db('mlite_tracksql')->save([
-          'log_id' => NULL,
-          'log_modul' => 'logistik_non_medis_master_barang',
-          'log_waktu' => $tanggal_log,
-          'log_location' => $log_lokasi,
-          'log_data' => $logdata,
-          'log_status' => (isset($_POST['kode_item']) && $this->db('rsns_custom_logistik_non_medis_master_barang')->where('kode_item', $_POST['kode_item'])->oneArray()) ? 'U' : 'I',
-          'log_username' => $user
-      ]);
+          $this->db('mlite_tracksql')->save([
+              'log_id' => NULL,
+              'log_modul' => 'logistik_non_medis_master_barang',
+              'log_waktu' => $tanggal_log,
+              'log_location' => $log_lokasi,
+              'log_data' => $logdata,
+              'log_status' => (isset($_POST['kode_item']) && $this->db('rsns_custom_logistik_non_medis_master_barang')->where('kode_item', $_POST['kode_item'])->oneArray()) ? 'U' : 'I',
+              'log_username' => $user
+          ]);
+      } catch (\Throwable $e) {}
 
       $upload_dir = UPLOADS . '/logistik_non_medis';
       if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
@@ -1076,7 +1094,7 @@ class Admin extends AdminModule
           $allowed_images = ['jpg', 'jpeg', 'png', 'gif'];
           $ext = strtolower(pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION));
           if(in_array($ext, $allowed_images)) {
-              $filename = 'foto_' . $kode_item . '_' . time() . '.' . $ext;
+              $filename = 'foto_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $kode_item) . '_' . time() . '.' . $ext;
               if(move_uploaded_file($_FILES['foto']['tmp_name'], $upload_dir . '/foto/' . $filename)) {
                   $data['foto'] = $filename;
               } else {
@@ -1093,7 +1111,7 @@ class Admin extends AdminModule
           $allowed_docs = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'];
           $ext = strtolower(pathinfo($_FILES['dokumen']['name'], PATHINFO_EXTENSION));
           if(in_array($ext, $allowed_docs)) {
-              $filename = 'dok_' . $kode_item . '_' . time() . '.' . $ext;
+              $filename = 'dok_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $kode_item) . '_' . time() . '.' . $ext;
               if(move_uploaded_file($_FILES['dokumen']['tmp_name'], $upload_dir . '/dokumen/' . $filename)) {
                   $data['dokumen'] = $filename;
               } else {
@@ -1109,18 +1127,71 @@ class Admin extends AdminModule
       $cek = $this->db('rsns_custom_logistik_non_medis_master_barang')->where('kode_item', $kode_item)->oneArray();
       
       if (!$cek) {
-          $query = $this->db('rsns_custom_logistik_non_medis_master_barang')->save($data);
+          $stmt = $this->db()->pdo()->prepare("INSERT INTO `rsns_custom_logistik_non_medis_master_barang` (`kode_item`, `barcode`, `nama_barang`, `deskripsi`, `spesifikasi`, `kategori`, `tipe_barang`, `jenis_item`, `sub_kategori`, `satuan_dasar`, `satuan_konversi`, `harga_referensi`, `stok_min`, `stok_max`, `safety_stock`, `foto`, `dokumen`, `default_kode_lokasi`, `status`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+          $query = $stmt->execute([
+              $data['kode_item'],
+              $data['barcode'],
+              $data['nama_barang'],
+              $data['deskripsi'],
+              $data['spesifikasi'],
+              $data['kategori'],
+              $data['tipe_barang'],
+              $data['jenis_item'],
+              $data['sub_kategori'],
+              $data['satuan_dasar'],
+              $data['satuan_konversi'],
+              $data['harga_referensi'],
+              $data['stok_min'],
+              $data['stok_max'],
+              $data['safety_stock'],
+              $data['foto'] ?? '',
+              $data['dokumen'] ?? '',
+              $data['default_kode_lokasi'],
+              $data['status']
+          ]);
       } else {
           if(isset($data['foto']) && !empty($cek['foto']) && file_exists($upload_dir . '/foto/' . $cek['foto'])) {
-              unlink($upload_dir . '/foto/' . $cek['foto']);
+              @unlink($upload_dir . '/foto/' . $cek['foto']);
           }
           if(isset($data['dokumen']) && !empty($cek['dokumen']) && file_exists($upload_dir . '/dokumen/' . $cek['dokumen'])) {
-              unlink($upload_dir . '/dokumen/' . $cek['dokumen']);
+              @unlink($upload_dir . '/dokumen/' . $cek['dokumen']);
           }
-          $query = $this->db('rsns_custom_logistik_non_medis_master_barang')->where('kode_item', $kode_item)->update($data);
+
+          $setSql = "UPDATE `rsns_custom_logistik_non_medis_master_barang` SET `barcode`=?, `nama_barang`=?, `deskripsi`=?, `spesifikasi`=?, `kategori`=?, `tipe_barang`=?, `jenis_item`=?, `sub_kategori`=?, `satuan_dasar`=?, `satuan_konversi`=?, `harga_referensi`=?, `stok_min`=?, `stok_max`=?, `safety_stock`=?, `default_kode_lokasi`=?, `status`=?";
+          $params = [
+              $data['barcode'],
+              $data['nama_barang'],
+              $data['deskripsi'],
+              $data['spesifikasi'],
+              $data['kategori'],
+              $data['tipe_barang'],
+              $data['jenis_item'],
+              $data['sub_kategori'],
+              $data['satuan_dasar'],
+              $data['satuan_konversi'],
+              $data['harga_referensi'],
+              $data['stok_min'],
+              $data['stok_max'],
+              $data['safety_stock'],
+              $data['default_kode_lokasi'],
+              $data['status']
+          ];
+          if(isset($data['foto'])) {
+              $setSql .= ", `foto`=?";
+              $params[] = $data['foto'];
+          }
+          if(isset($data['dokumen'])) {
+              $setSql .= ", `dokumen`=?";
+              $params[] = $data['dokumen'];
+          }
+          $setSql .= " WHERE `kode_item`=?";
+          $params[] = $kode_item;
+
+          $stmt = $this->db()->pdo()->prepare($setSql);
+          $query = $stmt->execute($params);
       }
 
-      if($query) {
+      if($query !== false) {
           echo json_encode(['status' => 'success']);
       } else {
           echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data ke database']);
@@ -1131,38 +1202,42 @@ class Admin extends AdminModule
   public function postHapusMasterBarang()
   {
       $kode_item = $_POST['kode_item'] ?? '';
+      if(empty($kode_item)) {
+          echo json_encode(['status' => 'error', 'message' => 'Kode barang tidak boleh kosong.']);
+          exit();
+      }
+
       $cek = $this->db('rsns_custom_logistik_non_medis_master_barang')->where('kode_item', $kode_item)->oneArray();
       if($cek) {
-          // Logging
-          $user = $this->core->getUserInfo('username', null, true);
-          $tanggal_log = date('Y-m-d H:i:s');
-          $ip = $_SERVER['REMOTE_ADDR'];
-          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-          $log_lokasi = ''.$hostname.' | '.$ip.'';
-          $logdata = ''.$cek['kode_item'].' | '.$cek['nama_barang'].' | '.$user.'';
-
-          $this->db('mlite_tracksql')->save([
-              'log_id' => NULL,
-              'log_modul' => 'logistik_non_medis_master_barang',
-              'log_waktu' => $tanggal_log,
-              'log_location' => $log_lokasi,
-              'log_data' => $logdata,
-              'log_status' => 'D',
-              'log_username' => $user
-          ]);
-
           $upload_dir = UPLOADS . '/logistik_non_medis';
           if(!empty($cek['foto']) && file_exists($upload_dir . '/foto/' . $cek['foto'])) {
-              unlink($upload_dir . '/foto/' . $cek['foto']);
+              @unlink($upload_dir . '/foto/' . $cek['foto']);
           }
           if(!empty($cek['dokumen']) && file_exists($upload_dir . '/dokumen/' . $cek['dokumen'])) {
-              unlink($upload_dir . '/dokumen/' . $cek['dokumen']);
+              @unlink($upload_dir . '/dokumen/' . $cek['dokumen']);
           }
-          $this->db('rsns_custom_logistik_non_medis_master_barang')->where('kode_item', $kode_item)->delete();
+
+          // Delete from master_barang using direct PDO prepare/execute
+          $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_master_barang` WHERE `kode_item` = ?");
+          $exec = $stmt->execute([$kode_item]);
+
+          // Also delete from stok_batch if table exists
+          try {
+              $stmt_stok = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_stok_batch` WHERE `kode_item` = ?");
+              $stmt_stok->execute([$kode_item]);
+          } catch (\Throwable $e) {}
+
+          if ($exec) {
+              echo json_encode(['status' => 'success']);
+          } else {
+              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data dari database.']);
+          }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data barang tidak ditemukan.']);
       }
       exit();
   }
+
 
   private function _initVendor()
   {
@@ -1333,24 +1408,26 @@ class Admin extends AdminModule
           'status' => $_POST['status'] ?? 'Whitelist'
       ];
 
-      // Logging
-      $user = $this->core->getUserInfo('username', null, true);
-      $tanggal_log = date('Y-m-d H:i:s');
-      $ip = $_SERVER['REMOTE_ADDR'];
-      $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-      $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-      $log_lokasi = ''.$hostname.' | '.$ip.'';
-      $logdata = ''.$data['kode_vendor'].' | '.$data['nama_vendor'].' | '.$data['alamat'].' | '.$data['no_telp'].' | '.$data['email'].' | '.$data['website'].' | '.$data['npwp'].' | '.$data['siup'].' | '.$data['status_pkp'].' | '.$data['nama_bank'].' | '.$data['no_rekening'].' | '.$data['nama_rekening'].' | '.$data['pic_nama'].' | '.$data['pic_kontak'].' | '.$data['kategori_vendor'].' | '.$data['rating'].' | '.$data['evaluasi'].' | '.$data['status'].' | '.$user.'';
+      // Logging (wrapped in try-catch)
+      try {
+          $user = $this->core->getUserInfo('username', null, true);
+          $tanggal_log = date('Y-m-d H:i:s');
+          $ip = $_SERVER['REMOTE_ADDR'];
+          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+          $log_lokasi = ''.$hostname.' | '.$ip.'';
+          $logdata = ''.$data['kode_vendor'].' | '.$data['nama_vendor'].' | '.$data['alamat'].' | '.$data['no_telp'].' | '.$data['email'].' | '.$data['website'].' | '.$data['npwp'].' | '.$data['siup'].' | '.$data['status_pkp'].' | '.$data['nama_bank'].' | '.$data['no_rekening'].' | '.$data['nama_rekening'].' | '.$data['pic_nama'].' | '.$data['pic_kontak'].' | '.$data['kategori_vendor'].' | '.$data['rating'].' | '.$data['evaluasi'].' | '.$data['status'].' | '.$user.'';
 
-      $this->db('mlite_tracksql')->save([
-          'log_id' => NULL,
-          'log_modul' => 'logistik_non_medis_master_vendor',
-          'log_waktu' => $tanggal_log,
-          'log_location' => $log_lokasi,
-          'log_data' => $logdata,
-          'log_status' => (isset($_POST['kode_vendor']) && $this->db('rsns_custom_logistik_non_medis_vendor')->where('kode_vendor', $_POST['kode_vendor'])->oneArray()) ? 'U' : 'I',
-          'log_username' => $user
-      ]);
+          $this->db('mlite_tracksql')->save([
+              'log_id' => NULL,
+              'log_modul' => 'logistik_non_medis_master_vendor',
+              'log_waktu' => $tanggal_log,
+              'log_location' => $log_lokasi,
+              'log_data' => $logdata,
+              'log_status' => (isset($_POST['kode_vendor']) && $this->db('rsns_custom_logistik_non_medis_vendor')->where('kode_vendor', $_POST['kode_vendor'])->oneArray()) ? 'U' : 'I',
+              'log_username' => $user
+          ]);
+      } catch (\Throwable $e) {}
 
       $upload_dir = UPLOADS . '/logistik_non_medis/vendor';
       if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
@@ -1363,7 +1440,7 @@ class Admin extends AdminModule
       if(isset($_FILES['file_npwp']) && $_FILES['file_npwp']['error'] == 0) {
           $ext = strtolower(pathinfo($_FILES['file_npwp']['name'], PATHINFO_EXTENSION));
           if(in_array($ext, $allowed_ext)) {
-              $filename = 'npwp_' . $kode_vendor . '_' . time() . '.' . $ext;
+              $filename = 'npwp_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $kode_vendor) . '_' . time() . '.' . $ext;
               if(move_uploaded_file($_FILES['file_npwp']['tmp_name'], $upload_path . '/' . $filename)) {
                   $data['file_npwp'] = $filename;
               } else {
@@ -1379,7 +1456,7 @@ class Admin extends AdminModule
       if(isset($_FILES['file_siup']) && $_FILES['file_siup']['error'] == 0) {
           $ext = strtolower(pathinfo($_FILES['file_siup']['name'], PATHINFO_EXTENSION));
           if(in_array($ext, $allowed_ext)) {
-              $filename = 'siup_' . $kode_vendor . '_' . time() . '.' . $ext;
+              $filename = 'siup_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $kode_vendor) . '_' . time() . '.' . $ext;
               if(move_uploaded_file($_FILES['file_siup']['tmp_name'], $upload_path . '/' . $filename)) {
                   $data['file_siup'] = $filename;
               } else {
@@ -1399,15 +1476,15 @@ class Admin extends AdminModule
       } else {
           // Cleanup old files if new ones uploaded
           if(isset($data['file_npwp']) && !empty($cek['file_npwp']) && file_exists($upload_dir . '/' . $cek['file_npwp'])) {
-              unlink($upload_dir . '/' . $cek['file_npwp']);
+              @unlink($upload_dir . '/' . $cek['file_npwp']);
           }
           if(isset($data['file_siup']) && !empty($cek['file_siup']) && file_exists($upload_dir . '/' . $cek['file_siup'])) {
-              unlink($upload_dir . '/' . $cek['file_siup']);
+              @unlink($upload_dir . '/' . $cek['file_siup']);
           }
           $query = $this->db('rsns_custom_logistik_non_medis_vendor')->where('kode_vendor', $kode_vendor)->update($data);
       }
 
-      if($query) {
+      if($query !== false) {
           echo json_encode(['status' => 'success']);
       } else {
           echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data ke database']);
@@ -1418,35 +1495,52 @@ class Admin extends AdminModule
   public function postHapusMasterVendor()
   {
       $kode_vendor = $_POST['kode_vendor'] ?? '';
+      if(empty($kode_vendor)) {
+          echo json_encode(['status' => 'error', 'message' => 'Kode vendor tidak boleh kosong.']);
+          exit();
+      }
+
       $cek = $this->db('rsns_custom_logistik_non_medis_vendor')->where('kode_vendor', $kode_vendor)->oneArray();
       if($cek) {
-          // Logging
-          $user = $this->core->getUserInfo('username', null, true);
-          $tanggal_log = date('Y-m-d H:i:s');
-          $ip = $_SERVER['REMOTE_ADDR'];
-          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-          $log_lokasi = ''.$hostname.' | '.$ip.'';
-          $logdata = ''.$cek['kode_vendor'].' | '.$cek['nama_vendor'].' | '.$cek['alamat'].' | '.$cek['no_telp'].' | '.$cek['email'].' | '.$cek['website'].' | '.$cek['npwp'].' | '.$cek['siup'].' | '.$cek['status_pkp'].' | '.$cek['nama_bank'].' | '.$cek['no_rekening'].' | '.$cek['nama_rekening'].' | '.$cek['pic_nama'].' | '.$cek['pic_kontak'].' | '.$cek['kategori_vendor'].' | '.$cek['rating'].' | '.$cek['evaluasi'].' | '.$cek['status'].' | '.$user.'';
+          // Logging (wrapped in try-catch)
+          try {
+              $user = $this->core->getUserInfo('username', null, true);
+              $tanggal_log = date('Y-m-d H:i:s');
+              $ip = $_SERVER['REMOTE_ADDR'];
+              $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+              $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+              $log_lokasi = ''.$hostname.' | '.$ip.'';
+              $logdata = ''.$cek['kode_vendor'].' | '.$cek['nama_vendor'].' | '.$cek['alamat'].' | '.$cek['no_telp'].' | '.$cek['email'].' | '.$cek['website'].' | '.$cek['npwp'].' | '.$cek['siup'].' | '.$cek['status_pkp'].' | '.$cek['nama_bank'].' | '.$cek['no_rekening'].' | '.$cek['nama_rekening'].' | '.$cek['pic_nama'].' | '.$cek['pic_kontak'].' | '.$cek['kategori_vendor'].' | '.$cek['rating'].' | '.$cek['evaluasi'].' | '.$cek['status'].' | '.$user.'';
 
-          $this->db('mlite_tracksql')->save([
-              'log_id' => NULL,
-              'log_modul' => 'logistik_non_medis_master_vendor',
-              'log_waktu' => $tanggal_log,
-              'log_location' => $log_lokasi,
-              'log_data' => $logdata,
-              'log_status' => 'D',
-              'log_username' => $user
-          ]);
+              $this->db('mlite_tracksql')->save([
+                  'log_id' => NULL,
+                  'log_modul' => 'logistik_non_medis_master_vendor',
+                  'log_waktu' => $tanggal_log,
+                  'log_location' => $log_lokasi,
+                  'log_data' => $logdata,
+                  'log_status' => 'D',
+                  'log_username' => $user
+              ]);
+          } catch (\Throwable $e) {}
 
           $upload_dir = UPLOADS . '/logistik_non_medis/vendor';
           if(!empty($cek['file_npwp']) && file_exists($upload_dir . '/' . $cek['file_npwp'])) {
-              unlink($upload_dir . '/' . $cek['file_npwp']);
+              @unlink($upload_dir . '/' . $cek['file_npwp']);
           }
           if(!empty($cek['file_siup']) && file_exists($upload_dir . '/' . $cek['file_siup'])) {
-              unlink($upload_dir . '/' . $cek['file_siup']);
+              @unlink($upload_dir . '/' . $cek['file_siup']);
           }
-          $this->db('rsns_custom_logistik_non_medis_vendor')->where('kode_vendor', $kode_vendor)->delete();
+          
+          $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_vendor` WHERE `kode_vendor` = ?");
+          $exec = $stmt->execute([$kode_vendor]);
+          
+          if ($exec !== false) {
+              echo json_encode(['status' => 'success']);
+          } else {
+              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data dari database.']);
+          }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data vendor tidak ditemukan.']);
       }
       exit();
   }
@@ -1739,24 +1833,26 @@ class Admin extends AdminModule
           'status' => $_POST['status'] ?? 'Aktif'
       ];
 
-      // Logging
-      $user = $this->core->getUserInfo('username', null, true);
-      $tanggal_log = date('Y-m-d H:i:s');
-      $ip = $_SERVER['REMOTE_ADDR'];
-      $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-      $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-      $log_lokasi = ''.$hostname.' | '.$ip.'';
-      $logdata = ''.$data['kode_unit'].' | '.$data['nama_unit'].' | '.$user.'';
+      // Logging (wrapped in try-catch)
+      try {
+          $user = $this->core->getUserInfo('username', null, true);
+          $tanggal_log = date('Y-m-d H:i:s');
+          $ip = $_SERVER['REMOTE_ADDR'];
+          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+          $log_lokasi = ''.$hostname.' | '.$ip.'';
+          $logdata = ''.$data['kode_unit'].' | '.$data['nama_unit'].' | '.$user.'';
 
-      $this->db('mlite_tracksql')->save([
-          'log_id' => NULL,
-          'log_modul' => 'logistik_non_medis_unit',
-          'log_waktu' => $tanggal_log,
-          'log_location' => $log_lokasi,
-          'log_data' => $logdata,
-          'log_status' => (isset($_POST['id']) && !empty($_POST['id'])) ? 'U' : 'I',
-          'log_username' => $user
-      ]);
+          $this->db('mlite_tracksql')->save([
+              'log_id' => NULL,
+              'log_modul' => 'logistik_non_medis_unit',
+              'log_waktu' => $tanggal_log,
+              'log_location' => $log_lokasi,
+              'log_data' => $logdata,
+              'log_status' => (isset($_POST['id']) && !empty($_POST['id'])) ? 'U' : 'I',
+              'log_username' => $user
+          ]);
+      } catch (\Throwable $e) {}
 
       if (isset($_POST['id']) && !empty($_POST['id'])) {
           // Ambil PJ lama sebelum update untuk cleanup
@@ -1842,26 +1938,33 @@ class Admin extends AdminModule
   public function postHapusMasterUnit()
   {
       $id = $_POST['id'] ?? '';
+      if(empty($id)) {
+          echo json_encode(['status' => 'error', 'message' => 'ID unit tidak boleh kosong.']);
+          exit();
+      }
+
       $cek = $this->db('rsns_custom_logistik_non_medis_unit')->where('id', $id)->oneArray();
       if($cek) {
-          // Logging
-          $user = $this->core->getUserInfo('username', null, true);
-          $tanggal_log = date('Y-m-d H:i:s');
-          $ip = $_SERVER['REMOTE_ADDR'];
-          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-          $log_lokasi = ''.$hostname.' | '.$ip.'';
-          $logdata = ''.$cek['kode_unit'].' | '.$cek['nama_unit'].' | '.$user.'';
+          // Logging (wrapped in try-catch)
+          try {
+              $user = $this->core->getUserInfo('username', null, true);
+              $tanggal_log = date('Y-m-d H:i:s');
+              $ip = $_SERVER['REMOTE_ADDR'];
+              $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+              $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+              $log_lokasi = ''.$hostname.' | '.$ip.'';
+              $logdata = ''.$cek['kode_unit'].' | '.$cek['nama_unit'].' | '.$user.'';
 
-          $this->db('mlite_tracksql')->save([
-              'log_id' => NULL,
-              'log_modul' => 'logistik_non_medis_unit',
-              'log_waktu' => $tanggal_log,
-              'log_location' => $log_lokasi,
-              'log_data' => $logdata,
-              'log_status' => 'D',
-              'log_username' => $user
-          ]);
+              $this->db('mlite_tracksql')->save([
+                  'log_id' => NULL,
+                  'log_modul' => 'logistik_non_medis_unit',
+                  'log_waktu' => $tanggal_log,
+                  'log_location' => $log_lokasi,
+                  'log_data' => $logdata,
+                  'log_status' => 'D',
+                  'log_username' => $user
+              ]);
+          } catch (\Throwable $e) {}
 
           $this->db('rsns_custom_logistik_non_medis_unit')->where('id', $id)->delete();
 
@@ -2023,24 +2126,26 @@ class Admin extends AdminModule
           'status' => $_POST['status'] ?? 'Aktif'
       ];
 
-      // Logging
-      $user = $this->core->getUserInfo('username', null, true);
-      $tanggal_log = date('Y-m-d H:i:s');
-      $ip = $_SERVER['REMOTE_ADDR'];
-      $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-      $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-      $log_lokasi = ''.$hostname.' | '.$ip.'';
-      $logdata = ''.$data['kode_lokasi'].' | '.$data['nama_lokasi'].' | '.$user.'';
+      // Logging (wrapped in try-catch)
+      try {
+          $user = $this->core->getUserInfo('username', null, true);
+          $tanggal_log = date('Y-m-d H:i:s');
+          $ip = $_SERVER['REMOTE_ADDR'];
+          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+          $log_lokasi = ''.$hostname.' | '.$ip.'';
+          $logdata = ''.$data['kode_lokasi'].' | '.$data['nama_lokasi'].' | '.$user.'';
 
-      $this->db('mlite_tracksql')->save([
-          'log_id' => NULL,
-          'log_modul' => 'logistik_non_medis_lokasi_gudang',
-          'log_waktu' => $tanggal_log,
-          'log_location' => $log_lokasi,
-          'log_data' => $logdata,
-          'log_status' => (isset($_POST['id']) && !empty($_POST['id'])) ? 'U' : 'I',
-          'log_username' => $user
-      ]);
+          $this->db('mlite_tracksql')->save([
+              'log_id' => NULL,
+              'log_modul' => 'logistik_non_medis_lokasi_gudang',
+              'log_waktu' => $tanggal_log,
+              'log_location' => $log_lokasi,
+              'log_data' => $logdata,
+              'log_status' => (isset($_POST['id']) && !empty($_POST['id'])) ? 'U' : 'I',
+              'log_username' => $user
+          ]);
+      } catch (\Throwable $e) {}
 
       $upload_dir = UPLOADS . '/logistik_non_medis/lokasi';
       if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
@@ -2050,7 +2155,7 @@ class Admin extends AdminModule
           $allowed = ['jpg', 'jpeg', 'png', 'pdf'];
           $ext = strtolower(pathinfo($_FILES['denah_digital']['name'], PATHINFO_EXTENSION));
           if(in_array($ext, $allowed)) {
-              $filename = 'denah_' . $kode_lokasi . '_' . time() . '.' . $ext;
+              $filename = 'denah_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $kode_lokasi) . '_' . time() . '.' . $ext;
               if(move_uploaded_file($_FILES['denah_digital']['tmp_name'], $upload_dir . '/' . $filename)) {
                   $data['denah_digital'] = $filename;
               }
@@ -2060,14 +2165,14 @@ class Admin extends AdminModule
       if (isset($_POST['id']) && !empty($_POST['id'])) {
           $cek = $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('id', $_POST['id'])->oneArray();
           if(isset($data['denah_digital']) && !empty($cek['denah_digital']) && file_exists($upload_dir . '/' . $cek['denah_digital'])) {
-              unlink($upload_dir . '/' . $cek['denah_digital']);
+              @unlink($upload_dir . '/' . $cek['denah_digital']);
           }
           $query = $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('id', $_POST['id'])->update($data);
       } else {
           $query = $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->save($data);
       }
 
-      if($query) {
+      if($query !== false) {
           echo json_encode(['status' => 'success']);
       } else {
           echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data']);
@@ -2078,32 +2183,49 @@ class Admin extends AdminModule
   public function postHapusMasterLokasi()
   {
       $id = $_POST['id'] ?? '';
+      if(empty($id)) {
+          echo json_encode(['status' => 'error', 'message' => 'ID lokasi tidak boleh kosong.']);
+          exit();
+      }
+
       $cek = $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('id', $id)->oneArray();
       if($cek) {
-          // Logging
-          $user = $this->core->getUserInfo('username', null, true);
-          $tanggal_log = date('Y-m-d H:i:s');
-          $ip = $_SERVER['REMOTE_ADDR'];
-          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-          $log_lokasi = ''.$hostname.' | '.$ip.'';
-          $logdata = ''.$cek['kode_lokasi'].' | '.$cek['nama_lokasi'].' | '.$user.'';
+          // Logging (wrapped in try-catch)
+          try {
+              $user = $this->core->getUserInfo('username', null, true);
+              $tanggal_log = date('Y-m-d H:i:s');
+              $ip = $_SERVER['REMOTE_ADDR'];
+              $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+              $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+              $log_lokasi = ''.$hostname.' | '.$ip.'';
+              $logdata = ''.$cek['kode_lokasi'].' | '.$cek['nama_lokasi'].' | '.$user.'';
 
-          $this->db('mlite_tracksql')->save([
-              'log_id' => NULL,
-              'log_modul' => 'logistik_non_medis_lokasi_gudang',
-              'log_waktu' => $tanggal_log,
-              'log_location' => $log_lokasi,
-              'log_data' => $logdata,
-              'log_status' => 'D',
-              'log_username' => $user
-          ]);
+              $this->db('mlite_tracksql')->save([
+                  'log_id' => NULL,
+                  'log_modul' => 'logistik_non_medis_lokasi_gudang',
+                  'log_waktu' => $tanggal_log,
+                  'log_location' => $log_lokasi,
+                  'log_data' => $logdata,
+                  'log_status' => 'D',
+                  'log_username' => $user
+              ]);
+          } catch (\Throwable $e) {}
 
           $upload_dir = UPLOADS . '/logistik_non_medis/lokasi';
           if(!empty($cek['denah_digital']) && file_exists($upload_dir . '/' . $cek['denah_digital'])) {
-              unlink($upload_dir . '/' . $cek['denah_digital']);
+              @unlink($upload_dir . '/' . $cek['denah_digital']);
           }
-          $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('id', $id)->delete();
+          
+          $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_lokasi_gudang` WHERE `id` = ?");
+          $exec = $stmt->execute([$id]);
+
+          if ($exec !== false) {
+              echo json_encode(['status' => 'success']);
+          } else {
+              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data lokasi.']);
+          }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data lokasi tidak ditemukan.']);
       }
       exit();
   }
@@ -2201,24 +2323,26 @@ class Admin extends AdminModule
           'nilai_konversi' => $_POST['nilai_konversi'] ?? 1
       ];
 
-      // Logging
-      $user = $this->core->getUserInfo('username', null, true);
-      $tanggal_log = date('Y-m-d H:i:s');
-      $ip = $_SERVER['REMOTE_ADDR'];
-      $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-      $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-      $log_lokasi = ''.$hostname.' | '.$ip.'';
-      $logdata = ''.$data['kode_satuan'].' | '.$data['nama_satuan'].' | '.$data['satuan_dasar'].' | '.$data['nilai_konversi'].' | '.$user.'';
+      // Logging (wrapped in try-catch)
+      try {
+          $user = $this->core->getUserInfo('username', null, true);
+          $tanggal_log = date('Y-m-d H:i:s');
+          $ip = $_SERVER['REMOTE_ADDR'];
+          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+          $log_lokasi = ''.$hostname.' | '.$ip.'';
+          $logdata = ''.$data['kode_satuan'].' | '.$data['nama_satuan'].' | '.$data['satuan_dasar'].' | '.$data['nilai_konversi'].' | '.$user.'';
 
-      $this->db('mlite_tracksql')->save([
-          'log_id' => NULL,
-          'log_modul' => 'logistik_non_medis_satuan',
-          'log_waktu' => $tanggal_log,
-          'log_location' => $log_lokasi,
-          'log_data' => $logdata,
-          'log_status' => (isset($_POST['id']) && !empty($_POST['id'])) ? 'U' : 'I',
-          'log_username' => $user
-      ]);
+          $this->db('mlite_tracksql')->save([
+              'log_id' => NULL,
+              'log_modul' => 'logistik_non_medis_satuan',
+              'log_waktu' => $tanggal_log,
+              'log_location' => $log_lokasi,
+              'log_data' => $logdata,
+              'log_status' => (isset($_POST['id']) && !empty($_POST['id'])) ? 'U' : 'I',
+              'log_username' => $user
+          ]);
+      } catch (\Throwable $e) {}
 
       if (isset($_POST['id']) && !empty($_POST['id'])) {
           $query = $this->db('rsns_custom_logistik_non_medis_satuan')->where('id', $_POST['id'])->update($data);
@@ -2226,7 +2350,7 @@ class Admin extends AdminModule
           $query = $this->db('rsns_custom_logistik_non_medis_satuan')->save($data);
       }
 
-      if($query) {
+      if($query !== false) {
           echo json_encode(['status' => 'success']);
       } else {
           echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data']);
@@ -2237,10 +2361,15 @@ class Admin extends AdminModule
   public function postHapusMasterSatuan()
   {
       $id = $_POST['id'] ?? '';
-      if($id) {
-          $cek = $this->db('rsns_custom_logistik_non_medis_satuan')->where('id', $id)->oneArray();
-          if($cek) {
-              // Logging
+      if(empty($id)) {
+          echo json_encode(['status' => 'error', 'message' => 'ID satuan tidak boleh kosong.']);
+          exit();
+      }
+
+      $cek = $this->db('rsns_custom_logistik_non_medis_satuan')->where('id', $id)->oneArray();
+      if($cek) {
+          // Logging (wrapped in try-catch)
+          try {
               $user = $this->core->getUserInfo('username', null, true);
               $tanggal_log = date('Y-m-d H:i:s');
               $ip = $_SERVER['REMOTE_ADDR'];
@@ -2258,9 +2387,18 @@ class Admin extends AdminModule
                   'log_status' => 'D',
                   'log_username' => $user
               ]);
+          } catch (\Throwable $e) {}
 
-              $this->db('rsns_custom_logistik_non_medis_satuan')->where('id', $id)->delete();
+          $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_satuan` WHERE `id` = ?");
+          $exec = $stmt->execute([$id]);
+
+          if ($exec !== false) {
+              echo json_encode(['status' => 'success']);
+          } else {
+              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data satuan.']);
           }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data satuan tidak ditemukan.']);
       }
       exit();
   }
@@ -2384,24 +2522,26 @@ class Admin extends AdminModule
           'deskripsi' => $_POST['deskripsi'] ?? ''
       ];
 
-      // Logging
-      $user = $this->core->getUserInfo('username', null, true);
-      $tanggal_log = date('Y-m-d H:i:s');
-      $ip = $_SERVER['REMOTE_ADDR'];
-      $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-      $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-      $log_lokasi = ''.$hostname.' | '.$ip.'';
-      $logdata = ''.$data['nama_kategori'].' | '.$data['deskripsi'].' | '.$user.'';
+      // Logging (wrapped in try-catch)
+      try {
+          $user = $this->core->getUserInfo('username', null, true);
+          $tanggal_log = date('Y-m-d H:i:s');
+          $ip = $_SERVER['REMOTE_ADDR'];
+          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+          $log_lokasi = ''.$hostname.' | '.$ip.'';
+          $logdata = ''.$data['nama_kategori'].' | '.$data['deskripsi'].' | '.$user.'';
 
-      $this->db('mlite_tracksql')->save([
-          'log_id' => NULL,
-          'log_modul' => 'logistik_non_medis_kategori',
-          'log_waktu' => $tanggal_log,
-          'log_location' => $log_lokasi,
-          'log_data' => $logdata,
-          'log_status' => (isset($_POST['id']) && !empty($_POST['id'])) ? 'U' : 'I',
-          'log_username' => $user
-      ]);
+          $this->db('mlite_tracksql')->save([
+              'log_id' => NULL,
+              'log_modul' => 'logistik_non_medis_kategori',
+              'log_waktu' => $tanggal_log,
+              'log_location' => $log_lokasi,
+              'log_data' => $logdata,
+              'log_status' => (isset($_POST['id']) && !empty($_POST['id'])) ? 'U' : 'I',
+              'log_username' => $user
+          ]);
+      } catch (\Throwable $e) {}
 
       if (isset($_POST['id']) && !empty($_POST['id'])) {
           $query = $this->db('rsns_custom_logistik_non_medis_kategori')->where('kode_kategori', $_POST['id'])->update($data);
@@ -2416,7 +2556,7 @@ class Admin extends AdminModule
           $query = $this->db('rsns_custom_logistik_non_medis_kategori')->save($data);
       }
 
-      if($query) {
+      if($query !== false) {
           echo json_encode(['status' => 'success']);
       } else {
           echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data']);
@@ -2431,6 +2571,7 @@ class Admin extends AdminModule
           $cek = $this->db('rsns_custom_logistik_non_medis_kategori')->where('kode_kategori', $id)->oneArray();
           if($cek) {
               // Logging
+              try {
               $user = $this->core->getUserInfo('username', null, true);
               $tanggal_log = date('Y-m-d H:i:s');
               $ip = $_SERVER['REMOTE_ADDR'];
@@ -2448,9 +2589,12 @@ class Admin extends AdminModule
                   'log_status' => 'D',
                   'log_username' => $user
               ]);
+              } catch (\Throwable $e) {}
 
               $this->db('rsns_custom_logistik_non_medis_kategori')->where('kode_kategori', $id)->delete();
           }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data kategori tidak ditemukan.']);
       }
       exit();
   }
@@ -2696,28 +2840,30 @@ class Admin extends AdminModule
           'nomor_kontrak' => $_POST['nomor_kontrak'] ?? '',
           'tgl_mulai_kontrak' => $_POST['tgl_mulai_kontrak'] ?? NULL,
           'tgl_selesai_kontrak' => $_POST['tgl_selesai_kontrak'] ?? NULL,
-          'nilai_kontrak' => str_replace(['Rp. ', 'Rp.', '.', ' '], '', $_POST['nilai_kontrak'] ?? 0) ?: 0,
+          'nilai_kontrak' => preg_replace('/[^0-9]/', '', $_POST['nilai_kontrak'] ?? '0') ?: 0,
           'status' => $_POST['status'] ?? 'Aktif'
       ];
 
-      // Logging
-      $user = $this->core->getUserInfo('username', null, true);
-      $tanggal_log = date('Y-m-d H:i:s');
-      $ip = $_SERVER['REMOTE_ADDR'];
-      $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-      $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-      $log_lokasi = ''.$hostname.' | '.$ip.'';
-      $logdata = ''.$data['kode_rekanan'].' | '.$data['nama_rekanan'].' | '.$user.'';
+      // Logging (wrapped in try-catch)
+      try {
+          $user = $this->core->getUserInfo('username', null, true);
+          $tanggal_log = date('Y-m-d H:i:s');
+          $ip = $_SERVER['REMOTE_ADDR'];
+          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+          $log_lokasi = ''.$hostname.' | '.$ip.'';
+          $logdata = ''.$data['kode_rekanan'].' | '.$data['nama_rekanan'].' | '.$user.'';
 
-      $this->db('mlite_tracksql')->save([
-          'log_id' => NULL,
-          'log_modul' => 'logistik_non_medis_rekanan_jasa',
-          'log_waktu' => $tanggal_log,
-          'log_location' => $log_lokasi,
-          'log_data' => $logdata,
-          'log_status' => (isset($_POST['kode_rekanan']) && $this->db('rsns_custom_logistik_non_medis_rekanan_jasa')->where('kode_rekanan', $_POST['kode_rekanan'])->oneArray()) ? 'U' : 'I',
-          'log_username' => $user
-      ]);
+          $this->db('mlite_tracksql')->save([
+              'log_id' => NULL,
+              'log_modul' => 'logistik_non_medis_rekanan_jasa',
+              'log_waktu' => $tanggal_log,
+              'log_location' => $log_lokasi,
+              'log_data' => $logdata,
+              'log_status' => (isset($_POST['kode_rekanan']) && $this->db('rsns_custom_logistik_non_medis_rekanan_jasa')->where('kode_rekanan', $_POST['kode_rekanan'])->oneArray()) ? 'U' : 'I',
+              'log_username' => $user
+          ]);
+      } catch (\Throwable $e) {}
 
       $upload_dir = UPLOADS . '/logistik_non_medis/rekanan_jasa';
       if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
@@ -2731,7 +2877,7 @@ class Admin extends AdminModule
               exit();
           }
           
-          $filename = 'kontrak_' . $kode_rekanan . '_' . time() . '.' . $ext;
+          $filename = 'kontrak_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $kode_rekanan) . '_' . time() . '.' . $ext;
           if(move_uploaded_file($_FILES['file_kontrak']['tmp_name'], $upload_dir . '/' . $filename)) {
               $data['file_kontrak'] = $filename;
           }
@@ -2743,7 +2889,7 @@ class Admin extends AdminModule
           $query = $this->db('rsns_custom_logistik_non_medis_rekanan_jasa')->save($data);
       } else {
           if(isset($data['file_kontrak']) && !empty($cek['file_kontrak']) && file_exists($upload_dir . '/' . $cek['file_kontrak'])) {
-              unlink($upload_dir . '/' . $cek['file_kontrak']);
+              @unlink($upload_dir . '/' . $cek['file_kontrak']);
           }
           $query = $this->db('rsns_custom_logistik_non_medis_rekanan_jasa')->where('kode_rekanan', $kode_rekanan)->update($data);
       }
@@ -2759,32 +2905,49 @@ class Admin extends AdminModule
   public function postHapusMasterRekanan()
   {
       $kode_rekanan = $_POST['kode_rekanan'] ?? '';
+      if(empty($kode_rekanan)) {
+          echo json_encode(['status' => 'error', 'message' => 'Kode rekanan tidak boleh kosong.']);
+          exit();
+      }
+
       $cek = $this->db('rsns_custom_logistik_non_medis_rekanan_jasa')->where('kode_rekanan', $kode_rekanan)->oneArray();
       if($cek) {
-          // Logging
-          $user = $this->core->getUserInfo('username', null, true);
-          $tanggal_log = date('Y-m-d H:i:s');
-          $ip = $_SERVER['REMOTE_ADDR'];
-          $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
-          $hostname = $cek_hostname['hostname'] ?? 'Unknown';
-          $log_lokasi = ''.$hostname.' | '.$ip.'';
-          $logdata = ''.$cek['kode_rekanan'].' | '.$cek['nama_rekanan'].' | '.$user.'';
+          // Logging (wrapped in try-catch)
+          try {
+              $user = $this->core->getUserInfo('username', null, true);
+              $tanggal_log = date('Y-m-d H:i:s');
+              $ip = $_SERVER['REMOTE_ADDR'];
+              $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+              $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+              $log_lokasi = ''.$hostname.' | '.$ip.'';
+              $logdata = ''.$cek['kode_rekanan'].' | '.$cek['nama_rekanan'].' | '.$user.'';
 
-          $this->db('mlite_tracksql')->save([
-              'log_id' => NULL,
-              'log_modul' => 'logistik_non_medis_rekanan_jasa',
-              'log_waktu' => $tanggal_log,
-              'log_location' => $log_lokasi,
-              'log_data' => $logdata,
-              'log_status' => 'D',
-              'log_username' => $user
-          ]);
+              $this->db('mlite_tracksql')->save([
+                  'log_id' => NULL,
+                  'log_modul' => 'logistik_non_medis_rekanan_jasa',
+                  'log_waktu' => $tanggal_log,
+                  'log_location' => $log_lokasi,
+                  'log_data' => $logdata,
+                  'log_status' => 'D',
+                  'log_username' => $user
+              ]);
+          } catch (\Throwable $e) {}
 
           $upload_dir = UPLOADS . '/logistik_non_medis/rekanan_jasa';
           if(!empty($cek['file_kontrak']) && file_exists($upload_dir . '/' . $cek['file_kontrak'])) {
-              unlink($upload_dir . '/' . $cek['file_kontrak']);
+              @unlink($upload_dir . '/' . $cek['file_kontrak']);
           }
-          $this->db('rsns_custom_logistik_non_medis_rekanan_jasa')->where('kode_rekanan', $kode_rekanan)->delete();
+          
+          $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_rekanan_jasa` WHERE `kode_rekanan` = ?");
+          $exec = $stmt->execute([$kode_rekanan]);
+
+          if ($exec !== false) {
+              echo json_encode(['status' => 'success']);
+          } else {
+              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data rekanan.']);
+          }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data rekanan tidak ditemukan.']);
       }
       exit();
   }
@@ -3261,6 +3424,7 @@ $(document).ready(function() {
               $this->db('rsns_custom_logistik_non_medis_perencanaan')->where('kode_perencanaan', $id)->delete();
               
               // Logging
+              try {
               $user = $this->core->getUserInfo('username', null, true);
               $ip = $_SERVER['REMOTE_ADDR'];
               $hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray()['hostname'] ?? 'Unknown';
@@ -3273,7 +3437,12 @@ $(document).ready(function() {
                   'log_status' => 'D',
                   'log_username' => $user
               ]);
+              } catch (\Throwable $e) {}
+
+              echo json_encode(['status' => 'success']);
           }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data perencanaan tidak ditemukan.']);
       }
       exit();
   }
@@ -3631,9 +3800,12 @@ $(document).ready(function() {
   public function postHapuspr()
   {
       $no_pr = $_POST['no_pr'] ?? '';
-      if ($no_pr) {
-          $this->db('rsns_custom_logistik_non_medis_pr')->where('no_pr', $no_pr)->delete();
-          
+      if (empty($no_pr)) {
+          echo json_encode(['status' => 'error', 'message' => 'Nomor PR wajib diisi!']);
+          exit();
+      }
+
+      try {
           // Logging
           $user = $this->core->getUserInfo('username', null, true);
           $ip = $_SERVER['REMOTE_ADDR'];
@@ -3647,8 +3819,15 @@ $(document).ready(function() {
               'log_status' => 'D',
               'log_username' => $user
           ]);
+      } catch (\Throwable $e) {}
 
+      $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_pr` WHERE `no_pr` = ?");
+      $exec = $stmt->execute([$no_pr]);
+
+      if ($exec !== false) {
           echo json_encode(['status' => 'success']);
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data PR.']);
       }
       exit();
   }
@@ -3828,11 +4007,14 @@ $(document).ready(function() {
   public function postHapusVendorManajemen()
   {
       $id = $_POST['id'] ?? '';
-      if($id) {
-          $data = $this->db('rsns_custom_logistik_non_medis_vendor_evaluasi')->where('id', $id)->oneArray();
-          if($data) {
-              $this->db('rsns_custom_logistik_non_medis_vendor_evaluasi')->where('id', $id)->delete();
-              
+      if(empty($id)) {
+          echo json_encode(['status' => 'error', 'message' => 'ID wajib diisi!']);
+          exit();
+      }
+
+      $data = $this->db('rsns_custom_logistik_non_medis_vendor_evaluasi')->where('id', $id)->oneArray();
+      if($data) {
+          try {
               // Logging Feature
               $user = $this->core->getUserInfo('username', null, true);
               $tanggal_log = date('Y-m-d H:i:s');
@@ -3851,10 +4033,18 @@ $(document).ready(function() {
                   'log_status' => 'D',
                   'log_username' => $user
               ]);
+          } catch (\Throwable $e) {}
+
+          $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_vendor_evaluasi` WHERE `id` = ?");
+          $exec = $stmt->execute([$id]);
+
+          if ($exec !== false) {
               echo json_encode(['status' => 'success']);
           } else {
-              echo json_encode(['status' => 'error', 'message' => 'Data tidak ditemukan']);
+              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data evaluasi vendor.']);
           }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data tidak ditemukan']);
       }
       exit();
   }
@@ -4206,18 +4396,24 @@ $(document).ready(function() {
   {
       $this->_initPR();
       $id = $_POST['id'] ?? '';
-      if($id) {
-          $data = $this->db('rsns_custom_logistik_non_medis_po')->where('id', $id)->oneArray();
-          if($data) {
-              $items = json_decode($data['detail_items'], true) ?: [];
-              foreach($items as $item) {
-                  if(!empty($item['id_pr'])) {
-                      $this->db('rsns_custom_logistik_non_medis_pr')->where('id', $item['id_pr'])->update(['status' => 'Disetujui']);
-                  }
-              }
+      if(empty($id)) {
+          echo json_encode(['status' => 'error', 'message' => 'ID PO tidak boleh kosong.']);
+          exit();
+      }
 
-              $this->db('rsns_custom_logistik_non_medis_po')->where('id', $id)->delete();
-              
+      $data = $this->db('rsns_custom_logistik_non_medis_po')->where('id', $id)->oneArray();
+      if($data) {
+          $items = json_decode($data['detail_items'], true) ?: [];
+          foreach($items as $item) {
+              if(!empty($item['id_pr'])) {
+                  $this->db('rsns_custom_logistik_non_medis_pr')->where('id', $item['id_pr'])->update(['status' => 'Disetujui']);
+              }
+          }
+
+          $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_po` WHERE `id` = ?");
+          $exec = $stmt->execute([$id]);
+          
+          try {
               $user = $this->core->getUserInfo('username', null, true);
               $this->db('mlite_tracksql')->save([
                   'log_id' => NULL,
@@ -4228,10 +4424,15 @@ $(document).ready(function() {
                   'log_status' => 'D',
                   'log_username' => $user
               ]);
+          } catch (\Throwable $e) {}
+
+          if ($exec !== false) {
               echo json_encode(['status' => 'success']);
           } else {
-              echo json_encode(['status' => 'error', 'message' => 'Data PO tidak ditemukan']);
+              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data PO dari database']);
           }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data PO tidak ditemukan']);
       }
       exit();
   }
@@ -4969,29 +5170,44 @@ $(document).ready(function() {
   public function postHapusPenerimaan()
   {
       $no_penerimaan = $_POST['no_penerimaan'] ?? '';
+      if(empty($no_penerimaan)) {
+          echo json_encode(['status' => 'error', 'message' => 'Nomor penerimaan wajib diisi!']);
+          exit();
+      }
+
       $cek = $this->db('rsns_custom_logistik_non_medis_penerimaan')->where('no_penerimaan', $no_penerimaan)->oneArray();
       if($cek) {
           if($cek['status'] == 'Selesai') {
               echo json_encode(['status' => 'error', 'message' => 'Data yang sudah selesai tidak dapat dihapus']);
               exit();
           }
-          $this->db('rsns_custom_logistik_non_medis_penerimaan')->where('no_penerimaan', $no_penerimaan)->delete();
-          
-          // Logging
-          $user = $this->core->getUserInfo('username', null, true);
-          $ip = $_SERVER['REMOTE_ADDR'];
-          $hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray()['hostname'] ?? 'Unknown';
-          $this->db('mlite_tracksql')->save([
-              'log_id' => NULL,
-              'log_modul' => 'logistik_non_medis_penerimaan',
-              'log_waktu' => date('Y-m-d H:i:s'),
-              'log_location' => $hostname . ' | ' . $ip,
-              'log_data' => 'Delete Penerimaan: ' . $no_penerimaan,
-              'log_status' => 'D',
-              'log_username' => $user
-          ]);
 
-          echo json_encode(['status' => 'success']);
+          $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_penerimaan` WHERE `no_penerimaan` = ?");
+          $exec = $stmt->execute([$no_penerimaan]);
+          
+          try {
+              // Logging
+              $user = $this->core->getUserInfo('username', null, true);
+              $ip = $_SERVER['REMOTE_ADDR'];
+              $hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray()['hostname'] ?? 'Unknown';
+              $this->db('mlite_tracksql')->save([
+                  'log_id' => NULL,
+                  'log_modul' => 'logistik_non_medis_penerimaan',
+                  'log_waktu' => date('Y-m-d H:i:s'),
+                  'log_location' => $hostname . ' | ' . $ip,
+                  'log_data' => 'Delete Penerimaan: ' . $no_penerimaan,
+                  'log_status' => 'D',
+                  'log_username' => $user
+              ]);
+          } catch (\Throwable $e) {}
+
+          if ($exec !== false) {
+              echo json_encode(['status' => 'success']);
+          } else {
+              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data penerimaan.']);
+          }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data penerimaan tidak ditemukan.']);
       }
       exit();
   }
@@ -6374,29 +6590,44 @@ $(document).ready(function() {
   public function postHapusOpname()
   {
       $no_opname = $_POST['no_opname'] ?? '';
+      if(empty($no_opname)) {
+          echo json_encode(['status' => 'error', 'message' => 'Nomor opname wajib diisi!']);
+          exit();
+      }
+
       $cek = $this->db('rsns_custom_logistik_non_medis_opname')->where('no_opname', $no_opname)->oneArray();
       if($cek) {
           if($cek['status'] == 'Selesai') {
               echo json_encode(['status' => 'error', 'message' => 'Data yang sudah selesai tidak dapat dihapus!']);
               exit();
           }
-          $this->db('rsns_custom_logistik_non_medis_opname')->where('no_opname', $no_opname)->delete();
-          
-          // Logging to mlite_tracksql
-          $user = $this->core->getUserInfo('username', null, true);
-          $ip = $_SERVER['REMOTE_ADDR'];
-          $hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray()['hostname'] ?? 'Unknown';
-          $this->db('mlite_tracksql')->save([
-              'log_id' => NULL,
-              'log_modul' => 'logistik_non_medis_opname',
-              'log_waktu' => date('Y-m-d H:i:s'),
-              'log_location' => $hostname . ' | ' . $ip,
-              'log_data' => 'Delete Opname ' . $no_opname,
-              'log_status' => 'D',
-              'log_username' => $user
-          ]);
 
-          echo json_encode(['status' => 'success']);
+          $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_opname` WHERE `no_opname` = ?");
+          $exec = $stmt->execute([$no_opname]);
+          
+          try {
+              // Logging to mlite_tracksql
+              $user = $this->core->getUserInfo('username', null, true);
+              $ip = $_SERVER['REMOTE_ADDR'];
+              $hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray()['hostname'] ?? 'Unknown';
+              $this->db('mlite_tracksql')->save([
+                  'log_id' => NULL,
+                  'log_modul' => 'logistik_non_medis_opname',
+                  'log_waktu' => date('Y-m-d H:i:s'),
+                  'log_location' => $hostname . ' | ' . $ip,
+                  'log_data' => 'Delete Opname ' . $no_opname,
+                  'log_status' => 'D',
+                  'log_username' => $user
+              ]);
+          } catch (\Throwable $e) {}
+
+          if ($exec !== false) {
+              echo json_encode(['status' => 'success']);
+          } else {
+              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data opname.']);
+          }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data opname tidak ditemukan.']);
       }
       exit();
   }
@@ -7483,6 +7714,28 @@ $(document).ready(function() {
       $status = $_POST['status'] ?? 'Diajukan';
       $user = $this->core->getUserInfo('username', null, true);
 
+      // Determine jenis_permintaan automatically from item type (Habis Pakai vs Aset)
+      $this->_initDataBarang();
+      $jenis_permintaan = 'Rutin';
+      if (isset($_POST['kode_item']) && is_array($_POST['kode_item'])) {
+          foreach ($_POST['kode_item'] as $k_item) {
+              $item_info = $this->db('rsns_custom_logistik_non_medis_master_barang')->where('kode_item', $k_item)->oneArray();
+              $tipe = $item_info['tipe_barang'] ?? 'Habis Pakai';
+              if ($tipe === 'Aset') {
+                  $jenis_permintaan = 'Non Rutin';
+                  break;
+              }
+          }
+      }
+
+      if ($status === 'Diajukan') {
+          if ($jenis_permintaan === 'Rutin') {
+              $status = 'Disetujui Unit';
+          } else {
+              $status = 'Diajukan';
+          }
+      }
+
       $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $user)->oneArray();
       $role = $userRoleData['role'] ?? 'unit';
       $user_kode_unit = $userRoleData['kode_unit'] ?? null;
@@ -7556,7 +7809,7 @@ $(document).ready(function() {
       }
 
       // Check Quota
-      if ($status == 'Diajukan') {
+      if ($status == 'Diajukan' || $status == 'Disetujui Unit') {
           $tgl_sppb = $_POST['tgl_sppb'] ?? date('Y-m-d');
           $tahun = date('Y', strtotime($tgl_sppb));
           $bulan = (int)date('m', strtotime($tgl_sppb));
@@ -7788,7 +8041,6 @@ $(document).ready(function() {
 
       if ($update) {
           $this->_logAction('logistik_non_medis_sppb', $log_msg, 'U');
-          
           echo json_encode(['status' => 'success']);
       } else {
           echo json_encode(['status' => 'error', 'message' => 'Gagal menyetujui permintaan.']);
@@ -8503,7 +8755,6 @@ $(document).ready(function() {
       $role = $userRoleData['role'] ?? 'unit';
       $user_kode_unit = $userRoleData['kode_unit'] ?? null;
       $cek = $this->db('rsns_custom_logistik_non_medis_sppb')->where('no_sppb', $no_sppb)->oneArray();
-      
       if ($cek) {
           if ($role === 'logistik') {
               echo json_encode(['status' => 'error', 'message' => 'Role logistik tidak memiliki hak hapus permintaan.']);
@@ -8527,12 +8778,17 @@ $(document).ready(function() {
               exit();
           }
           
-          if ($this->db('rsns_custom_logistik_non_medis_sppb')->where('no_sppb', $no_sppb)->delete()) {
+          $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_sppb` WHERE `no_sppb` = ?");
+          $exec = $stmt->execute([$no_sppb]);
+
+          if ($exec !== false) {
               $this->_logAction('logistik_non_medis_sppb', 'Hapus SPPB: ' . $no_sppb, 'D');
               echo json_encode(['status' => 'success']);
           } else {
-              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data.']);
+              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data SPPB.']);
           }
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Data SPPB tidak ditemukan.']);
       }
       exit();
   }
@@ -8657,11 +8913,13 @@ $(document).ready(function() {
 
   public function postSaveDistribusiVerifikasi()
   {
+      $this->_initSppb();
       $no_sppb = $_POST['no_sppb'] ?? '';
       $status = $_POST['status_verif'] ?? 'Terverifikasi';
-      $user = $_SESSION['mlite_user'] ?? 'admin';
+      $user = $this->core->getUserInfo('username', null, true);
 
       if(empty($no_sppb)) {
+          if (ob_get_length()) ob_clean();
           echo json_encode(['status' => 'error', 'message' => 'No. SPPB tidak valid. Diterima: ' . json_encode($_POST)]);
           exit();
       }
@@ -8677,10 +8935,13 @@ $(document).ready(function() {
               
               // Update approved quantities for specific items
               $items = $_POST['items'] ?? [];
-              foreach($items as $id => $val) {
-                  $this->db('rsns_custom_logistik_non_medis_sppb')->where('id', $id)->update([
-                      'jumlah_disetujui' => $val['jumlah_disetujui']
-                  ]);
+              if (is_array($items)) {
+                  foreach($items as $id => $val) {
+                      $jml = $val['jumlah_disetujui'] ?? 0;
+                      $this->db('rsns_custom_logistik_non_medis_sppb')->where('id', $id)->update([
+                          'jumlah_disetujui' => $jml
+                      ]);
+                  }
               }
               $this->_logAction('logistik_non_medis_sppb', 'Verifikasi SPPB Disetujui: ' . $no_sppb, 'U');
           } else {
@@ -8692,8 +8953,10 @@ $(document).ready(function() {
               ]);
               $this->_logAction('logistik_non_medis_sppb', 'Verifikasi SPPB Ditolak: ' . $no_sppb . ' | Alasan: ' . ($_POST['alasan_penolakan'] ?? ''), 'U');
           }
+          if (ob_get_length()) ob_clean();
           echo json_encode(['status' => 'success']);
-      } catch (\Exception $e) {
+      } catch (\Throwable $e) {
+          if (ob_get_length()) ob_clean();
           echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
       }
       exit();
@@ -8981,6 +9244,27 @@ $(document).ready(function() {
           
           $this->_logAction('logistik_non_medis_packing', 'Simpan Packing SPPB: ' . $no_sppb, 'U');
           
+          // Log to mlite_tracksql
+          try {
+              $user = $this->core->getUserInfo('username', null, true);
+              $tanggal_log = date('Y-m-d H:i:s');
+              $ip = $_SERVER['REMOTE_ADDR'] ?? 'Localhost';
+              $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+              $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+              $log_lokasi = ''.$hostname.' | '.$ip.'';
+              $logdata = 'Packed SPPB: '.$no_sppb.' | User: '.$user;
+
+              $this->db('mlite_tracksql')->save([
+                  'log_id' => NULL,
+                  'log_modul' => 'logistik_non_medis_packing',
+                  'log_waktu' => $tanggal_log,
+                  'log_location' => $log_lokasi,
+                  'log_data' => $logdata,
+                  'log_status' => 'U',
+                  'log_username' => $user
+              ]);
+          } catch (\Throwable $e) {}
+
           echo json_encode(['status' => 'success']);
       } catch (\Exception $e) {
           echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
@@ -9609,6 +9893,10 @@ $(document).ready(function() {
               }
           });
       }
+
+      if ($role === 'unit' && !empty($user_kode_unit)) {
+          $query->where('rsns_custom_logistik_non_medis_retur_unit.kode_unit', $user_kode_unit);
+      }
       
       // Ambil semua data sesuai filter, lalu group di PHP
       $all_rows = $query->desc('tgl_input')->toArray();
@@ -9864,12 +10152,23 @@ $(document).ready(function() {
   public function postHapusRetur()
   {
       $no_retur = $_POST['no_retur'] ?? '';
+      if (empty($no_retur)) {
+          echo json_encode(['status' => 'error', 'message' => 'Nomor retur wajib diisi!']);
+          exit();
+      }
+
       $retur = $this->db('rsns_custom_logistik_non_medis_retur_unit')->where('no_retur', $no_retur)->oneArray();
       
       if ($retur && $retur['status'] == 'Pending') {
-          $this->db('rsns_custom_logistik_non_medis_retur_unit')->where('no_retur', $no_retur)->delete();
-          $this->_logAction('logistik_non_medis_retur', 'Hapus Retur Unit: ' . $no_retur, 'D');
-          echo json_encode(['status' => 'success']);
+          $stmt = $this->db()->pdo()->prepare("DELETE FROM `rsns_custom_logistik_non_medis_retur_unit` WHERE `no_retur` = ?");
+          $exec = $stmt->execute([$no_retur]);
+
+          if ($exec !== false) {
+              $this->_logAction('logistik_non_medis_retur', 'Hapus Retur Unit: ' . $no_retur, 'D');
+              echo json_encode(['status' => 'success']);
+          } else {
+              echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus data retur dari database.']);
+          }
       } else {
           echo json_encode(['status' => 'error', 'message' => 'Hanya data Pending yang bisa dihapus']);
       }
@@ -10010,20 +10309,21 @@ $(document).ready(function() {
       
       if (isset($_POST['id'])){
           $kuota = $this->db('rsns_custom_logistik_non_medis_kuota')->where('id', $_POST['id'])->oneArray();
-          echo $this->draw('distribusi.kuota.form.html', ['kuota' => $kuota, 'mode' => 'edit', 'barang' => $barang, 'unit' => $unit]);
+          echo $this->draw('distribusi.kuota.form.html', ['kuota' => $kuota, 'barang' => $barang, 'unit' => $unit]);
       } else {
           $kuota = [
+              'id' => '',
               'kode_unit' => '',
               'kode_item' => '',
               'periode_tipe' => 'Bulanan',
               'tahun' => date('Y'),
               'bulan' => date('m'),
-              'triwulan' => '',
-              'jumlah' => 0,
+              'triwulan' => '1',
+              'jumlah' => '0',
               'jenis' => 'Utama',
-              'status' => 'Draft'
+              'keterangan' => ''
           ];
-          echo $this->draw('distribusi.kuota.form.html', ['kuota' => $kuota, 'mode' => 'add', 'barang' => $barang, 'unit' => $unit]);
+          echo $this->draw('distribusi.kuota.form.html', ['kuota' => $kuota, 'barang' => $barang, 'unit' => $unit]);
       }
       exit();
   }

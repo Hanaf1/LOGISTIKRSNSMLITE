@@ -143,7 +143,13 @@ function openForm(kode_rekanan = '', viewOnly = false) {
 
 function deleteData(kode_rekanan) {
     if(confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-        $.post('{?=url([ADMIN, "logistik_non_medis", "hapusmasterrekanan"])?}', {kode_rekanan: kode_rekanan}, function() {
+        $.post('{?=url([ADMIN, "logistik_non_medis", "hapusmasterrekanan"])?}', {kode_rekanan: kode_rekanan}, function(data) {
+            var res = (typeof data === 'object') ? data : JSON.parse(data);
+            if(res.status === 'success') {
+                alert('Data berhasil dihapus!');
+            } else {
+                alert(res.message || 'Gagal menghapus data.');
+            }
             loadData();
         });
     }

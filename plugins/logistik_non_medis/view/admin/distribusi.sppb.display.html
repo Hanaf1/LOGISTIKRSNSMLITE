@@ -30,6 +30,13 @@
                         </td>
                         {if: $role != 'unit'}<td>{$value.nama_unit}</td>{/if}
                         <td>
+                            {if: $value.jenis_permintaan == 'Rutin'}
+                                <span class="label label-info"><i class="fa fa-refresh"></i> Rutin</span>
+                            {else}
+                                <span class="label label-warning"><i class="fa fa-star"></i> Non-Rutin</span>
+                            {/if}
+                        </td>
+                        <td>
                             <small class="text-muted">{$value.jml_item} items: {$value.daftar_barang}</small>
                         </td>
                         <td>

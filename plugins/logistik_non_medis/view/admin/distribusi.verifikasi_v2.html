@@ -111,6 +111,38 @@ $(document).ready(function() {
         });
     });
 
+    $('#btn_tolak_sppb').off('click').on('click', function() {
+        var alasan = prompt("Masukkan alasan penolakan:");
+        if (alasan != null && alasan != "") {
+            var formData = 'no_sppb=' + encodeURIComponent(current_no_sppb) + '&status_verif=Ditolak&alasan_penolakan=' + encodeURIComponent(alasan);
+            
+            var url = '{?=url(ADMIN."/logistik_non_medis/savedistribusiverifikasi")?}';
+            if(typeof mlite !== 'undefined' && mlite.token) {
+                url += (url.indexOf('?') > -1 ? '&' : '?') + 't=' + mlite.token;
+            }
+
+            $.post(url, formData, function(data) {
+                try {
+                    var jsonStr = data;
+                    if (typeof data === 'string' && data.indexOf('{') > -1) {
+                        jsonStr = data.substring(data.indexOf('{'));
+                    }
+                    var res = (typeof jsonStr === 'object') ? jsonStr : JSON.parse(jsonStr);
+                    if(res.status == 'success') {
+                        $('#modal_verifikasi').modal('hide');
+                        displayVerifikasi();
+                        alert('Permintaan telah ditolak.');
+                    } else {
+                        alert('Gagal menolak permintaan: ' + (res.message || 'Terjadi kesalahan'));
+                    }
+                } catch(e) {
+                    console.error("JSON Parse Error:", e, data);
+                    alert('Respon server tidak valid.');
+                }
+            });
+        }
+    });
+
     $(document).on('click', '.pagination li a', function(e) {
         e.preventDefault();
         var halaman = $(this).data('halaman');

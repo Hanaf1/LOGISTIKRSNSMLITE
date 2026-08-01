@@ -24,6 +24,9 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') {
     return;
   }
+  if (event.request.url.includes('/admin/') || event.request.mode === 'navigate') {
+    return;
+  }
   
   event.respondWith(caches.match(event.request)
     .then(cachedResponse => {

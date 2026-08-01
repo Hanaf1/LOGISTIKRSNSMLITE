@@ -243,7 +243,7 @@ $(document).ready(function() {
         $('#nilai_kontrak').val(formatRupiah($('#nilai_kontrak').val(), 'Rp. '));
     }
 
-    $('#rekananForm').on('submit', function(e) {
+    $('#rekananForm').off('submit').on('submit', function(e) {
         e.preventDefault();
         $('#btnSimpan').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
         
@@ -255,12 +255,13 @@ $(document).ready(function() {
             contentType: false,
             processData: false,
             success: function(response) {
-                var res = JSON.parse(response);
+                var res = (typeof response === 'object') ? response : JSON.parse(response);
                 if(res.status == 'success') {
                     $('#rekananModal').modal('hide');
                     loadData();
+                    alert('Data berhasil disimpan!');
                 } else {
-                    alert(res.message);
+                    alert(res.message || 'Gagal menyimpan data.');
                     $('#btnSimpan').prop('disabled', false).html('Simpan Data');
                 }
             },

@@ -17,9 +17,9 @@
     </td>
     <td class="text-right">
         <div class="btn-group">
-            <button type="button" class="btn btn-info btn-xs btn-detail-barang" data-id="{$value.kode_item}" title="Detail"><i class="fa fa-eye"></i></button>
-            <button type="button" class="btn btn-success btn-xs btn-edit-barang" data-id="{$value.kode_item}" title="Edit"><i class="fa fa-edit"></i></button>
-            <button type="button" class="btn btn-danger btn-xs btn-hapus-barang" data-id="{$value.kode_item}" title="Hapus"><i class="fa fa-trash"></i></button>
+            <button type="button" class="btn btn-info btn-xs btn-detail-barang" data-id="{?=htmlspecialchars($value.kode_item, ENT_QUOTES)?}" title="Detail"><i class="fa fa-eye"></i></button>
+            <button type="button" class="btn btn-success btn-xs btn-edit-barang" data-id="{?=htmlspecialchars($value.kode_item, ENT_QUOTES)?}" title="Edit"><i class="fa fa-edit"></i></button>
+            <button type="button" class="btn btn-danger btn-xs btn-hapus-barang" data-id="{?=htmlspecialchars($value.kode_item, ENT_QUOTES)?}" title="Hapus"><i class="fa fa-trash"></i></button>
         </div>
     </td>
 </tr>
