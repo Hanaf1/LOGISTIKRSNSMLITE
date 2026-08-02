@@ -1,6 +1,9 @@
 {if: !empty($aset)}
 {loop: $aset}
 <tr>
+    <td style="text-align:center; vertical-align:middle;">
+        <input type="checkbox" class="chk-aset-row" value="{$value.id}">
+    </td>
     <td>
         {if: !empty($value.nomor_inventaris)}
         <code style="font-size:12px; font-weight:bold;">{$value.nomor_inventaris}</code>
@@ -9,9 +12,13 @@
         {/if}
     </td>
     <td>
-        <strong>{$value.nama_aset}</strong><br><small class="text-muted">Kode sistem: {$value.kode_aset}</small>
+        <strong class="asset-name">{$value.nama_aset}</strong><br>
+        <small class="asset-classification">{$value.nama_kelompok} &rsaquo; {$value.nama_jenis}</small><br>
+        <small class="text-muted">Kode sistem: {$value.kode_aset}</small>
     </td>
-    <td>{if: !empty($value.merk_type)}{$value.merk_type}{else}-{/if}<br><small class="text-muted">{$value.nomor_dokumen}</small></td>
+    <td>
+        {if: !empty($value.nama_kelompok)}<span class="label label-default">{$value.nama_kelompok}</span>{else}<span class="text-muted">-</span>{/if}
+    </td>
     <td>{if: !empty($value.lokasi_fisik)}{$value.lokasi_fisik}{else}{$value.nama_unit}{/if}</td>
     <td>{$value.sumber_perolehan}<br><small class="text-muted">{if: !empty($value.tahun_beli)}{$value.tahun_beli}{else}{?=date('Y', strtotime($value.tanggal_perolehan))?}{/if}</small></td>
     <td><strong>{$value.jumlah}</strong> {$value.satuan}</td>
@@ -37,44 +44,13 @@
 {/loop}
 {else}
 <tr>
-    <td colspan="9" class="text-center" style="padding: 30px; color: #888;">
+    <td colspan="10" class="text-center" style="padding: 30px; color: #888;">
         <i class="fa fa-info-circle fa-2x" style="margin-bottom: 10px;"></i>
         <p>Belum ada data aset non-medis yang terdaftar atau cocok dengan pencarian.</p>
     </td>
 </tr>
 {/if}
 
-<script>
-    $('#total-aset-count').text('{$jumlah_data}');
-    var halaman = {?= (int)$halaman ?};
-    var jml_halaman = {?= (int)$jml_halaman ?};
-    
-    var pagination = '';
-    if (jml_halaman > 1) {
-        // Previous Button
-        if (halaman > 1) {
-            pagination += '<li><a href="javascript:void(0)" data-page="'+(halaman-1)+'">&laquo; Prev</a></li>';
-        } else {
-            pagination += '<li class="disabled"><span>&laquo; Prev</span></li>';
-        }
+<div id="aset-display-data" data-jumlah="{$jumlah_data}" data-halaman="{?= (int)$halaman ?}" data-jml-halaman="{?= (int)$jml_halaman ?}" style="display:none;"></div>
 
-        // Page Numbers
-        for (var i = 1; i <= jml_halaman; i++) {
-            if (i == halaman) {
-                pagination += '<li class="active"><a href="javascript:void(0)" data-page="'+i+'">'+i+'</a></li>';
-            } else {
-                pagination += '<li><a href="javascript:void(0)" data-page="'+i+'">'+i+'</a></li>';
-            }
-        }
 
-        // Next Button
-        if (halaman < jml_halaman) {
-            pagination += '<li><a href="javascript:void(0)" data-page="'+(halaman+1)+'">Next &raquo;</a></li>';
-        } else {
-            pagination += '<li class="disabled"><span>Next &raquo;</span></li>';
-        }
-    } else {
-        pagination = '';
-    }
-    $('.pagination-aset').html(pagination);
-</script>

@@ -64,7 +64,7 @@
                     <div class="row">
                         <div class="col-md-4">
                                 <div class="form-group">
-                                    <label>Pilih Barang</label>
+                                    <label>Filter Barang</label>
                                     <select id="filter-item-mutasi" class="form-control" style="width: 100%;">
                                         <option value="">-- Semua Barang --</option>
                                         {loop: $items}
@@ -73,26 +73,30 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Dari Tanggal</label>
-                                    <input type="text" id="tgl-awal" class="form-control datepicker" value="{?=date('Y-m-01')?}">
+                                    <input type="text" id="tgl-awal" class="form-control datepicker" value="" placeholder="Semua tanggal">
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Sampai Tanggal</label>
-                                    <input type="text" id="tgl-akhir" class="form-control datepicker" value="{?=date('Y-m-d')?}">
+                                    <input type="text" id="tgl-akhir" class="form-control datepicker" value="" placeholder="Semua tanggal">
                                 </div>
                             </div>
                             <div class="col-md-2" style="padding-top: 25px;">
                                 <button class="btn btn-primary btn-block" id="btn-filter-kartu"><i class="fa fa-search"></i> Tampilkan</button>
                             </div>
-                        </div>
-                        <div id="display-kartu-stok" style="margin-top: 20px;">
-                            <div class="alert alert-info">
-                                <i class="fa fa-info-circle"></i> Silakan pilih barang dan periode tanggal untuk menampilkan kartu stok.
+                            <div class="col-md-2" style="padding-top: 25px;">
+                                <button class="btn btn-danger btn-block" id="btn-cetak-kartu-pdf"><i class="fa fa-file-pdf-o"></i> Cetak PDF</button>
                             </div>
+                        </div>
+                    <div id="display-kartu-stok" style="margin-top: 20px;">
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle"></i> Memuat data mutasi stok...
+                        </div>
+                    </div>
                 </div> <!-- end kartu-stok -->
             </div> <!-- end panel-body -->
         </div>
@@ -123,7 +127,7 @@ $('#form-import-csv').submit(function(e) {
             var r = JSON.parse(res);
             if (r.status == 'success') {
                 $('#modal-import-csv').modal('hide');
-                $('#btn-filter-kartu').click();
+                loadKartuStok(1);
                 alert(r.message);
             } else {
                 alert(r.message);
@@ -147,38 +151,42 @@ $(document).ready(function() {
     {if: !empty($selected_item)}
         $('#filter-item-mutasi').val('{$selected_item}').trigger('change').trigger('change.select2');
         setTimeout(function() {
-            $('#btn-filter-kartu').click();
+            loadKartuStok(1);
         }, 800);
+    {else}
+        loadKartuStok(1);
     {/if}
 
     $('#btn-filter-kartu').click(function() {
-        var item = $('#filter-item-mutasi').val();
-        var tgl1 = $('#tgl-awal').val();
-        var tgl2 = $('#tgl-akhir').val();
-        
-        console.log("Filtering for Item:", item, "Dates:", tgl1, tgl2);
-        
-        if(!item) {
-            alert('Pilih barang terlebih dahulu!');
-            return;
-        }
+        loadKartuStok(1);
+    });
 
-        $('#display-kartu-stok').html('<div class="text-center" style="padding: 50px;"><i class="fa fa-spinner fa-spin fa-3x"></i></div>');
-
-        $.post('{?=url(ADMIN."/logistik_non_medis/displaykartustok")?}', {
-            kode_item: item,
-            kode_lokasi: '-',
-            tgl_awal: tgl1,
-            tgl_akhir: tgl2
-        }, function(data) {
-            console.log("Kartu Stok Data Received");
-            $('#display-kartu-stok').html(data);
-        }).fail(function(xhr, status, error) {
-            console.error("AJAX Error:", status, error);
-            alert("Gagal memuat data kartu stok.");
-        });
+    $('#btn-cetak-kartu-pdf').click(function() {
+        cetakKartuStokPdf();
     });
 });
+
+function loadKartuStok(halaman) {
+    if (!halaman) halaman = 1;
+    var item = $('#filter-item-mutasi').val();
+    var tgl1 = $('#tgl-awal').val();
+    var tgl2 = $('#tgl-akhir').val();
+
+    $('#display-kartu-stok').html('<div class="text-center" style="padding: 50px;"><i class="fa fa-spinner fa-spin fa-3x"></i></div>');
+
+    $.post('{?=url(ADMIN."/logistik_non_medis/displaykartustok")?}', {
+        kode_item: item,
+        kode_lokasi: '-',
+        tgl_awal: tgl1,
+        tgl_akhir: tgl2,
+        halaman: halaman
+    }, function(data) {
+        $('#display-kartu-stok').html(data);
+    }).fail(function(xhr, status, error) {
+        console.error("AJAX Error:", status, error);
+        alert("Gagal memuat data mutasi stok.");
+    });
+}
 
 
 
@@ -211,13 +219,22 @@ function prosesMutasi(no, action) {
         $.post('{?=url(ADMIN."/logistik_non_medis/prosesmutasi")?}', { no_mutasi: no, action: action }, function(res) {
             var data = JSON.parse(res);
             if(data.status == 'success') {
-                loadMutasi();
+                loadKartuStok(1);
                 if($('#modalMutasi').hasClass('in')) $('#modalMutasi').modal('hide');
             } else {
                 alert(data.message);
             }
         });
     }
+}
+
+function cetakKartuStokPdf() {
+    var params = $.param({
+        kode_item: $('#filter-item-mutasi').val(),
+        tgl_awal: $('#tgl-awal').val(),
+        tgl_akhir: $('#tgl-akhir').val()
+    });
+    window.open('{?=url(ADMIN."/logistik_non_medis/cetakkartustokpdf")?}&' + params, '_blank');
 }
 </script>
 
@@ -311,7 +328,7 @@ $('#form-import-csv').submit(function(e) {
             var r = JSON.parse(res);
             if (r.status == 'success') {
                 $('#modal-import-csv').modal('hide');
-                loadDaftarMutasi();
+                loadKartuStok(1);
                 alert(r.message);
             } else {
                 alert(r.message);

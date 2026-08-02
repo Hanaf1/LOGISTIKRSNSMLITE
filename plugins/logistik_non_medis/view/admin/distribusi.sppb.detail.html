@@ -127,50 +127,55 @@
         <!-- Step 2 -->
         <div class="stepper-item {if: $stepper_step > 2}completed{elseif: $stepper_step == 2 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-user"></i></div>
-            <div class="stepper-title">ACC KASI</div>
+            <div class="stepper-title">ACC KA UNIT</div>
         </div>
         <!-- Step 3 -->
         <div class="stepper-item {if: $stepper_step > 3}completed{elseif: $stepper_step == 3 && !$stepper_rejected}active{/if}">
-            <div class="stepper-circle"><i class="fa fa-user-md"></i></div>
-            <div class="stepper-title">ACC KABID</div>
+            <div class="stepper-circle"><i class="fa fa-user"></i></div>
+            <div class="stepper-title">ACC KASI</div>
         </div>
         <!-- Step 4 -->
         <div class="stepper-item {if: $stepper_step > 4}completed{elseif: $stepper_step == 4 && !$stepper_rejected}active{/if}">
-            <div class="stepper-circle"><i class="fa fa-users"></i></div>
-            <div class="stepper-title">Kasie Umum</div>
+            <div class="stepper-circle"><i class="fa fa-user-md"></i></div>
+            <div class="stepper-title">ACC KABID</div>
         </div>
         <!-- Step 5 -->
         <div class="stepper-item {if: $stepper_step > 5}completed{elseif: $stepper_step == 5 && !$stepper_rejected}active{/if}">
-            <div class="stepper-circle"><i class="fa fa-check-square-o"></i></div>
-            <div class="stepper-title">Verifikasi</div>
+            <div class="stepper-circle"><i class="fa fa-users"></i></div>
+            <div class="stepper-title">Kasie Umum</div>
         </div>
         <!-- Step 6 -->
         <div class="stepper-item {if: $stepper_step > 6}completed{elseif: $stepper_step == 6 && !$stepper_rejected}active{/if}">
-            <div class="stepper-circle"><i class="fa fa-shopping-cart"></i></div>
-            <div class="stepper-title">Logistik & Rekap</div>
+            <div class="stepper-circle"><i class="fa fa-check-square-o"></i></div>
+            <div class="stepper-title">Verifikasi</div>
         </div>
         <!-- Step 7 -->
         <div class="stepper-item {if: $stepper_step > 7}completed{elseif: $stepper_step == 7 && !$stepper_rejected}active{/if}">
-            <div class="stepper-circle"><i class="fa fa-money"></i></div>
-            <div class="stepper-title">Konsul Kabid Umum</div>
+            <div class="stepper-circle"><i class="fa fa-shopping-cart"></i></div>
+            <div class="stepper-title">Logistik & Rekap</div>
         </div>
         <!-- Step 8 -->
         <div class="stepper-item {if: $stepper_step > 8}completed{elseif: $stepper_step == 8 && !$stepper_rejected}active{/if}">
-            <div class="stepper-circle"><i class="fa fa-bank"></i></div>
-            <div class="stepper-title">Bendahara</div>
+            <div class="stepper-circle"><i class="fa fa-money"></i></div>
+            <div class="stepper-title">Konsul Kabid Umum</div>
         </div>
         <!-- Step 9 -->
         <div class="stepper-item {if: $stepper_step > 9}completed{elseif: $stepper_step == 9 && !$stepper_rejected}active{/if}">
-            <div class="stepper-circle"><i class="fa fa-shopping-cart"></i></div>
-            <div class="stepper-title">Proses Pengadaan</div>
+            <div class="stepper-circle"><i class="fa fa-bank"></i></div>
+            <div class="stepper-title">Bendahara</div>
         </div>
         <!-- Step 10 -->
         <div class="stepper-item {if: $stepper_step > 10}completed{elseif: $stepper_step == 10 && !$stepper_rejected}active{/if}">
-            <div class="stepper-circle"><i class="fa fa-handshake-o"></i></div>
-            <div class="stepper-title">Siap Diserahkan</div>
+            <div class="stepper-circle"><i class="fa fa-shopping-cart"></i></div>
+            <div class="stepper-title">Proses Pengadaan</div>
         </div>
         <!-- Step 11 -->
         <div class="stepper-item {if: $stepper_step > 11}completed{elseif: $stepper_step == 11 && !$stepper_rejected}active{/if}">
+            <div class="stepper-circle"><i class="fa fa-handshake-o"></i></div>
+            <div class="stepper-title">Siap Diserahkan</div>
+        </div>
+        <!-- Step 12 -->
+        <div class="stepper-item {if: $stepper_step == 12}completed{/if}">
             <div class="stepper-circle"><i class="fa fa-flag-checkered"></i></div>
             <div class="stepper-title">Diterima/Selesai</div>
         </div>
@@ -220,9 +225,9 @@
                     {if: $sppb.status == 'Draft'}
                         <span class="label label-default">Draft</span>
                     {elseif: $sppb.status == 'Diajukan'}
-                        <span class="label label-info">{if: $sppb.jenis_permintaan == 'Non Rutin'}Pengajuan / Butuh ACC KASI{else}Diajukan{/if}</span>
+                        <span class="label label-info">{if: $sppb.jenis_permintaan == 'Non Rutin'}Pengajuan / Butuh ACC KA UNIT{else}Diajukan{/if}</span>
                     {elseif: $sppb.status == 'Disetujui Ka. Unit'}
-                        <span class="label label-warning">Disetujui Ka. Unit</span>
+                        <span class="label label-warning">{if: $sppb.jenis_permintaan == 'Non Rutin'}ACC KA UNIT / Butuh ACC KASI{else}Disetujui Ka. Unit{/if}</span>
                     {elseif: $sppb.status == 'Disetujui Ka. Sie'}
                         <span class="label label-primary">{if: $sppb.jenis_permintaan == 'Non Rutin'}ACC KASI / Butuh ACC KABID{else}Disetujui Ka. Sie{/if}</span>
                     {elseif: $sppb.status == 'Disetujui Kabid' || $sppb.status == 'Disetujui Unit'}

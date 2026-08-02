@@ -3,6 +3,58 @@
     font-weight: bold;
 }
 
+/* Penanda proses untuk seluruh halaman Logistik Non Medis. */
+.logistik-busy-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(33, 43, 54, 0.42);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.logistik-busy-overlay.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: all;
+}
+
+.logistik-busy-dialog {
+    width: min(300px, calc(100vw - 40px));
+    padding: 22px 20px;
+    border-radius: 6px;
+    background: #fff;
+    color: #3f4a56;
+    text-align: center;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+
+.logistik-busy-dialog .fa {
+    display: block;
+    margin-bottom: 12px;
+    color: #337ab7;
+}
+
+.logistik-busy-dialog strong,
+.logistik-busy-dialog span {
+    display: block;
+}
+
+.logistik-busy-dialog strong {
+    font-size: 16px;
+}
+
+.logistik-busy-dialog span {
+    margin-top: 6px;
+    color: #78828c;
+    font-size: 13px;
+}
+
 /* Fix Select2 Offside / Overlapping Text */
 .select2-container--default .select2-selection--single {
     height: auto !important;

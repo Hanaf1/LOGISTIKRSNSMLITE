@@ -15,46 +15,6 @@
             <div class="col-md-6">
                 <div class="panel panel-default">
                     <div class="panel-heading">
-                <style>
-                    .custom-breadcrumb {
-                        display: inline-flex;
-                        align-items: center;
-                        background: #f8f9fa;
-                        border: 1px solid #e1e4e8;
-                        border-radius: 6px;
-                        padding: 6px 15px;
-                        font-size: 13px;
-                        margin-bottom: 15px;
-                        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-                    }
-                    .custom-breadcrumb a {
-                        color: #4a4a4a;
-                        text-decoration: none;
-                        display: inline-flex;
-                        align-items: center;
-                        font-weight: 500;
-                    }
-                    .custom-breadcrumb a:hover {
-                        color: #337ab7;
-                    }
-                    .custom-breadcrumb .separator {
-                        margin: 0 10px;
-                        color: #a0a0a0;
-                        font-size: 11px;
-                    }
-                    .custom-breadcrumb .active {
-                        color: #337ab7;
-                        font-weight: 600;
-                    }
-                </style>
-                <div class="custom-breadcrumb">
-                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
-                    <i class="fa fa-chevron-right separator"></i>
-                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Aset</a>
-                    <i class="fa fa-chevron-right separator"></i>
-                    <span class="active">Registrasi</span>
-                </div>
-
                         <i class="fa fa-info-circle"></i> Identitas & Spesifikasi Aset
                     </div>
                     <div class="panel-body">
@@ -62,7 +22,7 @@
                         <!-- Unit Penugasan -->
                         <div class="form-group">
                             <label class="control-label">Unit Penugasan <span class="text-danger">*</span></label>
-                            <select name="kode_unit" id="form_kode_unit" class="form-control" required {if: $mode == 'edit'}disabled{/if}>
+                            <select name="kode_unit" id="form_kode_unit" class="form-control" required>
                                 <option value="">-- Pilih Unit Penugasan --</option>
                                 {if: !empty($units)}
                                 {loop: $units}
@@ -70,9 +30,48 @@
                                 {/loop}
                                 {/if}
                             </select>
-                            {if: $mode == 'edit'}
-                            <input type="hidden" name="kode_unit" value="{$aset.kode_unit}">
-                            {/if}
+                        </div>
+
+                        <div class="well well-sm" style="margin-bottom:15px;">
+                            <strong><i class="fa fa-sitemap"></i> Klasifikasi Master Inventaris</strong>
+                            <p class="text-muted" style="margin:4px 0 10px;">Pilih berurutan dari kategori sampai barang.</p>
+                            <div class="row">
+                                <div class="col-sm-4">
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label>Kategori</label>
+                                        <select id="form_master_kategori" class="form-control">
+                                            {loop: $kategori_master}<option value="{$value.kode_kategori}">{$value.nama_kategori}</option>{/loop}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label>Kelompok <span class="text-danger">*</span></label>
+                                        <select id="form_master_kelompok" class="form-control" required>
+                                            <option value="">-- Pilih Kelompok --</option>
+                                            {loop: $kelompok_master}<option value="{$value.kode_kelompok}" data-kategori="{$value.kode_kategori}">{$value.nama_kelompok}</option>{/loop}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-sm-4">
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label>Jenis <span class="text-danger">*</span></label>
+                                        <select id="form_master_jenis" class="form-control" required>
+                                            <option value="">-- Pilih Jenis --</option>
+                                            {loop: $jenis_master}<option value="{$value.kode_jenis}" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}">{$value.nama_jenis}</option>{/loop}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin:12px 0 0;">
+                                <label>Pilih Barang Inventaris <span class="text-danger">*</span></label>
+                                <select name="kode_item" id="form_kode_item" class="form-control" required>
+                                    <option value="">-- Pilih dari Master Inventaris --</option>
+                                    {loop: $master_barang}
+                                    <option value="{$value.kode}" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}" data-jenis="{$value.kode_jenis}" data-nama="{$value.nama}" {if: $value.kode == $aset.kode_item}selected{/if}>[{$value.kode_barang}] {$value.nama}</option>
+                                    {/loop}
+                                </select>
+                            </div>
                         </div>
 
                         <!-- Kode Aset Unik -->
@@ -107,7 +106,8 @@
                             <input type="text" name="serial_number" class="form-control" value="{$aset.serial_number}" placeholder="Contoh: SN-AC-992138">
                         </div>
 
-                        <!-- Klasifikasi KIB -->
+                        {if: false}
+                        <!-- Klasifikasi KIB lama dipertahankan di template untuk kompatibilitas arsip. -->
                         <div class="form-group">
                             <label class="control-label">Klasifikasi KIB</label>
                             <select name="kib_jenis" id="form_kib_jenis" class="form-control">
@@ -120,19 +120,7 @@
                                 <option value="F" {if: $aset.kib_jenis == 'F'}selected{/if}>KIB F — Konstruksi Dalam Pengerjaan</option>
                             </select>
                         </div>
-
-                        <!-- Linkage ke Master Barang -->
-                        <div class="form-group">
-                            <label class="control-label">Pilih Barang Inventaris <span class="text-danger">*</span></label>
-                            <select name="kode_item" id="form_kode_item" class="form-control" required>
-                                <option value="">-- Pilih dari Master Inventaris --</option>
-                                {if: !empty($master_barang)}
-                                {loop: $master_barang}
-                                <option value="{$value.kode}" data-nama="{$value.nama}" data-kib="{$value.kib_jenis}" {if: $value.kode == $aset.kode_item}selected{/if}>[{$value.kode_kelompok}.{$value.kode_jenis}.{$value.kode_barang}] {$value.nama}</option>
-                                {/loop}
-                                {/if}
-                            </select>
-                        </div>
+                        {/if}
 
                         <!-- Nama Aset -->
                         <div class="form-group">
@@ -178,7 +166,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="row">
                             <div class="col-md-4"><div class="form-group"><label>Tahun Beli</label><input type="number" name="tahun_beli" class="form-control" value="{$aset.tahun_beli}" min="1900" max="2100" placeholder="2026"></div></div>
                             <div class="col-md-4"><div class="form-group"><label>Satuan</label><input type="text" name="satuan" class="form-control" value="{$aset.satuan}" placeholder="Buah"></div></div>
@@ -273,7 +260,8 @@
             </div>
         </div>
 
-        <!-- Dynamic KIB Panels -->
+        {if: false}
+        <!-- Dynamic KIB Panels lama -->
         <div class="row kib-spec-wrapper" style="margin-top: 15px; display: none;">
             <div class="col-md-12">
                 
@@ -616,6 +604,7 @@
 
             </div>
         </div>
+        {/if}
     </div>
     
     <div class="modal-footer">
@@ -626,57 +615,107 @@
 
 <script>
     $(document).ready(function() {
-        
-        // Function to toggle KIB panels
-        function toggleKibPanel() {
-            var selectedKib = $('#form_kib_jenis').val();
-            $('.kib-panel').hide();
-            
-            if (selectedKib !== '' && selectedKib !== undefined) {
-                $('.kib-spec-wrapper').slideDown(300);
-                $('#panel-kib-' + selectedKib).slideDown(300);
-            } else {
-                $('.kib-spec-wrapper').slideUp(300);
-            }
+
+        // Gunakan prop('hidden') dan prop('disabled') agar filter option bekerja di semua browser
+        function filterKelompok(selected) {
+            var kategori = $('#form_master_kategori').val();
+            var found = false;
+            $('#form_master_kelompok option').each(function() {
+                var cocok = !$(this).val() || String($(this).data('kategori')) === String(kategori);
+                $(this).prop('hidden', !cocok).prop('disabled', !cocok);
+                if (cocok && $(this).val() === selected) found = true;
+            });
+            $('#form_master_kelompok').val(found ? selected : '');
         }
 
-        // On change trigger
-        $('#form_kib_jenis').on('change', function() {
-            toggleKibPanel();
+        function filterJenis(selected) {
+            var kategori = $('#form_master_kategori').val();
+            var kelompok = $('#form_master_kelompok').val();
+            var found = false;
+            $('#form_master_jenis option').each(function() {
+                var cocok = !$(this).val() || (String($(this).data('kategori')) === String(kategori) && String($(this).data('kelompok')) === String(kelompok));
+                $(this).prop('hidden', !cocok).prop('disabled', !cocok);
+                if (cocok && $(this).val() === selected) found = true;
+            });
+            $('#form_master_jenis').val(found ? selected : '');
+        }
+
+        function filterBarang(selected) {
+            var kategori = $('#form_master_kategori').val();
+            var kelompok = $('#form_master_kelompok').val();
+            var jenis = $('#form_master_jenis').val();
+            var found = false;
+            $('#form_kode_item option').each(function() {
+                var cocok = !$(this).val() || (String($(this).data('kategori')) === String(kategori) && String($(this).data('kelompok')) === String(kelompok) && String($(this).data('jenis')) === String(jenis));
+                $(this).prop('hidden', !cocok).prop('disabled', !cocok);
+                if (cocok && $(this).val() === selected) found = true;
+            });
+            $('#form_kode_item').val(found ? selected : '');
+        }
+
+        var initialItem = $('#form_kode_item').val();
+        var initialOption = $('#form_kode_item option[value="' + initialItem + '"]');
+        var initialKategori = initialOption.data('kategori') || '';
+        var initialKelompok = initialOption.data('kelompok') || '';
+        var initialJenis   = initialOption.data('jenis') || '';
+        if (initialKategori) $('#form_master_kategori').val(String(initialKategori));
+        filterKelompok(String(initialKelompok));
+        filterJenis(String(initialJenis));
+        filterBarang(initialItem);
+
+        $('#form_master_kategori').on('change', function() {
+            filterKelompok('');
+            filterJenis('');
+            filterBarang('');
+        });
+        $('#form_master_kelompok').on('change', function() {
+            filterJenis('');
+            filterBarang('');
+        });
+        $('#form_master_jenis').on('change', function() {
+            filterBarang('');
         });
 
-        // Initialize KIB panel on load
-        toggleKibPanel();
-
         function generateNomorInventaris() {
-            if ('{$mode}' !== 'add') return;
             var data = {
                 kode_unit: $('#form_kode_unit').val(),
                 kode_item: $('#form_kode_item').val()
             };
             if (!data.kode_unit || !data.kode_item) {
-                $('#form_nomor_inventaris, #form_kode_aset').val('');
+                $('#form_nomor_inventaris').val('').attr('placeholder', 'Pilih unit dan item barang');
+                $('#form_kode_aset').val('');
                 return;
             }
+            $('#form_nomor_inventaris').val('').attr('placeholder', '⏳ Membuat nomor...');
+            $('#form_kode_aset').val('').attr('placeholder', '⏳ Membuat kode...');
             $.post('{?=url([ADMIN, "logistik_non_medis", "generatenomorinventaris"])?}', data, function(response) {
                 if (response.status === 'success') {
-                    $('#form_nomor_inventaris').val(response.nomor_inventaris);
-                    $('#form_kode_aset').val(response.kode_aset);
+                    $('#form_nomor_inventaris').val(response.nomor_inventaris).attr('placeholder', '');
+                    $('#form_kode_aset').val(response.kode_aset).attr('placeholder', '');
+                } else {
+                    $('#form_nomor_inventaris').attr('placeholder', '⚠️ Gagal: ' + response.message);
                 }
-            }, 'json');
+            }, 'json').fail(function() {
+                $('#form_nomor_inventaris').attr('placeholder', '⚠️ Terjadi kesalahan koneksi');
+            });
         }
-        
-        // KIB mengikuti konfigurasi barang pada Master Inventaris.
+
+        // Nomor inventaris di-generate ulang saat unit berubah (add & edit)
+        $('#form_kode_unit').on('change', function() {
+            generateNomorInventaris();
+        });
+
+        // Nama aset mengikuti barang pada Master Inventaris.
         $('#form_kode_item').on('change', function() {
             var selectedOption = $(this).find('option:selected');
-            var kibDefault = selectedOption.data('kib');
-            
-            if (kibDefault) {
-                $('#form_kib_jenis').val(kibDefault).trigger('change');
+            var barangName = selectedOption.attr('data-nama');
+
+            if (barangName && $('#form_nama_aset').val() === '') {
+                $('#form_nama_aset').val(barangName);
             }
             generateNomorInventaris();
         });
-        
+
         // Initial price masking format
         var raw_harga = $('#form_harga_beli').val();
         if(raw_harga && raw_harga > 0) {
@@ -693,21 +732,6 @@
             $('#form_nilai_residu').val('');
         }
 
-        // Auto-Inherit Name from Master Barang when selected
-        $('#form_kode_item').on('change', function() {
-            var selectedOption = $(this).find('option:selected');
-            var barangName = selectedOption.attr('data-nama');
-            if(barangName && $('#form_nama_aset').val() === '') {
-                $('#form_nama_aset').val(barangName);
-            }
-            generateNomorInventaris();
-        });
-
-        // Unit, kategori, dan barang menentukan nomor inventaris otomatis.
-        $('#form_kode_unit').on('change', function() {
-            generateNomorInventaris();
-        });
-
         // Live mask currency formatting for Price Input
         $('#form_harga_beli').on('keyup', function() {
             $(this).val(formatRupiah($(this).val()));
@@ -721,7 +745,7 @@
         // Submit Form via AJAX (FormData supporting uploads)
         $('#form-save-aset').on('submit', function(e) {
             e.preventDefault();
-            
+
             // Validation
             if($('#form_kode_unit').val() === '') {
                 alert('Unit Penugasan wajib dipilih!');
@@ -731,9 +755,9 @@
                 alert('Item Barang wajib dipilih!');
                 return;
             }
-            
+
             var formData = new FormData(this);
-            
+
             $.ajax({
                 url: '{?=url([ADMIN, "logistik_non_medis", "saveasetregistrasi"])?}',
                 type: 'POST',

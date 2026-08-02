@@ -3,6 +3,107 @@ $(document).ready(function() {
     var baseURL = mlite.url + '/' + mlite.admin;
     console.log("Logistik Non Medis module loaded.");
 
+    // Arahkan breadcrumb kategori kembali ke tab kategori yang sesuai pada
+    // dashboard Logistik Non Medis, bukan selalu ke tab pertama.
+    var logistikBreadcrumbTabs = {
+        'master': 'master-data',
+        'master data': 'master-data',
+        'pengadaan': 'pengadaan',
+        'gudang': 'manajemen-gudang',
+        'manajemen gudang': 'manajemen-gudang',
+        'distribusi': 'distribusi',
+        'aset': 'aset',
+        'laporan': 'laporan-audit',
+        'laporan & audit': 'laporan-audit'
+    };
+    var logistikManageUrl = baseURL + '/logistik_non_medis/manage?t=' + encodeURIComponent(mlite.token || '');
+
+    $('.custom-breadcrumb a, .breadcrumb a, .bhp-breadcrumb a').each(function() {
+        var label = $.trim($(this).text()).replace(/\s+/g, ' ').toLowerCase();
+        var targetTab = logistikBreadcrumbTabs[label];
+        if (targetTab) {
+            $(this).attr('href', logistikManageUrl + '#' + targetTab);
+        }
+    });
+
+    $(document).on('click.logistikBreadcrumb', '.custom-breadcrumb a, .breadcrumb a, .bhp-breadcrumb a', function(e) {
+        var label = $.trim($(this).text()).replace(/\s+/g, ' ').toLowerCase();
+        var targetTab = logistikBreadcrumbTabs[label];
+        if (!targetTab) return;
+        e.preventDefault();
+        window.location.href = logistikManageUrl + '#' + targetTab;
+    });
+
+    var activeDashboardTab = String(window.location.hash || '').replace('#', '');
+    if (activeDashboardTab && $('#'+ activeDashboardTab).length) {
+        var $dashboardTab = $('.nav-tabs a[href="#' + activeDashboardTab + '"]');
+        if ($dashboardTab.length && $.fn.tab) {
+            $dashboardTab.tab('show');
+        }
+    }
+
+    $('.nav-tabs a[data-toggle="tab"]').on('shown.bs.tab.logistikBreadcrumb', function(e) {
+        var target = $(e.target).attr('href');
+        if (target && /^#[a-z0-9-]+$/i.test(target) && window.history && window.history.replaceState) {
+            window.history.replaceState(null, document.title, window.location.pathname + window.location.search + target);
+        }
+    });
+
+    // Penanda global khusus aksi yang mengubah data. Endpoint baca (form/list/detail)
+    // tetap ringan agar indikator tidak berkedip ketika pengguna mencari data.
+    var logistikBusyCount = 0;
+    var logistikReadEndpoint = /(display|form|detail|ajax|search|lookup|preview|filter|load|generate)/i;
+
+    function isLogistikMutationRequest(settings) {
+        var method = String(settings.type || settings.method || 'GET').toUpperCase();
+        var requestUrl = String(settings.url || '');
+        if (method !== 'POST' || requestUrl.indexOf('/logistik_non_medis/') === -1) {
+            return false;
+        }
+        return !logistikReadEndpoint.test(requestUrl);
+    }
+
+    function isLogistikRequest(settings) {
+        return String(settings.url || '').indexOf('/logistik_non_medis/') !== -1;
+    }
+
+    function setLogistikBusy(show) {
+        var $overlay = $('#logistik-busy-overlay');
+        if (!$overlay.length) return;
+        $overlay.toggleClass('is-visible', show).attr('aria-hidden', show ? 'false' : 'true');
+        $('body').toggleClass('logistik-is-busy', show);
+    }
+
+    $('#logistik-busy-overlay').remove();
+    $('body').append(
+        '<div id="logistik-busy-overlay" class="logistik-busy-overlay" aria-hidden="true">' +
+            '<div class="logistik-busy-dialog" role="status" aria-live="polite">' +
+                '<i class="fa fa-spinner fa-spin fa-2x"></i>' +
+                '<strong>Memproses data...</strong>' +
+                '<span>Mohon tunggu, jangan klik tombol lagi.</span>' +
+            '</div>' +
+        '</div>'
+    );
+
+    $(document).off('ajaxSend.logistikBusy ajaxComplete.logistikBusy');
+    $(document).on('ajaxSend.logistikBusy', function(event, xhr, settings) {
+        // Bila aksi simpan/hapus memicu reload tabel, indikator baru ditutup
+        // setelah reload tersebut selesai agar hasil perubahan langsung terlihat.
+        var isMutation = isLogistikMutationRequest(settings);
+        var isFollowUpLoad = logistikBusyCount > 0 && isLogistikRequest(settings);
+        if (!isMutation && !isFollowUpLoad) return;
+        xhr.logistikBusyRequest = true;
+        logistikBusyCount++;
+        setLogistikBusy(true);
+    });
+
+    $(document).on('ajaxComplete.logistikBusy', function(event, xhr) {
+        if (!xhr.logistikBusyRequest) return;
+        xhr.logistikBusyRequest = false;
+        logistikBusyCount = Math.max(0, logistikBusyCount - 1);
+        if (logistikBusyCount === 0) setLogistikBusy(false);
+    });
+
     // Helper function for currency formatting
     function formatCurrency(angka, prefix) {
         var number_string = angka.replace(/[^,\d]/g, '').toString(),
@@ -200,7 +301,45 @@ $(document).ready(function() {
         }
     });
 
-    // btn-hapus-barang listener handled in master.barang.html
+    $(document).off('click.masterBarangDelete', '.btn-hapus-barang')
+        .on('click.masterBarangDelete', '.btn-hapus-barang', function(e) {
+            e.preventDefault();
+            var kodeItem = String($(this).data('id') || '');
+            var namaBarang = $.trim($(this).closest('tr').find('td').eq(2).text());
+
+            if (!kodeItem) {
+                alert('Kode barang tidak ditemukan. Muat ulang halaman lalu coba kembali.');
+                return;
+            }
+
+            var labelBarang = namaBarang ? namaBarang + ' (' + kodeItem + ')' : kodeItem;
+            if (!confirm('Hapus barang ' + labelBarang + '?\n\nData yang sudah dihapus tidak dapat dikembalikan.')) {
+                return;
+            }
+
+            $.ajax({
+                url: baseURL + '/logistik_non_medis/hapusmasterbarang?t=' + mlite.token,
+                type: 'POST',
+                dataType: 'json',
+                data: {kode_item: kodeItem},
+                success: function(response) {
+                    if (response && response.status === 'success') {
+                        loadMasterBarang(1);
+                        alert('Barang berhasil dihapus.');
+                        return;
+                    }
+                    alert((response && response.message) || 'Barang gagal dihapus.');
+                },
+                error: function(xhr) {
+                    var message = 'Server gagal memproses penghapusan barang.';
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response.message) message = response.message;
+                    } catch (ignore) {}
+                    alert(message);
+                }
+            });
+        });
 
 
     // Bulk Delete Checkbox Handlers

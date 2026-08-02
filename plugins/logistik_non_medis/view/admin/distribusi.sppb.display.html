@@ -30,26 +30,23 @@
                         </td>
                         {if: $role != 'unit'}<td>{$value.nama_unit}</td>{/if}
                         <td>
-                            {if: $value.jenis_permintaan == 'Rutin'}
-                                <span class="label label-info"><i class="fa fa-refresh"></i> Rutin</span>
-                            {else}
-                                <span class="label label-warning"><i class="fa fa-star"></i> Non-Rutin</span>
-                            {/if}
-                        </td>
-                        <td>
                             <small class="text-muted">{$value.jml_item} items: {$value.daftar_barang}</small>
                         </td>
                         <td>
                             {if: $value.status == 'Draft'}
                                 <span class="label label-default">Draft</span>
                             {elseif: $value.status == 'Diajukan'}
-                                <span class="label label-info">{if: $value.jenis_permintaan == 'Non Rutin'}Pengajuan / Butuh ACC KASI{else}Diajukan{/if}</span>
+                                <span class="label label-info">{if: $value.jenis_permintaan == 'Non Rutin'}Pengajuan / Butuh ACC KA UNIT{else}Diajukan{/if}</span>
                             {elseif: $value.status == 'Disetujui Ka. Unit'}
-                                <span class="label label-warning">Disetujui Ka. Unit</span>
+                                <span class="label label-warning">{if: $value.jenis_permintaan == 'Non Rutin'}ACC KA UNIT / Butuh ACC KASI{else}Disetujui Ka. Unit{/if}</span>
                             {elseif: $value.status == 'Disetujui Ka. Sie'}
                                 <span class="label label-primary">{if: $value.jenis_permintaan == 'Non Rutin'}ACC KASI / Butuh ACC KABID{else}Disetujui Ka. Sie{/if}</span>
                             {elseif: $value.status == 'Disetujui Kabid' || $value.status == 'Disetujui Unit'}
-                                <span class="label label-success">ACC KABID</span>
+                                {if: $value.jenis_permintaan == 'Non Rutin'}
+                                    <span class="label label-success">ACC KABID</span>
+                                {else}
+                                    <span class="label label-success">Disetujui Unit</span>
+                                {/if}
                             {elseif: $value.status == 'Diserahkan ke Kasie Umum'}
                                 <span class="label label-info" style="background:#5bc0de;">Diserahkan ke KASIE Umum & Administrasi</span>
                             {elseif: $value.status == 'Verifikasi Kasie Umum'}

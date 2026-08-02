@@ -47,6 +47,23 @@
         .sppb-approval-tabs > li > a:hover {
             background-color: #f5f5f5;
         }
+        .sppb-main-tabs {
+            margin-bottom: 15px;
+        }
+        .sppb-active-card {
+            border: 1px solid #e5e8ec;
+            background: #fff;
+            padding: 16px;
+            margin-bottom: 15px;
+        }
+        .sppb-active-card h4 {
+            margin-top: 0;
+            font-weight: 600;
+        }
+        .sppb-status-line {
+            margin: 8px 0 0;
+            color: #68707a;
+        }
     </style>
     <div class="custom-breadcrumb">
         <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
@@ -55,25 +72,36 @@
         <i class="fa fa-chevron-right separator"></i>
         <span class="active">{if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Pengadaan Non Rutin{else}Pengadaan Rutin{/if}{else}Permintaan Barang (SPPB){/if}</span>
     </div>
-    <div class="row">
+
         <div class="col-md-12">
             <div class="panel panel-default">
                 <div class="panel-heading" style="overflow: hidden;">
                     <h3 class="panel-title pull-left" style="line-height: 34px;"><i class="fa fa-shopping-cart"></i> {if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Pengadaan Non Rutin{else}Pengadaan Rutin{/if}{else}Permintaan Barang (SPPB){/if}</h3>
                     {if: !empty($can_create_sppb) || (!empty($can_manage_distribusi_controls) && (empty($jenis_page) || $jenis_page == 'Rutin'))}
                     <div class="btn-group pull-right">
-                        {if: !empty($can_manage_distribusi_controls)}
-                        {if: empty($jenis_page) || $jenis_page == 'Rutin'}
-                        <button class="btn btn-warning" data-toggle="modal" data-target="#modal-import-sppb" style="margin-right: 5px;"><i class="fa fa-upload"></i> Import SPPB Mingguan</button>
-                        {/if}
-                        {/if}
                         {if: !empty($can_create_sppb)}
-                        <button class="btn btn-primary" id="btn-tambah"><i class="fa fa-plus"></i> Tambah Permintaan</button>
+                            {if: $jenis_page != 'Rutin' || $role != 'unit'}
+                            <button class="btn btn-primary" id="btn-tambah"><i class="fa fa-plus"></i> Tambah Permintaan</button>
+                            {/if}
                         {/if}
                     </div>
                     {/if}
                 </div>
                 <div class="panel-body">
+                    {if: !empty($jenis_page)}
+                    <ul class="nav nav-tabs sppb-main-tabs" id="sppbMainTabs">
+                        <li class="active">
+                            <a href="javascript:void(0)" class="sppb-main-tab-link" data-tab="active">
+                                <i class="fa fa-bolt"></i> Aktif
+                            </a>
+                        </li>
+                        <li>
+                            <a href="javascript:void(0)" class="sppb-main-tab-link" data-tab="history">
+                                <i class="fa fa-history"></i> Riwayat
+                            </a>
+                        </li>
+                    </ul>
+                    {/if}
                     {if: $role == 'kepala_unit' || $role == 'kepala_sie' || $role == 'kepala_bidang'}
                     <ul class="nav nav-tabs sppb-approval-tabs" id="approvalTabs">
                         <li class="active">
@@ -105,7 +133,8 @@
                                 <select id="filter-status" class="form-control" onchange="loadDisplay()">
                                     <option value="">-- Semua Status --</option>
                                     <option value="Draft">Draft</option>
-                                    <option value="Diajukan">Diajukan (Butuh Persetujuan Ka. Unit)</option>
+                                    <option value="Diajukan">Diajukan (Butuh ACC Ka. Unit)</option>
+                                    <option value="Disetujui Ka. Unit">Disetujui Ka. Unit (Butuh ACC KASI)</option>
                                     <option value="Disetujui Ka. Sie">ACC KASI (Butuh ACC KABID)</option>
                                     <option value="Disetujui Kabid">Disetujui Kabid</option>
                                     <option value="Diserahkan ke Kasie Umum">Diserahkan ke Kasie Umum</option>
@@ -122,6 +151,40 @@
                             </div>
                             {/if}
                         </div>
+                    </div>
+                    {/if}
+                    {if: !empty($jenis_page) && $jenis_page == 'Rutin' && $role == 'unit'}
+                    <div id="sppb-active-rutin">
+                        {if: !empty($current_week_sppb)}
+                            {if: $current_week_sppb.status == 'Selesai' || $current_week_sppb.status == 'Diterima'}
+                            <div class="sppb-active-card">
+                                <h4><i class="fa fa-check-circle text-success"></i> Pengadaan rutin minggu ini sudah selesai</h4>
+                                <div class="sppb-status-line">
+                                    No. SPPB: <strong>{$current_week_sppb.no_sppb}</strong> | Tanggal: {$current_week_sppb.tgl_sppb_display} | Status: <span class="label label-success">{$current_week_sppb.status}</span>
+                                </div>
+                                <div style="margin-top:12px;">
+                                    <button class="btn btn-primary" onclick="aturBarangTambahan('{$current_week_sppb.no_sppb}')"><i class="fa fa-pencil"></i> Atur Barang Tambahan</button>
+                                    <button class="btn btn-info" onclick="aturBarangTambahan('{$current_week_sppb.no_sppb}')"><i class="fa fa-list"></i> Lihat Detail SPPB</button>
+                                </div>
+                            </div>
+                            <div id="sppb-active-form" style="display:none;"></div>
+                            {else}
+                            <div class="sppb-active-card">
+                                <h4><i class="fa fa-clock-o text-info"></i> Pengadaan rutin minggu ini sudah diajukan</h4>
+                                <div class="sppb-status-line">
+                                    No. SPPB: <strong>{$current_week_sppb.no_sppb}</strong> | Tanggal: {$current_week_sppb.tgl_sppb_display} | Status: <span class="label label-info">{$current_week_sppb.status}</span>
+                                </div>
+                                <div style="margin-top:12px;">
+                                    <button class="btn btn-primary" onclick="aturBarangTambahan('{$current_week_sppb.no_sppb}')"><i class="fa fa-pencil"></i> Atur Barang Tambahan</button>
+                                    <button class="btn btn-info" onclick="detailSPPB('{$current_week_sppb.no_sppb}')"><i class="fa fa-eye"></i> Lihat Status</button>
+                                </div>
+                            </div>
+                            {/if}
+                        {else}
+                            <div id="sppb-active-form">
+                                <div class="text-center" style="padding:30px;"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat form permintaan...</div>
+                            </div>
+                        {/if}
                     </div>
                     {/if}
                     <div id="sppb-list"></div>
@@ -213,67 +276,39 @@
     </div>
 </div>
 
-<!-- Modal Import SPPB Mingguan -->
-{if: !empty($can_manage_distribusi_controls)}
-<div class="modal fade" id="modal-import-sppb" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title">Import SPPB Mingguan</h4>
-            </div>
-            <form id="form-import-sppb" method="POST" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        Gunakan format: <strong>No, Ruang / Unit, Nama Barang, Jumlah</strong>. Banyak unit dapat diimport sekaligus; nomor SPPB dibuat otomatis per unit dan status awalnya <strong>Diajukan</strong> agar dapat dihitung melalui laporan Cost Unit Mingguan.
-                        <br><br>
-                        <a href="{?=url([ADMIN, 'logistik_non_medis', 'downloadtemplatesppbmingguan'])?}" class="btn btn-default btn-sm"><i class="fa fa-download"></i> Download Template CSV</a>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-7">
-                            <div class="form-group">
-                                <label>Periode Bulan / Tahun <span class="text-danger">*</span></label>
-                                <div class="input-group date" id="periode-import-sppb">
-                                    <input type="text" name="periode" class="form-control" value="{?=date('Y-m')?}" readonly required>
-                                    <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-5">
-                            <div class="form-group">
-                                <label>Minggu Ke- <span class="text-danger">*</span></label>
-                                <select name="minggu_ke" class="form-control" required>
-                                    <option value="1">Minggu ke-1 (tgl 1-7)</option>
-                                    <option value="2">Minggu ke-2 (tgl 8-14)</option>
-                                    <option value="3">Minggu ke-3 (tgl 15-21)</option>
-                                    <option value="4">Minggu ke-4 (tgl 22-akhir bulan)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Pilih File CSV / Excel XLSX <span class="text-danger">*</span></label>
-                        <input type="file" name="file" class="form-control" accept=".csv,.xlsx" required>
-                        <p class="help-block">Maksimal 10 MB dan 20.000 baris. XLS lama (.xls) belum didukung.</p>
-                    </div>
-                    <div id="import-sppb-result" class="alert" style="display:none;margin-bottom:0"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary" id="btn-proses-import-sppb">Proses Import</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{/if}
-
 <script>
 var sppbCurrentRole = '{$role}';
 var sppbCurrentTab = 'pending';
+var sppbJenisPage = '{$jenis_page}';
+var sppbListTab = sppbJenisPage ? 'active' : '';
+var sppbRutinUnitMode = sppbJenisPage === 'Rutin' && sppbCurrentRole === 'unit';
 
 $(document).ready(function() {
-    loadDisplay();
+    if (sppbRutinUnitMode && $('#sppb-active-form').length && $('#sppb-active-form').is(':visible')) {
+        loadSppbForm('Rutin', '#sppb-active-form');
+        $('#sppb-list').hide();
+    } else {
+        loadDisplay();
+    }
+
+    $(document).on('click', '.sppb-main-tab-link', function(e) {
+        e.preventDefault();
+        sppbListTab = $(this).data('tab');
+        $('#sppbMainTabs li').removeClass('active');
+        $(this).closest('li').addClass('active');
+
+        if (sppbRutinUnitMode && sppbListTab === 'active') {
+            $('#sppb-active-rutin').show();
+            $('#sppb-list').hide();
+            if ($('#sppb-active-form').length && $('#sppb-active-form').is(':visible') && !$('#sppb-active-form form').length) {
+                loadSppbForm('Rutin', '#sppb-active-form');
+            }
+        } else {
+            $('#sppb-active-rutin').hide();
+            $('#sppb-list').show();
+            loadDisplay(1);
+        }
+    });
 
     $(document).on('click', '.approval-tab-link', function(e) {
         e.preventDefault();
@@ -298,10 +333,7 @@ $(document).ready(function() {
     $('#btn-tambah').click(function() {
         var jenis = '{$jenis_page}';
         if (!jenis) jenis = 'Rutin';
-        $.post('{?=url(ADMIN."/logistik_non_medis/formsppb")?}', {jenis: jenis}, function(data) {
-            $('#display').hide();
-            $('#form-container').html(data).show();
-        });
+        loadSppbForm(jenis, '#form-container', true);
     });
 
     // Kompatibilitas bootstrap-datetimepicker lama dengan jQuery baru.
@@ -379,6 +411,13 @@ $(document).ready(function() {
     }, 0);
 });
 
+function loadSppbForm(jenis, target, hideDisplay) {
+    $.post('{?=url(ADMIN."/logistik_non_medis/formsppb")?}', {jenis: jenis}, function(data) {
+        if (hideDisplay) $('#display').hide();
+        $(target).html(data).show();
+    });
+}
+
 function loadDisplay(halaman) {
     if (!halaman) halaman = 1;
     var cari = $('#cari').val() || '';
@@ -389,6 +428,7 @@ function loadDisplay(halaman) {
         cari: cari,
         status: status,
         jenis_permintaan: jenis,
+        list_tab: sppbListTab,
         halaman: halaman
     };
 
@@ -416,6 +456,24 @@ function detailSPPB(no_sppb) {
         $('#detail-content').html(data);
         $('#modal-detail').modal('show');
     });
+}
+
+function aturBarangTambahan(no_sppb) {
+    $('#display').hide();
+    $('#sppb-active-rutin').hide();
+    $('#form-container').html('<div class="text-center" style="padding:30px;"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat detail SPPB...</div>').show();
+    $.post('{?=url(ADMIN."/logistik_non_medis/detailsppb")?}', {no_sppb: no_sppb, inline: 1}, function(data) {
+        $('#form-container').html(data).show();
+    });
+}
+
+function tutupEditorSPPB() {
+    $('#form-container').hide().empty();
+    $('#display').show();
+    if (sppbRutinUnitMode && sppbListTab === 'active') {
+        $('#sppb-active-rutin').show();
+    }
+    loadDisplay();
 }
 
 function hapusSPPB(no_sppb) {
@@ -465,7 +523,7 @@ function rejectUnit(no_sppb) {
 }
 
 function verifikasiLogistik(no_sppb) {
-    if(confirm('Lanjutkan pengajuan sesuai alur Non Rutin berikutnya?')) {
+    if(confirm('Proses permintaan rutin ini ke tahap logistik?')) {
         $.post('{?=url(ADMIN."/logistik_non_medis/verifikasisppb")?}', {no_sppb: no_sppb}, function(data) {
             var res = JSON.parse(data);
             if(res.status == 'success') {

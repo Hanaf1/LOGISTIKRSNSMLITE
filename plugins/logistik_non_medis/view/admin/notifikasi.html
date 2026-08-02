@@ -135,6 +135,8 @@ $(document).ready(function() {
     var websocket;
     var pusherStarted = false;
     var lastRealtimeMode = '';
+    var workermanRetry = 0;
+    var workermanMaxRetry = 2;
 
     function escapeHtml(text) {
         return $('<div>').text(text || '').html();
@@ -239,11 +241,15 @@ $(document).ready(function() {
     }
 
     function connectWorkerman() {
-        if (!window.WebSocket || websocket) return;
+        if (!window.WebSocket || websocket || workermanRetry >= workermanMaxRetry) return;
         $('#notifRealtimeStatus').text('Realtime: Workerman');
-        var wsUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.hostname + ':3892';
+        var wsHost = location.hostname === 'localhost' ? '127.0.0.1' : location.hostname;
+        var wsUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + wsHost + ':3892';
         try {
             websocket = new WebSocket(wsUrl);
+            websocket.onopen = function() {
+                workermanRetry = 0;
+            };
             websocket.onmessage = function(event) {
                 try {
                     var payload = JSON.parse(event.data);
@@ -252,15 +258,21 @@ $(document).ready(function() {
             };
             websocket.onclose = function() {
                 websocket = null;
-                setTimeout(connectWorkerman, 5000);
+                workermanRetry++;
+                if (workermanRetry < workermanMaxRetry) {
+                    setTimeout(connectWorkerman, 5000);
+                } else {
+                    $('#notifRealtimeStatus').text('Realtime: polling aktif');
+                }
             };
             websocket.onerror = function() {
                 try { websocket.close(); } catch (e) {}
             };
         } catch (e) {
             websocket = null;
+            workermanRetry++;
             $('#notifRealtimeStatus').text('Realtime: polling aktif');
-            setTimeout(connectWorkerman, 5000);
+            if (workermanRetry < workermanMaxRetry) setTimeout(connectWorkerman, 5000);
         }
     }
 

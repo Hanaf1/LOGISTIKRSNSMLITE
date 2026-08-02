@@ -133,24 +133,13 @@
                     <div role="tabpanel" class="tab-pane active" id="kartu-stok-tab">
                         <div class="well" style="padding: 15px; margin-bottom: 20px;">
                             <form id="form-kartu-stok" class="row">
-                                <div class="col-md-4">
+                                <div class="col-md-5">
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <label class="control-label">Pilih Barang</label>
                                         <select id="kartu-barang" class="form-control select2-ajax" style="width: 100%;"></select>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <label class="control-label">Lokasi Gudang</label>
-                                        <select id="kartu-lokasi" class="form-control select2" style="width: 100%;">
-                                            <option value="">Semua Lokasi</option>
-                                            {loop: $lokasi}
-                                            <option value="{$value.kode_lokasi}">{$value.nama_lokasi}</option>
-                                            {/loop}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
+                                <div class="col-md-5">
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <label class="control-label">Periode</label>
                                         <div class="input-group">
@@ -201,18 +190,8 @@
                     <div role="tabpanel" class="tab-pane" id="mutasi-saldo-tab">
                         <div class="well" style="padding: 15px; margin-bottom: 20px;">
                             <form id="form-mutasi-saldo" class="row">
-                                <div class="col-md-3">
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <label class="control-label">Lokasi Gudang</label>
-                                        <select id="mutasi-lokasi" class="form-control select2" style="width: 100%;">
-                                            <option value="">Semua Lokasi</option>
-                                            {loop: $lokasi}
-                                            <option value="{$value.kode_lokasi}">{$value.nama_lokasi}</option>
-                                            {/loop}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
+
+                                <div class="col-md-4">
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <label class="control-label">Kategori</label>
                                         <select id="mutasi-kategori" class="form-control select2" style="width: 100%;">
@@ -223,13 +202,13 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <label class="control-label">Cari Nama/Kode</label>
                                         <input type="text" id="mutasi-cari" class="form-control" placeholder="Cari barang...">
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <label class="control-label">Periode</label>
                                         <div class="input-group">
@@ -276,18 +255,7 @@
                     <div role="tabpanel" class="tab-pane" id="stok-kritis-tab">
                         <div class="well" style="padding: 15px; margin-bottom: 20px;">
                             <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <label class="control-label">Filter Lokasi</label>
-                                        <select id="kritis-lokasi" class="form-control select2" style="width: 100%;">
-                                            <option value="">Semua Lokasi</option>
-                                            {loop: $lokasi}
-                                            <option value="{$value.kode_lokasi}">{$value.nama_lokasi}</option>
-                                            {/loop}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-8 text-right" style="padding-top: 25px;">
+                                <div class="col-md-12 text-right">
                                     <button class="btn btn-danger" id="btn-refresh-kritis"><i class="fa fa-refresh"></i> Muat Ulang</button>
                                 </div>
                             </div>
@@ -327,18 +295,7 @@
                     <div role="tabpanel" class="tab-pane" id="nilai-persediaan-tab">
                         <div class="well" style="padding: 15px; margin-bottom: 20px;">
                             <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group" style="margin-bottom: 0;">
-                                        <label class="control-label">Lokasi Gudang</label>
-                                        <select id="nilai-lokasi" class="form-control select2" style="width: 100%;">
-                                            <option value="">Semua Lokasi</option>
-                                            {loop: $lokasi}
-                                            <option value="{$value.kode_lokasi}">{$value.nama_lokasi}</option>
-                                            {/loop}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <label class="control-label">Kategori</label>
                                         <select id="nilai-kategori" class="form-control select2" style="width: 100%;">
@@ -639,7 +596,6 @@ $(document).ready(function() {
     $('#form-kartu-stok').submit(function(e) {
         e.preventDefault();
         var kode_item = $('#kartu-barang').val();
-        var kode_lokasi = $('#kartu-lokasi').val();
         var tgl_awal = $('#kartu-tgl-awal').val();
         var tgl_akhir = $('#kartu-tgl-akhir').val();
         var label_barang = $('#kartu-barang').text() || 'Semua';
@@ -652,11 +608,10 @@ $(document).ready(function() {
         $('#tbody-kartu-stok').html('<tr><td colspan="8" class="text-center"><i class="fa fa-spinner fa-spin"></i> Memuat data...</td></tr>');
         
         // Update print meta info
-        $('#print-kartu-detail').text('Barang: ' + label_barang + ' | Lokasi: ' + ($('#kartu-lokasi option:selected').text()) + ' | Periode: ' + tgl_awal + ' s/d ' + tgl_akhir);
+        $('#print-kartu-detail').text('Barang: ' + label_barang + ' | Periode: ' + tgl_awal + ' s/d ' + tgl_akhir);
 
         $.post('{?=url(ADMIN."/logistik_non_medis/displaylaporankartustok")?}', {
             kode_item: kode_item,
-            kode_lokasi: kode_lokasi,
             tgl_awal: tgl_awal,
             tgl_akhir: tgl_akhir
         }, function(data) {
@@ -665,7 +620,7 @@ $(document).ready(function() {
     });
 
     // 5. TAB 2: MUTASI & SALDO DISPLAYER
-    $('#mutasi-lokasi, #mutasi-kategori, #mutasi-tgl-awal, #mutasi-tgl-akhir').change(function() {
+    $('#mutasi-kategori, #mutasi-tgl-awal, #mutasi-tgl-akhir').change(function() {
         loadMutasiSaldo();
     });
     $('#mutasi-cari').keyup(function() {
@@ -673,7 +628,6 @@ $(document).ready(function() {
     });
 
     function loadMutasiSaldo() {
-        var kode_lokasi = $('#mutasi-lokasi').val();
         var kategori = $('#mutasi-kategori').val();
         var tgl_awal = $('#mutasi-tgl-awal').val();
         var tgl_akhir = $('#mutasi-tgl-akhir').val();
@@ -682,10 +636,9 @@ $(document).ready(function() {
         $('#tbody-mutasi-saldo').html('<tr><td colspan="7" class="text-center"><i class="fa fa-spinner fa-spin"></i> Memuat data...</td></tr>');
         
         // Update print meta info
-        $('#print-mutasi-detail').text('Lokasi: ' + ($('#mutasi-lokasi option:selected').text()) + ' | Kategori: ' + (kategori || 'Semua') + ' | Periode: ' + tgl_awal + ' s/d ' + tgl_akhir);
+        $('#print-mutasi-detail').text('Kategori: ' + (kategori || 'Semua') + ' | Periode: ' + tgl_awal + ' s/d ' + tgl_akhir);
 
         $.post('{?=url(ADMIN."/logistik_non_medis/displaylaporanmutasisaldo")?}', {
-            kode_lokasi: kode_lokasi,
             kategori: kategori,
             tgl_awal: tgl_awal,
             tgl_akhir: tgl_akhir,
@@ -696,20 +649,14 @@ $(document).ready(function() {
     }
 
     // 6. TAB 3: STOK KRITIS & MINUS HANDLER
-    $('#kritis-lokasi').change(function() {
-        loadStokKritis();
-    });
     $('#btn-refresh-kritis').click(function() {
         loadStokKritis();
     });
 
     function loadStokKritis() {
-        var kode_lokasi = $('#kritis-lokasi').val();
         $('#tbody-stok-kritis').html('<tr><td colspan="8" class="text-center"><i class="fa fa-spinner fa-spin"></i> Memuat data...</td></tr>');
         
-        $.post('{?=url(ADMIN."/logistik_non_medis/displaylaporanstokkritis")?}', {
-            kode_lokasi: kode_lokasi
-        }, function(data) {
+        $.post('{?=url(ADMIN."/logistik_non_medis/displaylaporanstokkritis")?}', {}, function(data) {
             $('#tbody-stok-kritis').html(data);
             
             // Extract the quantity of critical & negative items for KPI
@@ -723,18 +670,16 @@ $(document).ready(function() {
     }
 
     // 7. TAB 4: VALUASI PERSEDIAAN & CHART PLOTTING
-    $('#nilai-lokasi, #nilai-kategori').change(function() {
+    $('#nilai-kategori').change(function() {
         loadNilaiPersediaan();
     });
 
     function loadNilaiPersediaan() {
-        var kode_lokasi = $('#nilai-lokasi').val();
         var kategori = $('#nilai-kategori').val();
 
         $('#tbody-nilai-persediaan').html('<tr><td colspan="7" class="text-center"><i class="fa fa-spinner fa-spin"></i> Memuat data...</td></tr>');
         
         $.post('{?=url(ADMIN."/logistik_non_medis/displaylaporannilaipersediaan")?}', {
-            kode_lokasi: kode_lokasi,
             kategori: kategori
         }, function(response) {
             var data = JSON.parse(response);
@@ -743,10 +688,6 @@ $(document).ready(function() {
             
             // Build / Update ChartJS Plot
             renderChart(data.chart_data);
-            
-            // Update total location count based on select dropdown options length
-            var total_locs = $('#nilai-lokasi option').length - 1; // Subtract "Semua"
-            $('#kpi-total-gudang').text(total_locs);
         });
     }
 

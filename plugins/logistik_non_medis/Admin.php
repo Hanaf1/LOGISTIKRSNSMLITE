@@ -605,7 +605,7 @@ class Admin extends AdminModule
     }
     $perm_flags['perm_laporancostunit'] = in_array('laporandistribusi', $permissions);
 
-    $count_verif = count($this->db('rsns_custom_logistik_non_medis_sppb')->where('status', 'Disetujui Kabid')->orWhere('status', 'Disetujui Unit')->group('no_sppb')->toArray());
+    $count_verif = (int) $this->db()->pdo()->query("SELECT COUNT(DISTINCT no_sppb) FROM rsns_custom_logistik_non_medis_sppb WHERE status IN ('Disetujui Kabid', 'Disetujui Unit') OR (status = 'Diajukan' AND jenis_permintaan = 'Rutin')")->fetchColumn();
     $count_packing = count($this->db('rsns_custom_logistik_non_medis_sppb')->where('status', 'Proses Logistik')->orWhere('status', 'Proses Pengadaan')->orWhere('status', 'Picking')->orWhere('status', 'Packing')->group('no_sppb')->toArray());
 
     $dash_permintaan_minggu = 0;
@@ -853,6 +853,9 @@ class Admin extends AdminModule
 
   private function _initDataBarang()
   {
+      static $_databarang_initialized = false;
+      if ($_databarang_initialized) return;
+      $_databarang_initialized = true;
       $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_master_barang` (
         `kode_item` varchar(50) NOT NULL,
         `barcode` varchar(100) DEFAULT NULL,
@@ -6695,6 +6698,9 @@ $(document).ready(function() {
 
   private function _initSppb()
   {
+      static $_sppb_initialized = false;
+      if ($_sppb_initialized) return;
+      $_sppb_initialized = true;
       $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_sppb` (
         `id` int(11) NOT NULL AUTO_INCREMENT,
         `no_sppb` varchar(50) NOT NULL,
@@ -6765,18 +6771,19 @@ $(document).ready(function() {
       $add_sppb_column_if_missing('tgl_approve_ka_bidang', "datetime DEFAULT NULL AFTER `user_approve_ka_bidang`");
 
       // Pertahankan seluruh status yang mungkin sudah dipakai database lama
-      // agar ALTER ENUM tidak memotong nilai existing (mis. Proses/Dibatalkan).
-      $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` MODIFY `status` enum('Draft','Diajukan','Disetujui Ka. Unit','Disetujui Ka. Sie','Disetujui Kabid','Disetujui Unit','Diserahkan ke Kasie Umum','Verifikasi Kasie Umum','Diteruskan ke Logistik Umum','Rekap Logistik','Logistik Umum & Rekap','Konsultasi Dana','Konsul Pengajuan ke Kabid Umum','Diserahkan ke Keuangan','Pengajuan Dana ke Bendahara','Tidak ACC','Proses','Terverifikasi','Proses Logistik','Proses Pengadaan','Siap Ambil','Siap Diserahkan','Picking','Packing','Ready','Dikirim','Diterima','Selesai','Ditolak','Dibatalkan') NOT NULL DEFAULT 'Draft'");
+      // Cek apakah enum 'Pengajuan Dana ke Bendahara' sudah ada (penanda migrasi selesai)
+      $enum_check = $this->db()->pdo()->query("SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'rsns_custom_logistik_non_medis_sppb' AND COLUMN_NAME = 'status'")->fetchColumn();
+      if (strpos((string)$enum_check, 'Pengajuan Dana ke Bendahara') === false) {
+          $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_sppb` MODIFY `status` enum('Draft','Diajukan','Disetujui Ka. Unit','Disetujui Ka. Sie','Disetujui Kabid','Disetujui Unit','Diserahkan ke Kasie Umum','Verifikasi Kasie Umum','Diteruskan ke Logistik Umum','Rekap Logistik','Logistik Umum & Rekap','Konsultasi Dana','Konsul Pengajuan ke Kabid Umum','Diserahkan ke Keuangan','Pengajuan Dana ke Bendahara','Tidak ACC','Proses','Terverifikasi','Proses Logistik','Proses Pengadaan','Siap Ambil','Siap Diserahkan','Picking','Packing','Ready','Dikirim','Diterima','Selesai','Ditolak','Dibatalkan') NOT NULL DEFAULT 'Draft'");
 
-      // Migration: rename 'Terverifikasi' -> 'Proses Logistik' untuk SPPB yang sudah ada
-      $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Proses Logistik' WHERE status = 'Terverifikasi'");
-
-      // Migration: rename 'Disetujui Unit' -> 'Disetujui Kabid' untuk SPPB Non Rutin
-      $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Disetujui Kabid' WHERE status = 'Disetujui Unit' AND jenis_permintaan = 'Non Rutin'");
-      $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Logistik Umum & Rekap' WHERE status IN ('Diteruskan ke Logistik Umum','Rekap Logistik') AND jenis_permintaan = 'Non Rutin'");
-      $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Konsul Pengajuan ke Kabid Umum' WHERE status = 'Konsultasi Dana' AND jenis_permintaan = 'Non Rutin'");
-      $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Pengajuan Dana ke Bendahara' WHERE status = 'Diserahkan ke Keuangan' AND jenis_permintaan = 'Non Rutin'");
-      $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Siap Diserahkan' WHERE status = 'Siap Ambil' AND jenis_permintaan = 'Non Rutin'");
+          // Migration: rename status lama ke baru
+          $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Proses Logistik' WHERE status = 'Terverifikasi'");
+          $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Disetujui Kabid' WHERE status = 'Disetujui Unit' AND jenis_permintaan = 'Non Rutin'");
+          $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Logistik Umum & Rekap' WHERE status IN ('Diteruskan ke Logistik Umum','Rekap Logistik') AND jenis_permintaan = 'Non Rutin'");
+          $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Konsul Pengajuan ke Kabid Umum' WHERE status = 'Konsultasi Dana' AND jenis_permintaan = 'Non Rutin'");
+          $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Pengajuan Dana ke Bendahara' WHERE status = 'Diserahkan ke Keuangan' AND jenis_permintaan = 'Non Rutin'");
+          $this->db()->pdo()->exec("UPDATE `rsns_custom_logistik_non_medis_sppb` SET status = 'Siap Diserahkan' WHERE status = 'Siap Ambil' AND jenis_permintaan = 'Non Rutin'");
+      }
 
       // Migration: add ditolak_pada_status column if missing
       $check_ditolak_status = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_sppb` LIKE 'ditolak_pada_status'")->fetch();
@@ -7193,10 +7200,31 @@ $(document).ready(function() {
           $nama_unit = $unit['nama_unit'] ?? '';
       }
       
+      $current_week_sppb = null;
+      if ($jenis === 'Rutin' && $role === 'unit' && !empty($userRoleData['kode_unit'])) {
+          $timestamp = time();
+          $dayOfWeek = date('w', $timestamp);
+          $offset = $dayOfWeek == 0 ? 6 : $dayOfWeek - 1; 
+          $monday = date('Y-m-d', strtotime("-$offset days", $timestamp));
+          $sunday = date('Y-m-d', strtotime("+6 days", strtotime($monday)));
+
+          $sql_cek = "SELECT no_sppb, tgl_sppb, status FROM rsns_custom_logistik_non_medis_sppb 
+                      WHERE kode_unit = ? AND jenis_permintaan = 'Rutin' 
+                      AND status NOT IN ('Ditolak', 'Dibatalkan') 
+                      AND tgl_sppb BETWEEN ? AND ? ORDER BY id DESC LIMIT 1";
+          $stmt_cek = $this->db()->pdo()->prepare($sql_cek);
+          $stmt_cek->execute([$userRoleData['kode_unit'], $monday, $sunday]);
+          $current_week_sppb = $stmt_cek->fetch(\PDO::FETCH_ASSOC);
+          if ($current_week_sppb) {
+              $current_week_sppb['tgl_sppb_display'] = date('d/m/Y', strtotime($current_week_sppb['tgl_sppb']));
+          }
+      }
+
       return $this->draw('distribusi.sppb.html', [
           'role' => $role,
           'nama_unit' => $nama_unit,
           'jenis_page' => $jenis,
+          'current_week_sppb' => $current_week_sppb,
           'can_create_sppb' => in_array($role, ['admin', 'unit', 'logistik'], true),
           'can_manage_distribusi_controls' => in_array($role, ['admin', 'logistik'], true)
       ]);
@@ -7228,6 +7256,7 @@ $(document).ready(function() {
       $status = isset($_POST['status']) ? $_POST['status'] : '';
       $jenis_permintaan = isset($_POST['jenis_permintaan']) ? $_POST['jenis_permintaan'] : '';
       $approval_tab = isset($_POST['approval_tab']) ? $_POST['approval_tab'] : '';
+      $list_tab = isset($_POST['list_tab']) ? $_POST['list_tab'] : '';
       
       $_offset = ($halaman - 1) * $perpage;
 
@@ -7245,7 +7274,7 @@ $(document).ready(function() {
           SELECT s.no_sppb, s.tgl_sppb, s.kode_unit, u.nama_unit, s.status, s.keterangan, s.jenis_permintaan, s.tgl_input,
                  s.ditolak_pada_status, s.diambil_oleh, s.tgl_diambil,
                  COUNT(s.kode_item) as jml_item,
-                 GROUP_CONCAT(COALESCE(NULLIF(s.nama_barang_manual, ''), b.nama_barang, s.kode_item) SEPARATOR ', ') as daftar_barang
+                 GROUP_CONCAT(CONCAT(COALESCE(NULLIF(s.nama_barang_manual, ''), b.nama_barang, s.kode_item), IF(s.jenis_keluar = 'Tambahan', ' <span class=\"label label-success\">Tambahan</span>', '')) SEPARATOR ', ') as daftar_barang
           FROM rsns_custom_logistik_non_medis_sppb s
           LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = s.kode_unit
           LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = s.kode_item
@@ -7284,9 +7313,11 @@ $(document).ready(function() {
       if (in_array($role, ['kepala_unit', 'kepala_sie', 'kepala_bidang']) && !empty($approval_tab)) {
           if ($approval_tab === 'pending') {
               if ($role === 'kepala_unit') {
-                  $sql .= " AND s.jenis_permintaan = 'Rutin' AND s.status = 'Diajukan' ";
+                  // Ka. Unit hanya approve Non Rutin; Rutin langsung ke logistik
+                  $sql .= " AND s.jenis_permintaan = 'Non Rutin' AND s.status = 'Diajukan' ";
               } elseif ($role === 'kepala_sie') {
-                  $sql .= " AND ((s.jenis_permintaan = 'Non Rutin' AND s.status = 'Diajukan') OR (s.jenis_permintaan <> 'Non Rutin' AND s.status = 'Disetujui Ka. Unit')) ";
+                  // Ka. Sie hanya approve Non Rutin yang sudah disetujui Ka. Unit; Rutin dihandle logistik
+                  $sql .= " AND s.jenis_permintaan = 'Non Rutin' AND s.status = 'Disetujui Ka. Unit' ";
               } elseif ($role === 'kepala_bidang') {
                   $sql .= " AND s.jenis_permintaan = 'Non Rutin' AND s.status = 'Disetujui Ka. Sie' ";
               }
@@ -7300,6 +7331,15 @@ $(document).ready(function() {
               } elseif ($role === 'kepala_bidang') {
                   $sql .= " AND s.user_approve_ka_bidang = ? ";
                   $params[] = $username;
+              }
+          }
+      } else {
+          // Tab filtering untuk list utama (Aktif vs Riwayat) jika bukan di tab approval
+          if (!empty($list_tab)) {
+              if ($list_tab === 'active') {
+                  $sql .= " AND s.status NOT IN ('Selesai', 'Batal', 'Dibatalkan', 'Ditolak') ";
+              } elseif ($list_tab === 'history') {
+                  $sql .= " AND s.status IN ('Selesai', 'Batal', 'Dibatalkan', 'Ditolak') ";
               }
           }
       }
@@ -7317,6 +7357,18 @@ $(document).ready(function() {
       $jumlah_data = count($all_data);
       $jml_halaman = $jumlah_data > 0 ? ceil($jumlah_data / $perpage) : 1;
       $rows = array_slice($all_data, $_offset, $perpage);
+      
+      $current_no_sppbs = array_unique(array_column($rows, 'no_sppb'));
+      $non_editable_sppbs = [];
+      if (!empty($current_no_sppbs)) {
+          $placeholders = implode(',', array_fill(0, count($current_no_sppbs), '?'));
+          $sql_non_editable = "SELECT DISTINCT no_sppb FROM rsns_custom_logistik_non_medis_sppb 
+                               WHERE no_sppb IN ($placeholders) 
+                               AND status NOT IN ('Draft', 'Diajukan')";
+          $stmt_non_editable = $this->db()->pdo()->prepare($sql_non_editable);
+          $stmt_non_editable->execute(array_values($current_no_sppbs));
+          $non_editable_sppbs = $stmt_non_editable->fetchAll(\PDO::FETCH_COLUMN);
+      }
       
       foreach ($rows as $i => &$row) {
           $row['no'] = $i + 1 + $_offset;
@@ -7340,27 +7392,33 @@ $(document).ready(function() {
               $in_unit_scope = in_array($row['kode_unit'], $scope_units, true);
           }
 
+          $is_fully_editable = !in_array($row['no_sppb'], $non_editable_sppbs, true);
+
           // Unit/perwakilan unit hanya boleh mengubah pengajuan yang belum melewati tahap Diajukan.
           if ($role === 'admin') {
-              $row['can_edit'] = in_array($row_status, ['Draft', 'Diajukan'], true);
-              $row['can_delete'] = in_array($row_status, ['Draft', 'Diajukan'], true);
+              $row['can_edit'] = $is_fully_editable && in_array($row_status, ['Draft', 'Diajukan'], true);
+              $row['can_delete'] = $is_fully_editable && in_array($row_status, ['Draft', 'Diajukan'], true);
           } elseif ($role === 'logistik') {
-              $row['can_edit'] = in_array($row_status, ['Draft', 'Diajukan'], true);
+              $row['can_edit'] = $is_fully_editable && in_array($row_status, ['Draft', 'Diajukan'], true);
           } elseif (in_array($role, ['unit', 'kepala_unit', 'kepala_sie', 'kepala_bidang'], true) && $in_unit_scope) {
-              $row['can_edit'] = in_array($row_status, ['Draft', 'Diajukan'], true);
-              $row['can_delete'] = $row_status === 'Draft';
+              $row['can_edit'] = $is_fully_editable && in_array($row_status, ['Draft', 'Diajukan'], true);
+              $row['can_delete'] = $is_fully_editable && $row_status === 'Draft';
           }
 
-          // Persetujuan mengikuti step. Role logistik tidak menjadi approver.
+          // Persetujuan mengikuti step.
+          // Rutin: langsung ke logistik (tidak ada approval Ka. Unit).
+          // Non Rutin: Ka. Unit → Ka. Sie → Ka. Bid → logistik.
           if ($row_jenis !== 'Rutin') {
-              $row['can_approve_ka_unit'] = false;
-              $row['can_approve_ka_sie'] = $row_status === 'Diajukan' && (($role === 'kepala_sie' && $in_unit_scope) || $role === 'admin');
+              $row['can_approve_ka_unit'] = $row_status === 'Diajukan' && (($role === 'kepala_unit' && $in_unit_scope) || $role === 'admin');
+              $row['can_approve_ka_sie'] = $row_status === 'Disetujui Ka. Unit' && (($role === 'kepala_sie' && $in_unit_scope) || $role === 'admin');
               $row['can_approve_ka_bidang'] = $row_status === 'Disetujui Ka. Sie' && (($role === 'kepala_bidang' && $in_unit_scope) || $role === 'admin');
           }
 
           $row['can_proses_logistik'] = ($role === 'admin' || $role === 'logistik') && (
-              in_array($row_status, ['Disetujui Kabid', 'Disetujui Unit'], true)
-              || ($row_status === 'Diajukan' && $row_jenis === 'Rutin')
+              // Rutin: langsung bisa diproses dari status Diajukan
+              ($row_jenis === 'Rutin' && in_array($row_status, ['Diajukan', 'Disetujui Unit'], true))
+              // Non Rutin: baru bisa diproses setelah Disetujui Kabid
+              || ($row_jenis !== 'Rutin' && in_array($row_status, ['Disetujui Kabid', 'Disetujui Unit'], true))
           );
           $row['can_review_logistik'] = ($role === 'admin' || $role === 'logistik') && (
               $row_status === 'Proses Logistik'
@@ -7430,7 +7488,7 @@ $(document).ready(function() {
           }
           $sppb_ref = $rows[0];
           if (!in_array($sppb_ref['status'], ['Draft', 'Diajukan'], true)) {
-              exit('Data sudah diproses dan tidak dapat diubah.');
+              exit('<div class=\"alert alert-warning\"><i class=\"fa fa-exclamation-triangle\"></i> <strong>Data sudah diproses dan tidak dapat diubah secara keseluruhan.</strong><br><br>Beberapa barang dalam SPPB ini sudah diproses atau selesai. Jika Anda ingin mengatur <strong>Barang Tambahan</strong>, silakan tutup form ini, lalu klik tombol <strong>Detail (ikon mata biru)</strong> pada tabel, kemudian klik <strong>Atur Barang Tambahan</strong>.</div>');
           }
           if (in_array($role, ['unit', 'kepala_unit', 'kepala_sie', 'kepala_bidang'], true) && !empty($user_kode_unit)) {
               $units_arr = $this->getChildUnitCodes(explode(',', $user_kode_unit));
@@ -7456,17 +7514,18 @@ $(document).ready(function() {
           if (in_array($status, ['Ditolak', 'Dibatalkan'])) {
               $stepper_rejected = true;
           } elseif ($jenis_perm === 'Non Rutin') {
-              if ($status === 'Disetujui Ka. Sie') { $stepper_step = 2; }
-              elseif ($status === 'Disetujui Kabid' || $status === 'Disetujui Unit') { $stepper_step = 3; }
-              elseif ($status === 'Diserahkan ke Kasie Umum') { $stepper_step = 4; }
-              elseif ($status === 'Verifikasi Kasie Umum') { $stepper_step = 5; }
-              elseif (in_array($status, ['Diteruskan ke Logistik Umum','Rekap Logistik','Logistik Umum & Rekap'], true)) { $stepper_step = 6; }
-              elseif (in_array($status, ['Konsultasi Dana','Konsul Pengajuan ke Kabid Umum'], true)) { $stepper_step = 7; }
-              elseif (in_array($status, ['Diserahkan ke Keuangan','Pengajuan Dana ke Bendahara'], true)) { $stepper_step = 8; }
-              elseif ($status === 'Proses Pengadaan') { $stepper_step = 9; }
-              elseif (in_array($status, ['Siap Ambil','Siap Diserahkan'], true)) { $stepper_step = 10; }
-              elseif ($status === 'Tidak ACC') { $stepper_step = 7; $stepper_rejected = true; }
-              elseif (in_array($status, ['Selesai', 'Ready', 'Diterima'])) { $stepper_step = 11; }
+              if ($status === 'Disetujui Ka. Unit') { $stepper_step = 2; }
+              elseif ($status === 'Disetujui Ka. Sie') { $stepper_step = 3; }
+              elseif ($status === 'Disetujui Kabid' || $status === 'Disetujui Unit') { $stepper_step = 4; }
+              elseif ($status === 'Diserahkan ke Kasie Umum') { $stepper_step = 5; }
+              elseif ($status === 'Verifikasi Kasie Umum') { $stepper_step = 6; }
+              elseif (in_array($status, ['Diteruskan ke Logistik Umum','Rekap Logistik','Logistik Umum & Rekap'], true)) { $stepper_step = 7; }
+              elseif (in_array($status, ['Konsultasi Dana','Konsul Pengajuan ke Kabid Umum'], true)) { $stepper_step = 8; }
+              elseif (in_array($status, ['Diserahkan ke Keuangan','Pengajuan Dana ke Bendahara'], true)) { $stepper_step = 9; }
+              elseif ($status === 'Proses Pengadaan') { $stepper_step = 10; }
+              elseif (in_array($status, ['Siap Ambil','Siap Diserahkan'], true)) { $stepper_step = 11; }
+              elseif ($status === 'Tidak ACC') { $stepper_step = 8; $stepper_rejected = true; }
+              elseif (in_array($status, ['Selesai', 'Ready', 'Diterima'])) { $stepper_step = 12; }
           } else {
               if (in_array($status, ['Disetujui Ka. Unit', 'Disetujui Ka. Sie', 'Disetujui Kabid', 'Disetujui Unit'])) {
                   $stepper_step = 2;
@@ -7521,13 +7580,21 @@ $(document).ready(function() {
           $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
           
           if ($rows) {
-              foreach ($rows as $idx => &$row) { $row['index'] = $idx; }
-              $sppb = $rows[0];
-              $sppb['items'] = $rows;
-              
+              $jenis_perm = $rows[0]['jenis_permintaan'];
+              $status = $rows[0]['status'];
               $username = $this->core->getUserInfo('username', null, true);
               $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
               $role = $userRoleData['role'] ?? 'unit';
+              
+              $can_add_tambahan = ($jenis_perm === 'Rutin' && in_array($role, ['unit', 'admin', 'logistik']) && !in_array($status, ['Ditolak', 'Dibatalkan']));
+
+              foreach ($rows as $idx => &$row) { 
+                  $row['index'] = $idx; 
+                  $row['can_edit_tambahan'] = ($can_add_tambahan && isset($row['jenis_keluar']) && $row['jenis_keluar'] === 'Tambahan');
+              }
+              $sppb = $rows[0];
+              $sppb['items'] = $rows;
+              
               $user_kode_unit = $userRoleData['kode_unit'] ?? null;
               $units_arr = !empty($user_kode_unit) ? $this->getChildUnitCodes(explode(',', $user_kode_unit)) : [];
 
@@ -7540,17 +7607,18 @@ $(document).ready(function() {
               if (in_array($status, ['Ditolak', 'Dibatalkan'])) {
                   $stepper_rejected = true;
               } elseif ($jenis_perm === 'Non Rutin') {
-                  if ($status === 'Disetujui Ka. Sie') { $stepper_step = 2; }
-                  elseif ($status === 'Disetujui Kabid' || $status === 'Disetujui Unit') { $stepper_step = 3; }
-                  elseif ($status === 'Diserahkan ke Kasie Umum') { $stepper_step = 4; }
-                  elseif ($status === 'Verifikasi Kasie Umum') { $stepper_step = 5; }
-                  elseif (in_array($status, ['Diteruskan ke Logistik Umum','Rekap Logistik','Logistik Umum & Rekap'], true)) { $stepper_step = 6; }
-                  elseif (in_array($status, ['Konsultasi Dana','Konsul Pengajuan ke Kabid Umum'], true)) { $stepper_step = 7; }
-                  elseif (in_array($status, ['Diserahkan ke Keuangan','Pengajuan Dana ke Bendahara'], true)) { $stepper_step = 8; }
-                  elseif ($status === 'Proses Pengadaan') { $stepper_step = 9; }
-                  elseif (in_array($status, ['Siap Ambil','Siap Diserahkan'], true)) { $stepper_step = 10; }
-                  elseif ($status === 'Tidak ACC') { $stepper_step = 7; $stepper_rejected = true; }
-                  elseif (in_array($status, ['Selesai', 'Ready', 'Diterima'])) { $stepper_step = 11; }
+                  if ($status === 'Disetujui Ka. Unit') { $stepper_step = 2; }
+                  elseif ($status === 'Disetujui Ka. Sie') { $stepper_step = 3; }
+                  elseif ($status === 'Disetujui Kabid' || $status === 'Disetujui Unit') { $stepper_step = 4; }
+                  elseif ($status === 'Diserahkan ke Kasie Umum') { $stepper_step = 5; }
+                  elseif ($status === 'Verifikasi Kasie Umum') { $stepper_step = 6; }
+                  elseif (in_array($status, ['Diteruskan ke Logistik Umum','Rekap Logistik','Logistik Umum & Rekap'], true)) { $stepper_step = 7; }
+                  elseif (in_array($status, ['Konsultasi Dana','Konsul Pengajuan ke Kabid Umum'], true)) { $stepper_step = 8; }
+                  elseif (in_array($status, ['Diserahkan ke Keuangan','Pengajuan Dana ke Bendahara'], true)) { $stepper_step = 9; }
+                  elseif ($status === 'Proses Pengadaan') { $stepper_step = 10; }
+                  elseif (in_array($status, ['Siap Ambil','Siap Diserahkan'], true)) { $stepper_step = 11; }
+                  elseif ($status === 'Tidak ACC') { $stepper_step = 8; $stepper_rejected = true; }
+                  elseif (in_array($status, ['Selesai', 'Ready', 'Diterima'])) { $stepper_step = 12; }
               } else {
                   if (in_array($status, ['Disetujui Ka. Unit', 'Disetujui Ka. Sie', 'Disetujui Kabid', 'Disetujui Unit'])) {
                       $stepper_step = 2;
@@ -7571,7 +7639,8 @@ $(document).ready(function() {
                   }
               }
 
-              echo $this->draw('distribusi.sppb.detail.html', ['sppb' => $sppb, 'role' => $role, 'can_approve_sppb' => $can_approve_sppb, 'stepper_step' => $stepper_step, 'stepper_rejected' => $stepper_rejected]);
+              $inline_mode = isset($_POST['inline']) ? (int)$_POST['inline'] : 0;
+              echo $this->draw('distribusi.sppb.detail.html', ['sppb' => $sppb, 'role' => $role, 'can_approve_sppb' => $can_approve_sppb, 'stepper_step' => $stepper_step, 'stepper_rejected' => $stepper_rejected, 'can_add_tambahan' => $can_add_tambahan, 'inline_mode' => $inline_mode]);
           }
       }
       exit();
@@ -7709,32 +7778,27 @@ $(document).ready(function() {
 
   public function postSaveSppb()
   {
+      ob_start(); // Prevent PHP Notice/Warning from polluting JSON response
       $no_sppb = $_POST['no_sppb'] ?? '';
       $kode_unit = $_POST['kode_unit'] ?? '';
       $status = $_POST['status'] ?? 'Diajukan';
       $user = $this->core->getUserInfo('username', null, true);
 
       // Determine jenis_permintaan automatically from item type (Habis Pakai vs Aset)
-      $this->_initDataBarang();
+      // Use single IN() query instead of per-item queries for performance
       $jenis_permintaan = 'Rutin';
       if (isset($_POST['kode_item']) && is_array($_POST['kode_item'])) {
-          foreach ($_POST['kode_item'] as $k_item) {
-              $item_info = $this->db('rsns_custom_logistik_non_medis_master_barang')->where('kode_item', $k_item)->oneArray();
-              $tipe = $item_info['tipe_barang'] ?? 'Habis Pakai';
-              if ($tipe === 'Aset') {
+          $kode_items = array_filter($_POST['kode_item']);
+          if (!empty($kode_items)) {
+              $placeholders = implode(',', array_fill(0, count($kode_items), '?'));
+              $stmt_tipe = $this->db()->pdo()->prepare("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_master_barang WHERE kode_item IN ($placeholders) AND tipe_barang = 'Aset'");
+              $stmt_tipe->execute(array_values($kode_items));
+              if ((int)$stmt_tipe->fetchColumn() > 0) {
                   $jenis_permintaan = 'Non Rutin';
-                  break;
               }
           }
       }
 
-      if ($status === 'Diajukan') {
-          if ($jenis_permintaan === 'Rutin') {
-              $status = 'Disetujui Unit';
-          } else {
-              $status = 'Diajukan';
-          }
-      }
 
       $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $user)->oneArray();
       $role = $userRoleData['role'] ?? 'unit';
@@ -7751,6 +7815,7 @@ $(document).ready(function() {
       // Check if already processed
       $cek = $this->db('rsns_custom_logistik_non_medis_sppb')->where('no_sppb', $no_sppb)->oneArray();
       if ($cek && !in_array($cek['status'], ['Draft', 'Diajukan'])) {
+          while(ob_get_level()) ob_end_clean();
           echo json_encode(['status' => 'error', 'message' => 'Data sudah diproses dan tidak dapat diubah!']);
           exit();
       }
@@ -7759,6 +7824,7 @@ $(document).ready(function() {
       if (in_array($role, ['unit', 'kepala_unit', 'kepala_sie', 'kepala_bidang'], true) && !empty($user_kode_unit) && $cek) {
           $units_arr = $this->getChildUnitCodes(explode(',', $user_kode_unit));
           if (!in_array($cek['kode_unit'], $units_arr, true)) {
+              while(ob_get_level()) ob_end_clean();
               echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak untuk mengubah permintaan unit lain!']);
               exit();
           }
@@ -7770,7 +7836,7 @@ $(document).ready(function() {
           'latar_belakang_tujuan' => trim((string)($_POST['latar_belakang_tujuan'] ?? '')),
           'sasaran_kegunaan' => trim((string)($_POST['sasaran_kegunaan'] ?? '')),
           'rencana_digunakan' => trim((string)($_POST['rencana_digunakan'] ?? '')),
-          'sifat_permintaan' => in_array(($_POST['sifat_permintaan'] ?? 'Biasa'), ['Urgent', 'Biasa'], true) ? $_POST['sifat_permintaan'] : 'Biasa',
+          'sifat_permintaan' => (function() { $v = $_POST['sifat_permintaan'] ?? 'Biasa'; return in_array($v, ['Urgent', 'Biasa'], true) ? $v : 'Biasa'; })(),
           'diajukan_oleh' => trim((string)($_POST['diajukan_oleh'] ?? '')),
           'penanggung_jawab_1' => trim((string)($_POST['penanggung_jawab_1'] ?? '')),
           'penanggung_jawab_2' => trim((string)($_POST['penanggung_jawab_2'] ?? '')),
@@ -7779,6 +7845,7 @@ $(document).ready(function() {
 
       if ($jenis_permintaan === 'Non Rutin' && $status === 'Diajukan') {
           if ($nonrutin_meta['latar_belakang_tujuan'] === '' || $nonrutin_meta['sasaran_kegunaan'] === '' || $nonrutin_meta['rencana_digunakan'] === '' || $nonrutin_meta['diajukan_oleh'] === '' || $nonrutin_meta['penanggung_jawab_1'] === '') {
+              while(ob_get_level()) ob_end_clean();
               echo json_encode(['status' => 'error', 'message' => 'Data non rutin wajib diisi: latar belakang/tujuan, sasaran kegunaan, rencana digunakan, diajukan oleh, dan minimal 1 penanggung jawab.']);
               exit();
           }
@@ -7803,6 +7870,7 @@ $(document).ready(function() {
           $existing_rutin = $stmt_cek->fetch();
 
           if ($existing_rutin) {
+              while(ob_get_level()) ob_end_clean();
               echo json_encode(['status' => 'error', 'message' => 'Permintaan Rutin hanya dapat dilakukan 1 kali dalam seminggu (Senin - Minggu). Anda sudah mengajukan SPPB Rutin minggu ini (No: ' . $existing_rutin['no_sppb'] . '). Silakan ajukan Permintaan Non Rutin.']);
               exit();
           }
@@ -7843,6 +7911,7 @@ $(document).ready(function() {
 
                       if (($used + $qty_request) > $total_quota) {
                           $item_name = $this->db('rsns_custom_logistik_non_medis_master_barang')->where('kode_item', $kode_item)->oneArray()['nama_barang'] ?? $kode_item;
+                          while(ob_get_level()) ob_end_clean();
                           echo json_encode(['status' => 'error', 'message' => "Kuota tidak mencukupi untuk item: $item_name. Sisa kuota saat ini: " . ($total_quota - $used)]);
                           exit();
                       }
@@ -7862,6 +7931,7 @@ $(document).ready(function() {
 
               if ($jenis_permintaan === 'Non Rutin' && $item_sumber === 'manual') {
                   if ($nama_barang_manual === '') {
+                      while(ob_get_level()) ob_end_clean();
                       echo json_encode(['status' => 'error', 'message' => 'Nama barang manual wajib diisi untuk permintaan non rutin.']);
                       exit();
                   }
@@ -7930,10 +8000,108 @@ $(document).ready(function() {
               $this->_broadcastNotification($notification);
           }
 
+          while(ob_get_level()) ob_end_clean();
           echo json_encode(['status' => 'success', 'no_sppb' => $no_sppb]);
       } else {
+          while(ob_get_level()) ob_end_clean();
           echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data.']);
       }
+      exit();
+  }
+
+  public function postTambahitemsppbtambahan()
+  {
+      $no_sppb = $_POST['no_sppb'] ?? '';
+      $kode_item = $_POST['kode_item'] ?? '';
+      $jumlah = $_POST['jumlah'] ?? 0;
+      $keterangan_item = $_POST['keterangan_item'] ?? '';
+
+      if (empty($no_sppb) || empty($kode_item) || $jumlah <= 0) {
+          echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap.']);
+          exit();
+      }
+
+      $existing = $this->db('rsns_custom_logistik_non_medis_sppb')->where('no_sppb', $no_sppb)->oneArray();
+      if (!$existing) {
+          echo json_encode(['status' => 'error', 'message' => 'SPPB tidak ditemukan.']);
+          exit();
+      }
+
+      $barang = $this->db('rsns_custom_logistik_non_medis_master_barang')->where('kode_item', $kode_item)->oneArray();
+      $satuan = $barang['satuan_dasar'] ?? '';
+
+      $user = $this->core->getUserInfo('username', null, true);
+
+      $data = [
+          'no_sppb' => $no_sppb,
+          'tgl_sppb' => $existing['tgl_sppb'],
+          'minggu_ke' => $existing['minggu_ke'] ?? null,
+          'kode_unit' => $existing['kode_unit'],
+          'jenis_permintaan' => $existing['jenis_permintaan'],
+          'jenis_keluar' => 'Tambahan',
+          'kode_item' => $kode_item,
+          'item_sumber' => 'master',
+          'jumlah' => $jumlah,
+          'satuan' => $satuan,
+          'status' => 'Diajukan',
+          'keterangan' => $existing['keterangan'] ?? '',
+          'keterangan_item' => $keterangan_item,
+          'user_input' => $user,
+          'tgl_input' => date('Y-m-d H:i:s')
+      ];
+
+      if ($this->db('rsns_custom_logistik_non_medis_sppb')->save($data)) {
+          echo json_encode(['status' => 'success', 'message' => 'Barang tambahan berhasil ditambahkan.']);
+      } else {
+          echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan barang tambahan.']);
+      }
+      exit();
+  }
+
+  public function postUpdateitemsppbtambahan()
+  {
+      $id = $_POST['id'] ?? '';
+      $jumlah = $_POST['jumlah'] ?? 0;
+      $keterangan_item = $_POST['keterangan_item'] ?? '';
+
+      if (empty($id) || $jumlah <= 0) {
+          echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap.']);
+          exit();
+      }
+
+      $item = $this->db('rsns_custom_logistik_non_medis_sppb')->where('id', $id)->oneArray();
+      if (!$item || ($item['jenis_keluar'] ?? '') !== 'Tambahan') {
+          echo json_encode(['status' => 'error', 'message' => 'Item tidak ditemukan atau bukan item tambahan.']);
+          exit();
+      }
+
+      $this->db('rsns_custom_logistik_non_medis_sppb')->where('id', $id)->update([
+          'jumlah' => $jumlah,
+          'keterangan_item' => $keterangan_item
+      ]);
+
+      echo json_encode(['status' => 'success', 'message' => 'Item tambahan berhasil diperbarui.']);
+      exit();
+  }
+
+  public function postHapusitemsppbtambahan()
+  {
+      $id = $_POST['id'] ?? '';
+
+      if (empty($id)) {
+          echo json_encode(['status' => 'error', 'message' => 'ID tidak valid.']);
+          exit();
+      }
+
+      $item = $this->db('rsns_custom_logistik_non_medis_sppb')->where('id', $id)->oneArray();
+      if (!$item || ($item['jenis_keluar'] ?? '') !== 'Tambahan') {
+          echo json_encode(['status' => 'error', 'message' => 'Item tidak ditemukan atau bukan item tambahan.']);
+          exit();
+      }
+
+      $this->db('rsns_custom_logistik_non_medis_sppb')->where('id', $id)->delete();
+
+      echo json_encode(['status' => 'success', 'message' => 'Item tambahan berhasil dihapus.']);
       exit();
   }
 
@@ -7959,38 +8127,30 @@ $(document).ready(function() {
       $log_msg = '';
 
       if ($current_status === 'Diajukan') {
-          if ($cek['jenis_permintaan'] === 'Non Rutin') {
-              if (!in_array($role, ['kepala_sie', 'admin'], true)) {
-                  echo json_encode(['status' => 'error', 'message' => 'Alur Non Rutin: tahap ini hanya dapat di-ACC KASI.']);
-                  exit();
-              }
-              if ($role === 'kepala_sie' && !empty($units_arr) && !in_array($cek['kode_unit'], $units_arr)) {
-                  echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak untuk menyetujui permintaan unit lain!']);
-                  exit();
-              }
-              $update_data = [
-                  'status' => 'Disetujui Ka. Sie',
-                  'user_approve_ka_sie' => $user,
-                  'tgl_approve_ka_sie' => $now
-              ];
-              $log_msg = 'ACC KASI SPPB Non Rutin: ' . $no_sppb;
-          } else {
-              if (!in_array($role, ['kepala_unit', 'admin'])) {
-                  echo json_encode(['status' => 'error', 'message' => 'Hanya Kepala Unit yang dapat menyetujui tahap ini.']);
-                  exit();
-              }
-              if ($role === 'kepala_unit' && !empty($units_arr) && !in_array($cek['kode_unit'], $units_arr)) {
-                  echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak untuk menyetujui permintaan unit lain!']);
-                  exit();
-              }
-              $update_data = [
-                  'status' => 'Disetujui Ka. Unit',
-                  'user_approve_ka_unit' => $user,
-                  'tgl_approve_ka_unit' => $now
-              ];
-              $log_msg = 'Approve SPPB Ka. Unit: ' . $no_sppb;
+          // Rutin langsung ke logistik, tidak perlu persetujuan Ka. Unit
+          if ($cek['jenis_permintaan'] === 'Rutin') {
+              echo json_encode(['status' => 'error', 'message' => 'Permintaan Rutin tidak membutuhkan persetujuan Ka. Unit, langsung diproses oleh Logistik.']);
+              exit();
           }
+          if (!in_array($role, ['kepala_unit', 'admin'])) {
+              echo json_encode(['status' => 'error', 'message' => 'Hanya Kepala Unit yang dapat menyetujui tahap ini.']);
+              exit();
+          }
+          if ($role === 'kepala_unit' && !empty($units_arr) && !in_array($cek['kode_unit'], $units_arr)) {
+              echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak untuk menyetujui permintaan unit lain!']);
+              exit();
+          }
+          $update_data = [
+              'status' => 'Disetujui Ka. Unit',
+              'user_approve_ka_unit' => $user,
+              'tgl_approve_ka_unit' => $now
+          ];
+          $log_msg = 'Approve SPPB Non Rutin Ka. Unit: ' . $no_sppb;
       } elseif ($current_status === 'Disetujui Ka. Unit') {
+          if ($cek['jenis_permintaan'] === 'Rutin') {
+              echo json_encode(['status' => 'error', 'message' => 'Permintaan Rutin tidak membutuhkan ACC KASI.']);
+              exit();
+          }
           if (!in_array($role, ['kepala_sie', 'admin'])) {
               echo json_encode(['status' => 'error', 'message' => 'Hanya Kepala Sie yang dapat menyetujui tahap ini.']);
               exit();
@@ -11019,7 +11179,22 @@ $(document).ready(function() {
       $this->_initAset();
       $this->_addHeaderFiles();
       $units = $this->db('rsns_custom_logistik_non_medis_inventaris_master')->where('jenis_master', 'UNIT')->where('status', 'Aktif')->toArray();
-      return $this->draw('aset.registrasi.html', ['units' => $units]);
+      
+      $total = $this->db('rsns_custom_logistik_non_medis_aset')->where('status', 'Aktif')->count();
+      $baik = $this->db('rsns_custom_logistik_non_medis_aset')->where('status', 'Aktif')->where('status_kondisi', 'Baik')->count();
+      $perhatian = $this->db('rsns_custom_logistik_non_medis_aset')->where('status', 'Aktif')->where('status_kondisi', '!=', 'Baik')->count();
+      // Asumsikan berlabel adalah yang tidak kosong kode_asetnya (semua aset valid). 
+      // Atau bisa pakai hitungan yang sama dengan total
+      $berlabel = $total; 
+
+      $ringkasan = [
+          'total' => $total,
+          'baik' => $baik,
+          'perlu_perhatian' => $perhatian,
+          'berlabel' => $berlabel
+      ];
+
+      return $this->draw('aset.registrasi.html', ['units' => $units, 'ringkasan' => $ringkasan]);
   }
 
   public function anyDisplayAsetRegistrasi()
@@ -11027,74 +11202,81 @@ $(document).ready(function() {
       $this->_initAset();
       $perpage = 10;
       $halaman = isset($_POST['halaman']) ? (int)$_POST['halaman'] : 1;
-      $cari = isset($_POST['cari']) ? $_POST['cari'] : '';
-      $filter_unit = isset($_POST['filter_unit']) ? $_POST['filter_unit'] : '';
-      $filter_sumber = isset($_POST['filter_sumber']) ? $_POST['filter_sumber'] : '';
-      $filter_kondisi = isset($_POST['filter_kondisi']) ? $_POST['filter_kondisi'] : '';
-      
+      if ($halaman < 1) $halaman = 1;
+      $cari = isset($_POST['cari']) ? trim($_POST['cari']) : '';
+      $filter_unit = isset($_POST['filter_unit']) ? trim($_POST['filter_unit']) : '';
+      $filter_sumber = isset($_POST['filter_sumber']) ? trim($_POST['filter_sumber']) : '';
+      $filter_kondisi = isset($_POST['filter_kondisi']) ? trim($_POST['filter_kondisi']) : '';
+
       $_offset = ($halaman - 1) * $perpage;
-      
-      $query = $this->db('rsns_custom_logistik_non_medis_aset')
-                    ->where('status', 'Aktif');
-      
-      if(!empty($cari)) {
-          $query->where(function($q) use ($cari) {
-              $q->where('kode_aset', 'LIKE', '%'.$cari.'%')
-                ->orLike('nama_aset', '%'.$cari.'%')
-                ->orLike('serial_number', '%'.$cari.'%');
-          });
+
+      $where = ["a.status = 'Aktif'"];
+      $params = [];
+
+      if (!empty($cari)) {
+          $where[] = "(a.kode_aset LIKE ? OR a.nama_aset LIKE ? OR a.serial_number LIKE ?)";
+          $params[] = '%' . $cari . '%';
+          $params[] = '%' . $cari . '%';
+          $params[] = '%' . $cari . '%';
       }
-      
-      if(!empty($filter_unit)) {
-          $query->where('kode_unit', $filter_unit);
+      if (!empty($filter_unit)) {
+          $where[] = "a.kode_unit = ?";
+          $params[] = $filter_unit;
       }
-      if(!empty($filter_sumber)) {
-          $query->where('sumber_perolehan', $filter_sumber);
+      if (!empty($filter_sumber)) {
+          $where[] = "a.sumber_perolehan = ?";
+          $params[] = $filter_sumber;
       }
-      if(!empty($filter_kondisi)) {
-          $query->where('status_kondisi', $filter_kondisi);
+      if (!empty($filter_kondisi)) {
+          $where[] = "a.status_kondisi = ?";
+          $params[] = $filter_kondisi;
       }
-      
-      $all_data = $query->toArray();
-      $jumlah_data = count($all_data);
-      $jml_halaman = ceil($jumlah_data / $perpage);
-      
-      $rows_query = $this->db('rsns_custom_logistik_non_medis_aset')
-                          ->where('status', 'Aktif');
-      
-      if(!empty($cari)) {
-          $rows_query->where(function($q) use ($cari) {
-              $q->where('kode_aset', 'LIKE', '%'.$cari.'%')
-                ->orLike('nama_aset', '%'.$cari.'%')
-                ->orLike('serial_number', '%'.$cari.'%');
-          });
+
+      $where_sql = implode(' AND ', $where);
+      $from_sql = "
+          FROM rsns_custom_logistik_non_medis_aset a
+          LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master iu
+            ON iu.jenis_master = 'UNIT' AND iu.kode = a.kode_unit
+          LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master im
+            ON im.jenis_master = 'BARANG' AND im.kode = a.kode_item
+          WHERE {$where_sql}
+      ";
+
+      $stmt_count = $this->db()->pdo()->prepare("SELECT COUNT(DISTINCT a.id) {$from_sql}");
+      $stmt_count->execute($params);
+      $jumlah_data = (int) $stmt_count->fetchColumn();
+      $jml_halaman = $jumlah_data > 0 ? ceil($jumlah_data / $perpage) : 1;
+
+      $stmt_rows = $this->db()->pdo()->prepare("
+          SELECT a.*,
+                 COALESCE(iu.nama, a.kode_unit) AS nama_unit,
+                 COALESCE(im.nama, a.nama_aset) AS nama_item_master,
+                 im.nama_kelompok,
+                 im.nama_jenis
+          {$from_sql}
+          GROUP BY a.id
+          ORDER BY a.id DESC
+          LIMIT {$perpage} OFFSET {$_offset}
+      ");
+      $stmt_rows->execute($params);
+      $rows = $stmt_rows->fetchAll(\PDO::FETCH_ASSOC);
+
+      foreach ($rows as &$row) {
+          $row['nama_kelompok'] = $row['nama_kelompok'] ?? '-';
+          $row['nama_jenis'] = $row['nama_jenis'] ?? '-';
+          $row['satuan_dasar'] = '';
       }
-      if(!empty($filter_unit)) {
-          $rows_query->where('kode_unit', $filter_unit);
-      }
-      if(!empty($filter_sumber)) {
-          $rows_query->where('sumber_perolehan', $filter_sumber);
-      }
-      if(!empty($filter_kondisi)) {
-          $rows_query->where('status_kondisi', $filter_kondisi);
-      }
-      
-      $rows = $rows_query->desc('id')
-                         ->offset($_offset)
-                         ->limit($perpage)
-                         ->toArray();
-                         
-      foreach($rows as &$row) {
-          $unit = $this->db('rsns_custom_logistik_non_medis_inventaris_master')->where('jenis_master', 'UNIT')->where('kode', $row['kode_unit'])->oneArray();
-          $row['nama_unit'] = $unit['nama'] ?? '-';
-          $item = $this->db('rsns_custom_logistik_non_medis_inventaris_master')->where('jenis_master', 'BARANG')->where('kode', $row['kode_item'])->oneArray();
-          $row['satuan_dasar'] = $item['nama'] ?? '';
-      }
-      
-      echo $this->draw('aset.registrasi.display.html', [
+
+      $html = $this->draw('aset.registrasi.display.html', [
           'aset' => $rows,
           'halaman' => $halaman,
           'jumlah_data' => $jumlah_data,
+          'jml_halaman' => $jml_halaman
+      ]);
+      echo json_encode([
+          'html' => $html,
+          'jumlah' => $jumlah_data,
+          'halaman' => $halaman,
           'jml_halaman' => $jml_halaman
       ]);
       exit();
@@ -11103,8 +11285,11 @@ $(document).ready(function() {
   public function anyFormAsetRegistrasi()
   {
       $this->_initAset();
-      $master_barang = $this->db('rsns_custom_logistik_non_medis_inventaris_master')->where('jenis_master', 'BARANG')->where('kode_kategori', '2')->where('status', 'Aktif')->toArray();
+      $master_barang = $this->db('rsns_custom_logistik_non_medis_inventaris_master')->where('jenis_master', 'BARANG')->where('status', 'Aktif')->toArray();
       $units = $this->db('rsns_custom_logistik_non_medis_inventaris_master')->where('jenis_master', 'UNIT')->where('status', 'Aktif')->toArray();
+      $kategori_master = $this->db('rsns_custom_logistik_non_medis_inventaris_kategori')->asc('kode_kategori')->toArray();
+      $kelompok_master = $this->db('rsns_custom_logistik_non_medis_inventaris_kelompok')->asc('kode_kategori')->asc('kode_kelompok')->toArray();
+      $jenis_master = $this->db('rsns_custom_logistik_non_medis_inventaris_jenis')->asc('kode_kategori')->asc('kode_kelompok')->asc('kode_jenis')->toArray();
       
       if (isset($_POST['id'])) {
           $aset = $this->db('rsns_custom_logistik_non_medis_aset')->where('id', $_POST['id'])->oneArray();
@@ -11118,6 +11303,9 @@ $(document).ready(function() {
               'mode' => 'edit',
               'master_barang' => $master_barang,
               'units' => $units,
+              'kategori_master' => $kategori_master,
+              'kelompok_master' => $kelompok_master,
+              'jenis_master' => $jenis_master,
               'kategori_aset' => []
           ]);
       } else {
@@ -11151,6 +11339,9 @@ $(document).ready(function() {
               'mode' => 'add',
               'master_barang' => $master_barang,
               'units' => $units,
+              'kategori_master' => $kategori_master,
+              'kelompok_master' => $kelompok_master,
+              'jenis_master' => $jenis_master,
               'kategori_aset' => []
           ]);
       }
@@ -11532,6 +11723,49 @@ $(document).ready(function() {
       } else {
           echo json_encode(['status' => 'error', 'message' => 'Data tidak ditemukan.']);
       }
+      exit();
+  }
+
+  public function postBulkHapusAsetRegistrasi()
+  {
+      $this->_initAset();
+      $ids = $_POST['ids'] ?? [];
+      if (!is_array($ids) || empty($ids)) {
+          echo json_encode(['status' => 'error', 'message' => 'Tidak ada aset yang dipilih.']);
+          exit();
+      }
+
+      $user = $this->core->getUserInfo('username', null, true);
+      $tanggal_log = date('Y-m-d H:i:s');
+      $ip = $_SERVER['REMOTE_ADDR'] ?? 'Localhost';
+      $cek_hostname = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+      $hostname = $cek_hostname['hostname'] ?? 'Unknown';
+      $log_lokasi = ''.$hostname.' | '.$ip.'';
+
+      $success_count = 0;
+      foreach ($ids as $id) {
+          $existing = $this->db('rsns_custom_logistik_non_medis_aset')->where('id', $id)->oneArray();
+          if ($existing && $existing['status'] !== 'Dihapuskan') {
+              $query = $this->db('rsns_custom_logistik_non_medis_aset')
+                            ->where('id', $id)
+                            ->update(['status' => 'Dihapuskan']);
+              if ($query) {
+                  $success_count++;
+                  $logdata = ''.$existing['kode_aset'].' | '.$existing['nama_aset'].' | Status changed to Dihapuskan | '.$user.'';
+                  $this->db('mlite_tracksql')->save([
+                      'log_id' => NULL,
+                      'log_modul' => 'logistik_non_medis_aset',
+                      'log_waktu' => $tanggal_log,
+                      'log_location' => $log_lokasi,
+                      'log_data' => $logdata,
+                      'log_status' => 'D',
+                      'log_username' => $user
+                  ]);
+              }
+          }
+      }
+
+      echo json_encode(['status' => 'success', 'message' => $success_count . ' aset berhasil dihapus.']);
       exit();
   }
 

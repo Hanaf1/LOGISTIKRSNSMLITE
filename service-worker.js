@@ -1,4 +1,4 @@
-const cacheName = 'cache-v2';
+const cacheName = 'cache-v3';
 const precacheResources = [
   '/',
   'assets/jscripts/bootstrap.min.js',
@@ -7,6 +7,7 @@ const precacheResources = [
 
 self.addEventListener('install', event => {
   //console.log('Service worker install event!');
+  self.skipWaiting();
   event.waitUntil(
     caches.open(cacheName)
       .then(cache => {
@@ -17,6 +18,15 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   //console.log('Service worker activate event!');
+  event.waitUntil(
+    caches.keys()
+      .then(cacheNames => Promise.all(
+        cacheNames
+          .filter(name => name !== cacheName)
+          .map(name => caches.delete(name))
+      ))
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', event => {
@@ -33,7 +43,12 @@ self.addEventListener('fetch', event => {
         if (cachedResponse) {
           return cachedResponse;
         }
-        return fetch(event.request);
+        return fetch(event.request).catch(() => {
+          return new Response('', {
+            status: 503,
+            statusText: 'Service Unavailable'
+          });
+        });
       })
     );
 });

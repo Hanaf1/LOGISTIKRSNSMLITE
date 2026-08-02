@@ -5,6 +5,7 @@
             <thead>
                 <tr>
                     <th>Tanggal</th>
+                    <th>Barang</th>
                     <th>No. Referensi</th>
                     <th>Tipe</th>
                     <th>Batch</th>
@@ -19,6 +20,10 @@
                 {loop: $mutasi_history}
                 <tr>
                     <td>{$value.tgl_transaksi}</td>
+                    <td>
+                        <strong>{if: !empty($value.nama_barang)}{$value.nama_barang}{else}{$value.kode_item}{/if}</strong><br>
+                        <small class="text-muted">{$value.kode_item}</small>
+                    </td>
                     <td>{$value.no_referensi}</td>
                     <td>
                         {if: $value.tipe_transaksi == 'Masuk'}<span class="label label-success">Masuk</span>
@@ -36,11 +41,20 @@
                 </tr>
                 {/loop}
                 {else}
-                <tr><td colspan="8" class="text-center">Data tidak ditemukan</td></tr>
+                <tr><td colspan="9" class="text-center">Data tidak ditemukan</td></tr>
                 {/if}
             </tbody>
         </table>
     </div>
+    {if: $jml_halaman > 1}
+    <nav class="text-center">
+        <ul class="pagination pagination-sm">
+            {loop: $pages}
+            <li class="{if: $halaman == $value}active{/if}"><a href="javascript:void(0)" onclick="loadKartuStok({$value})">{$value}</a></li>
+            {/loop}
+        </ul>
+    </nav>
+    {/if}
 {else}
     <!-- DISPLAY DAFTAR MUTASI -->
     <div class="table-responsive">
