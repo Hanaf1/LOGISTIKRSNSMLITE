@@ -605,8 +605,13 @@ class Admin extends AdminModule
     }
     $perm_flags['perm_laporancostunit'] = in_array('laporandistribusi', $permissions);
 
-    $count_verif = (int) $this->db()->pdo()->query("SELECT COUNT(DISTINCT no_sppb) FROM rsns_custom_logistik_non_medis_sppb WHERE status IN ('Disetujui Kabid', 'Disetujui Unit') OR (status = 'Diajukan' AND jenis_permintaan = 'Rutin')")->fetchColumn();
-    $count_packing = count($this->db('rsns_custom_logistik_non_medis_sppb')->where('status', 'Proses Logistik')->orWhere('status', 'Proses Pengadaan')->orWhere('status', 'Picking')->orWhere('status', 'Packing')->group('no_sppb')->toArray());
+    try {
+        $count_verif = (int) $this->db()->pdo()->query("SELECT COUNT(DISTINCT no_sppb) FROM rsns_custom_logistik_non_medis_sppb WHERE status IN ('Disetujui Kabid', 'Disetujui Unit') OR (status = 'Diajukan' AND jenis_permintaan = 'Rutin')")->fetchColumn();
+    } catch (\Exception $e) { $count_verif = 0; }
+    try {
+        $count_packing = count($this->db('rsns_custom_logistik_non_medis_sppb')->where('status', 'Proses Logistik')->orWhere('status', 'Proses Pengadaan')->orWhere('status', 'Picking')->orWhere('status', 'Packing')->group('no_sppb')->toArray());
+    } catch (\Exception $e) { $count_packing = 0; }
+
 
     $dash_permintaan_minggu = 0;
     $dash_cost_bulan = 0;
@@ -615,37 +620,64 @@ class Admin extends AdminModule
     $dash_total_po = 0;
 
     $pdo = $this->db()->pdo();
-    $dash_permintaan_minggu = (int) $pdo->query("
-        SELECT COUNT(DISTINCT no_sppb)
-        FROM rsns_custom_logistik_non_medis_sppb
-        WHERE YEARWEEK(tgl_sppb, 1) = YEARWEEK(CURDATE(), 1)
-          AND jenis_permintaan = 'Rutin'
-    ")->fetchColumn();
-    $dash_total_nonrutin = (int) $pdo->query("
-        SELECT COUNT(DISTINCT no_sppb)
-        FROM rsns_custom_logistik_non_medis_sppb
-        WHERE jenis_permintaan = 'Non Rutin'
-          AND YEAR(tgl_sppb) = YEAR(CURDATE())
-    ")->fetchColumn();
-    $dash_total_aset = (int) $pdo->query("
-        SELECT COUNT(*)
-        FROM rsns_custom_logistik_non_medis_aset
-        WHERE status = 'Aktif'
-    ")->fetchColumn();
-    $dash_total_po = (int) $pdo->query("
-        SELECT COUNT(DISTINCT no_po)
-        FROM rsns_custom_logistik_non_medis_po
-        WHERE MONTH(tgl_po) = MONTH(CURDATE())
-          AND YEAR(tgl_po) = YEAR(CURDATE())
-    ")->fetchColumn();
-    $dash_cost_bulan = (float) $pdo->query("
-        SELECT COALESCE(SUM(s.jumlah_disetujui * b.harga_referensi), 0)
-        FROM rsns_custom_logistik_non_medis_sppb s
-        LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = s.kode_item
-        WHERE s.status IN ('Siap Ambil', 'Selesai', 'Diterima')
-          AND MONTH(s.tgl_sppb) = MONTH(CURDATE())
-          AND YEAR(s.tgl_sppb) = YEAR(CURDATE())
-    ")->fetchColumn();
+    try {
+        $dash_permintaan_minggu = (int) $pdo->query("
+            SELECT COUNT(DISTINCT no_sppb)
+            FROM rsns_custom_logistik_non_medis_sppb
+            WHERE YEARWEEK(tgl_sppb, 1) = YEARWEEK(CURDATE(), 1)
+              AND jenis_permintaan = 'Rutin'
+        ")->fetchColumn();
+    } catch (\Exception $e) { $dash_permintaan_minggu = 0; }
+    try {
+        $dash_total_nonrutin = (int) $pdo->query("
+            SELECT COUNT(DISTINCT no_sppb)
+            FROM rsns_custom_logistik_non_medis_sppb
+            WHERE jenis_permintaan = 'Non Rutin'
+              AND YEAR(tgl_sppb) = YEAR(CURDATE())
+        ")->fetchColumn();
+    } catch (\Exception $e) { $dash_total_nonrutin = 0; }
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_aset` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `kode_aset` varchar(50) NOT NULL,
+          `nama_aset` varchar(255) DEFAULT NULL,
+          `kode_item` varchar(50) DEFAULT NULL,
+          `kode_unit` varchar(50) DEFAULT NULL,
+          `status` varchar(50) NOT NULL DEFAULT 'Aktif',
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
+        $dash_total_aset = (int) $pdo->query("
+            SELECT COUNT(*)
+            FROM rsns_custom_logistik_non_medis_aset
+            WHERE status = 'Aktif'
+        ")->fetchColumn();
+    } catch (\Exception $e) { $dash_total_aset = 0; }
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_po` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `no_po` varchar(50) NOT NULL,
+          `tgl_po` date NOT NULL,
+          `kode_vendor` varchar(50) NOT NULL,
+          PRIMARY KEY (`id`),
+          UNIQUE KEY `no_po` (`no_po`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
+        $dash_total_po = (int) $pdo->query("
+            SELECT COUNT(DISTINCT no_po)
+            FROM rsns_custom_logistik_non_medis_po
+            WHERE MONTH(tgl_po) = MONTH(CURDATE())
+              AND YEAR(tgl_po) = YEAR(CURDATE())
+        ")->fetchColumn();
+    } catch (\Exception $e) { $dash_total_po = 0; }
+    try {
+        $dash_cost_bulan = (float) $pdo->query("
+            SELECT COALESCE(SUM(s.jumlah_disetujui * b.harga_referensi), 0)
+            FROM rsns_custom_logistik_non_medis_sppb s
+            LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = s.kode_item
+            WHERE s.status IN ('Siap Ambil', 'Selesai', 'Diterima')
+              AND MONTH(s.tgl_sppb) = MONTH(CURDATE())
+              AND YEAR(s.tgl_sppb) = YEAR(CURDATE())
+        ")->fetchColumn();
+    } catch (\Exception $e) { $dash_cost_bulan = 0; }
 
     // Dynamic Dashboard Variables
     $dash_status_usulan = '';
@@ -657,34 +689,40 @@ class Admin extends AdminModule
     if (!empty($userRoleData['kode_unit'])) {
         $user_unit_kodes = array_map('trim', explode(',', $userRoleData['kode_unit']));
         $in_clause = implode("','", $user_unit_kodes);
-        $nama_units_arr = $this->db()->pdo()->query("SELECT nama_unit FROM rsns_custom_logistik_non_medis_unit WHERE kode_unit IN ('$in_clause')")->fetchAll(\PDO::FETCH_COLUMN);
-        if (!empty($nama_units_arr)) {
-            $dash_nama_unit_string = implode(', ', $nama_units_arr);
-        }
+        try {
+            $nama_units_arr = $this->db()->pdo()->query("SELECT nama_unit FROM rsns_custom_logistik_non_medis_unit WHERE kode_unit IN ('$in_clause')")->fetchAll(\PDO::FETCH_COLUMN);
+            if (!empty($nama_units_arr)) {
+                $dash_nama_unit_string = implode(', ', $nama_units_arr);
+            }
+        } catch (\Exception $e) { $dash_nama_unit_string = ''; }
     }
     
     if ($role === 'unit' && !empty($user_unit_kodes)) {
         // Status usulan terbaru untuk unit
         $in_clause = implode("','", $user_unit_kodes);
-        $latest = $this->db()->pdo()->query("SELECT status, no_sppb FROM rsns_custom_logistik_non_medis_sppb WHERE kode_unit IN ('$in_clause') ORDER BY tgl_sppb DESC, no_sppb DESC LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
-        if ($latest) {
-            $dash_status_usulan = $latest['status'];
-        }
+        try {
+            $latest = $this->db()->pdo()->query("SELECT status, no_sppb FROM rsns_custom_logistik_non_medis_sppb WHERE kode_unit IN ('$in_clause') ORDER BY tgl_sppb DESC, no_sppb DESC LIMIT 1")->fetch(\PDO::FETCH_ASSOC);
+            if ($latest) {
+                $dash_status_usulan = $latest['status'];
+            }
+        } catch (\Exception $e) { $dash_status_usulan = ''; }
     } elseif (in_array($role, ['kepala_unit', 'kepala_sie', 'kepala_bidang']) && !empty($user_unit_kodes)) {
         // Total butuh persetujuan
-        $all_child_kodes = $this->_getAllChildUnitKodes($user_unit_kodes);
-        if (!empty($all_child_kodes)) {
-            $in_clause = implode("','", $all_child_kodes);
-            $target_status = '';
-            if ($role === 'kepala_unit') $target_status = 'Diajukan';
-            elseif ($role === 'kepala_sie') $target_status = 'Disetujui Ka. Unit';
-            elseif ($role === 'kepala_bidang') $target_status = 'Disetujui Ka. Sie';
-            
-            if ($target_status) {
-                $count_q = $this->db()->pdo()->query("SELECT COUNT(DISTINCT no_sppb) as total FROM rsns_custom_logistik_non_medis_sppb WHERE status = '$target_status' AND jenis_permintaan = 'Non Rutin' AND kode_unit IN ('$in_clause')")->fetch(\PDO::FETCH_ASSOC);
-                $dash_butuh_persetujuan = $count_q['total'] ?? 0;
+        try {
+            $all_child_kodes = $this->_getAllChildUnitKodes($user_unit_kodes);
+            if (!empty($all_child_kodes)) {
+                $in_clause = implode("','", $all_child_kodes);
+                $target_status = '';
+                if ($role === 'kepala_unit') $target_status = 'Diajukan';
+                elseif ($role === 'kepala_sie') $target_status = 'Disetujui Ka. Unit';
+                elseif ($role === 'kepala_bidang') $target_status = 'Disetujui Ka. Sie';
+                
+                if ($target_status) {
+                    $count_q = $this->db()->pdo()->query("SELECT COUNT(DISTINCT no_sppb) as total FROM rsns_custom_logistik_non_medis_sppb WHERE status = '$target_status' AND jenis_permintaan = 'Non Rutin' AND kode_unit IN ('$in_clause')")->fetch(\PDO::FETCH_ASSOC);
+                    $dash_butuh_persetujuan = $count_q['total'] ?? 0;
+                }
             }
-        }
+        } catch (\Exception $e) { $dash_butuh_persetujuan = 0; }
     }
 
     return $this->draw('manage.html', array_merge([
