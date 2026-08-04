@@ -64,7 +64,7 @@
                         </div>
                         <div id="display-po"></div>
                     </div>
-                    
+
                     <!-- Tab Form -->
                     <div id="po-form" class="tab-pane fade">
                         <div id="form-po"></div>
@@ -194,7 +194,7 @@
                 btnClass = 'btn-danger';
                 btnLabel = '<i class="fa fa-times"></i> Ya, Batalkan';
             }
-            
+
             bootbox.confirm({
                 title: judul,
                 message: pesan,
@@ -225,8 +225,10 @@
             });
         });
 
-        {if: !empty($sumber_tipe) && !empty($no_rencana)}
-        openPOForm('{$sumber_tipe}', '{$no_rencana}');
-        {/if}
+        var sumber_tipe = '{$sumber_tipe}';
+        var no_rencana = '{$no_rencana}';
+        if (sumber_tipe !== '' && no_rencana !== '') {
+            openPOForm(sumber_tipe, no_rencana);
+        }
     });
 </script>

@@ -187,8 +187,11 @@
     <a class="dash-card blue" href="{?=url([ADMIN,'logistik_non_medis','distribusibhp'])?}">
         <div class="dash-icon"><i class="fa fa-share-square-o"></i></div>
         <div class="dash-value">{?=$dash_permintaan_minggu?}</div>
-        <div class="dash-label">Permintaan Minggu Ini</div>
-        <div class="dash-sub">Total permintaan dari unit</div>
+        <div class="dash-label">Perm. Rutin ({$dash_rutin_periode})</div>
+        <div class="dash-sub" style="font-size: 12px; margin-top: 5px;">
+            <span style="color:#f39c12; font-weight:bold;"><i class="fa fa-clock-o"></i> {$dash_rutin_proses} Diproses</span> &nbsp;
+            <span style="color:#27ae60; font-weight:bold;"><i class="fa fa-check"></i> {$dash_rutin_selesai} Selesai</span>
+        </div>
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
     {/if}
@@ -215,7 +218,10 @@
         <div class="dash-icon"><i class="fa fa-exclamation-triangle"></i></div>
         <div class="dash-value">{?=$dash_total_nonrutin?}</div>
         <div class="dash-label">Permintaan Pengadaan</div>
-        <div class="dash-sub">Non rutin tahun {?=date('Y')?}</div>
+        <div class="dash-sub" style="font-size: 12px; margin-top: 5px;">
+            <span style="color:#f39c12; font-weight:bold;"><i class="fa fa-clock-o"></i> {$dash_nonrutin_proses} Diproses</span> &nbsp;
+            <span style="color:#27ae60; font-weight:bold;"><i class="fa fa-check"></i> {$dash_nonrutin_selesai} Selesai</span>
+        </div>
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
     {elseif: $perm_pengadaanperencanaan}
@@ -223,7 +229,10 @@
         <div class="dash-icon"><i class="fa fa-calendar-check-o"></i></div>
         <div class="dash-value">{?=$dash_total_nonrutin?}</div>
         <div class="dash-label">Permintaan Pengadaan</div>
-        <div class="dash-sub">Tahun {?=date('Y')?}</div>
+        <div class="dash-sub" style="font-size: 12px; margin-top: 5px;">
+            <span style="color:#f39c12; font-weight:bold;"><i class="fa fa-clock-o"></i> {$dash_nonrutin_proses} Diproses</span> &nbsp;
+            <span style="color:#27ae60; font-weight:bold;"><i class="fa fa-check"></i> {$dash_nonrutin_selesai} Selesai</span>
+        </div>
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
     {/if}
@@ -627,6 +636,20 @@
                                 <div class="desc">Retur Barang dari Unit</div>
                             </div>
                             <h4><b>Retur Barang</b></h4>
+                        </a>
+                    </div>
+                </li>
+                {/if}
+
+                {if: $perm_distribusisppb}
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusippi'])?}" class="panel-body text-center module-card-soft">
+                            <div class="panel-thumb">
+                                <i class="fa fa-recycle text-success"></i>
+                                <div class="desc">Rekapitulasi Plastik & Tisue</div>
+                            </div>
+                            <h4><b>Barang PPI</b></h4>
                         </a>
                     </div>
                 </li>

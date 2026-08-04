@@ -207,20 +207,22 @@ $(document).ready(function() {
         var action = $(this).data('action');
         var msg = action == 'approve' ? 'Apakah Anda yakin menyetujui retur ini dan memperbarui stok gudang?' : 'Apakah Anda yakin menolak retur barang ini?';
         
-        if (confirm(msg)) {
-            var form_data = $('#form_retur_action').serializeArray();
-            form_data.push({name: 'action', value: action});
+        bootbox.confirm(msg, function(result) {
+            if (result) {
+                var form_data = $('#form_retur_action').serializeArray();
+                form_data.push({name: 'action', value: action});
 
-            $.post('{?=url([ADMIN, "logistik_non_medis", "approveretur"])?}', form_data, function(data) {
-                var res = JSON.parse(data);
-                if (res.status == 'success') {
-                    $('#modal_retur').modal('hide');
-                    loadRetur($('#current_halaman').val(), $('#cari_retur').val());
-                } else {
-                    alert(res.message);
-                }
-            });
-        }
+                $.post('{?=url([ADMIN, "logistik_non_medis", "approveretur"])?}', form_data, function(data) {
+                    var res = JSON.parse(data);
+                    if (res.status == 'success') {
+                        $('#modal_retur').modal('hide');
+                        loadRetur($('#current_halaman').val(), $('#cari_retur').val());
+                    } else {
+                        bootbox.alert(res.message);
+                    }
+                });
+            }
+        });
     });
 });
 </script>

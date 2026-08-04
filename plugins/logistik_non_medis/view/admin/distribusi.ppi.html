@@ -70,199 +70,232 @@
         <i class="fa fa-chevron-right separator"></i>
         <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}#distribusi">Distribusi</a>
         <i class="fa fa-chevron-right separator"></i>
-        <span class="active">{if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Pengadaan Non Rutin{else}Pengadaan Rutin{/if}{else}Permintaan Barang (SPPB){/if}</span>
+        <span class="active">Laporan PPI</span>
     </div>
 
         <div class="col-md-12">
-            <div class="panel panel-default">
-                <div class="panel-heading clearfix">
-                    <h3 class="panel-title pull-left" style="line-height: 34px;"><i class="fa fa-shopping-cart"></i> {if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Pengadaan Non Rutin{else}Pengadaan Rutin{/if}{else}Permintaan Barang (SPPB){/if}</h3>
-                    {if: !empty($can_create_sppb) || (!empty($can_manage_distribusi_controls) && (empty($jenis_page) || $jenis_page == 'Rutin'))}
-                    <div class="btn-group pull-right">
-                        {if: empty($jenis_page) || $jenis_page == 'Rutin'}
-                        <div class="btn-group" style="margin-right: 5px;">
-                            <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fa fa-file-excel-o"></i> Excel <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-right">
-                                <li><a href="{?=url(ADMIN.'/logistik_non_medis/downloadtemplatesppb')?}"><i class="fa fa-download"></i> Unduh Template Import (CSV)</a></li>
-                                <li><a href="javascript:void(0)" onclick="$('#modal-import-sppb').modal('show')"><i class="fa fa-upload"></i> Import SPPB (CSV)</a></li>
-                                <li role="separator" class="divider"></li>
-                                <li><a href="javascript:void(0)" onclick="exportSppbAktif()"><i class="fa fa-file-excel-o"></i> Export Data Tabel (CSV)</a></li>
-                            </ul>
-                        </div>
-                        {/if}
-                        {if: !empty($can_create_sppb)}
-                            {if: $jenis_page != 'Rutin' || $role != 'unit'}
-                            <button class="btn btn-primary" id="btn-tambah"><i class="fa fa-plus"></i> Tambah Permintaan</button>
-                            {/if}
-                        {/if}
-                    </div>
-                    {/if}
+            
+        <div class="panel panel-default">
+            <div class="panel-heading" style="padding: 15px 20px;">
+                <h3 class="panel-title" style="font-weight: 600; font-size: 20px; display: flex; align-items: center; margin-bottom: 5px;">
+                    <i class="fa fa-shield text-success" style="margin-right: 10px; font-size: 24px;"></i> Laporan PPI
+                </h3>
+                <div style="color: #666; font-size: 13px; margin-left: 34px;">
+                    Pemantauan penggunaan barang terkait Pencegahan dan Pengendalian Infeksi dari permintaan rutin unit.
                 </div>
-                <div class="panel-body">
-                    {if: !empty($jenis_page)}
-                    <ul class="nav nav-tabs sppb-main-tabs" id="sppbMainTabs">
-                        <li class="active">
-                            <a href="javascript:void(0)" class="sppb-main-tab-link" data-tab="active">
-                                <i class="fa fa-bolt"></i> Aktif
-                            </a>
-                        </li>
-                        <li>
-                            <a href="javascript:void(0)" class="sppb-main-tab-link" data-tab="history">
-                                <i class="fa fa-history"></i> Riwayat
-                            </a>
-                        </li>
-                    </ul>
-                    {/if}
-                    {if: $role == 'kepala_unit' || $role == 'kepala_sie' || $role == 'kepala_bidang'}
-                    <ul class="nav nav-tabs sppb-approval-tabs" id="approvalTabs">
-                        <li class="active">
-                            <a href="javascript:void(0)" class="approval-tab-link" data-tab="pending">
-                                <i class="fa fa-clock-o"></i> Butuh Persetujuan
-                            </a>
-                        </li>
-                        <li>
-                            <a href="javascript:void(0)" class="approval-tab-link" data-tab="history">
-                                <i class="fa fa-history"></i> Riwayat Persetujuan
-                            </a>
-                        </li>
-                    </ul>
-                    <div style="margin-top:15px;"></div>
-                    {/if}
-                    {if: !empty($can_manage_distribusi_controls)}
-                    <div class="row" style="margin-bottom: 15px;">
-                        <div class="col-md-4 col-sm-4">
-                            <div class="panel panel-warning" style="margin-bottom:0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: none;">
-                                <div class="panel-body text-center" style="padding: 10px;">
-                                    <h5 style="margin:0; font-size:14px; font-weight: bold; color: #8a6d3b;">Belum Diproses</h5>
-                                    <h2 style="margin:5px 0 0 0; color: #8a6d3b; font-weight: bold;" id="summary-belum-diproses">0</h2>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 col-sm-4">
-                            <div class="panel panel-success" style="margin-bottom:0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: none;">
-                                <div class="panel-body text-center" style="padding: 10px;">
-                                    <h5 style="margin:0; font-size:14px; font-weight: bold; color: #3c763d;">Siap Diambil</h5>
-                                    <h2 style="margin:5px 0 0 0; color: #3c763d; font-weight: bold;" id="summary-siap-diambil">0</h2>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 col-sm-4">
-                            <div class="panel panel-info" style="margin-bottom:0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: none;">
-                                <div class="panel-body text-center" style="padding: 10px;">
-                                    <h5 style="margin:0; font-size:14px; font-weight: bold; color: #31708f;">Selesai</h5>
-                                    <h2 style="margin:5px 0 0 0; color: #31708f; font-weight: bold;" id="summary-selesai">0</h2>
-                                </div>
-                            </div>
+            </div>
+            
+            <div class="panel-body" style="padding: 20px;">
+                
+                <!-- KPI Cards -->
+                <div class="row" style="margin-bottom: 25px;">
+                    <div class="col-md-4">
+                        <div style="border: 1px solid #e1e4e8; border-radius: 8px; padding: 15px; position: relative;">
+                            <div style="font-size: 11px; font-weight: 700; color: #586069; text-transform: uppercase; margin-bottom: 15px;">Total Qty Keluar Juli 2026</div>
+                            <i class="fa fa-cube text-success" style="position: absolute; top: 15px; right: 15px;"></i>
+                            <div style="font-size: 28px; font-weight: 600; color: #0366d6; line-height: 1; margin-bottom: 5px;">{$dash_qty_keluar}</div>
+                            <div style="font-size: 11px; color: #6a737d;">Barang PPI didistribusikan</div>
                         </div>
                     </div>
-                    <div class="well well-sm">
+                    <div class="col-md-4">
+                        <div style="border: 1px solid #e1e4e8; border-radius: 8px; padding: 15px; position: relative;">
+                            <div style="font-size: 11px; font-weight: 700; color: #586069; text-transform: uppercase; margin-bottom: 15px;">Jenis Barang PPI</div>
+                            <i class="fa fa-tags text-success" style="position: absolute; top: 15px; right: 15px;"></i>
+                            <div style="font-size: 28px; font-weight: 600; color: #28a745; line-height: 1; margin-bottom: 5px;">{$dash_jenis_barang}</div>
+                            <div style="font-size: 11px; color: #6a737d;">Jenis item berbeda bulan ini</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div style="border: 1px solid #e1e4e8; border-radius: 8px; padding: 15px; position: relative;">
+                            <div style="font-size: 11px; font-weight: 700; color: #586069; text-transform: uppercase; margin-bottom: 15px;">Unit Peminta</div>
+                            <i class="fa fa-hospital-o text-success" style="position: absolute; top: 15px; right: 15px;"></i>
+                            <div style="font-size: 28px; font-weight: 600; color: #6f42c1; line-height: 1; margin-bottom: 5px;">{$dash_unit_peminta}</div>
+                            <div style="font-size: 11px; color: #6a737d;">Unit aktif minta barang PPI</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <ul class="nav nav-tabs" style="border-bottom: 2px solid #e1e4e8; margin-bottom: 20px;">
+                    <li class="active"><a data-toggle="tab" href="#tab-minggu-ini" style="border:none; border-bottom: 3px solid transparent; color: #586069; font-weight: 600;">Data Juli 2026</a></li>
+                    <li><a data-toggle="tab" href="#tab-perbandingan" style="border:none; border-bottom: 3px solid transparent; color: #586069; font-weight: 600;">Perbandingan Periode</a></li>
+                    <li><a data-toggle="tab" href="#tab-riwayat" style="border:none; border-bottom: 3px solid transparent; color: #586069; font-weight: 600;">Riwayat Lengkap</a></li>
+                </ul>
+
+                <style>
+                    .nav-tabs > li.active > a, .nav-tabs > li.active > a:hover, .nav-tabs > li.active > a:focus {
+                        border: none !important;
+                        border-bottom: 3px solid #28a745 !important;
+                        color: #24292e !important;
+                        background: transparent !important;
+                    }
+                </style>
+
+                <div class="tab-content">
+                    
+                    <!-- TAB 1: PENGGUNAAN MINGGU INI -->
+                    <div id="tab-minggu-ini" class="tab-pane fade in active">
                         <div class="row">
-                            <div class="col-md-3">
-                                <div class="input-group">
-                                    <input type="text" id="cari" class="form-control" placeholder="Cari SPPB/Unit/Brg...">
-                                    <span class="input-group-btn">
-                                        <button class="btn btn-default" id="btn-cari"><i class="fa fa-search"></i></button>
-                                    </span>
+                            <div class="col-md-6">
+                                <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; min-height: 300px;">
+                                    <h4 style="margin-top: 0; font-weight: 600; color: #24292e;">Konsumsi Barang PPI Juli 2026</h4>
+                                    <div style="font-size: 12px; color: #6a737d; margin-bottom: 20px;">01 Jul 2026 - 31 Jul 2026</div>
+                                    
+                                    <!-- Chart -->
+                                    <div style="width: 100%; height: 250px;">
+                                        <canvas id="ppiChart"></canvas>
+                                    </div>
+                                    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+                                    <script>
+                                        $(document).ready(function() {
+                                            if (typeof Chart !== 'undefined') {
+                                                var ctx = document.getElementById('ppiChart').getContext('2d');
+                                                new Chart(ctx, {
+                                                    type: 'bar',
+                                                    data: {
+                                                        labels: {$chart_labels},
+                                                        datasets: [{
+                                                            label: 'Qty Barang Keluar',
+                                                            data: {$chart_data},
+                                                            backgroundColor: '#0366d6',
+                                                            borderColor: '#0366d6',
+                                                            borderWidth: 1
+                                                        }]
+                                                    },
+                                                    options: {
+                                                        responsive: true,
+                                                        maintainAspectRatio: false,
+                                                        scales: {
+                                                            yAxes: [{
+                                                                ticks: {
+                                                                    beginAtZero: true
+                                                                }
+                                                            }]
+                                                        },
+                                                        legend: {
+                                                            display: false
+                                                        }
+                                                    }
+                                                });
+                                            } else {
+                                                $('#ppiChart').parent().html('<div class="text-center text-muted" style="padding-top:100px;">Gagal memuat Chart.js</div>');
+                                            }
+                                        });
+                                    </script>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="input-group">
-                                    <span class="input-group-addon" style="background:transparent;border:none;padding:0 10px 0 0;line-height:34px;">Dari</span>
-                                    <input type="date" id="filter-tgl-awal" class="form-control" title="Tanggal Awal" onchange="loadDisplay()">
+                            <div class="col-md-6">
+                                <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; min-height: 300px;">
+                                    <h4 style="margin-top: 0; font-weight: 600; color: #24292e;">Top 10 Barang PPI Juli 2026</h4>
+                                    <div style="font-size: 12px; color: #6a737d; margin-bottom: 20px;">Berdasarkan total kuantitas keluar</div>
+                                    
+                                    <ul class="list-group" style="margin:0; box-shadow: none;">
+                                        {loop: $dash_top_barang}
+                                        <li class="list-group-item" style="background: transparent; border: none; border-bottom: 1px solid #e1e4e8; padding: 8px 0;">
+                                            <div class="row">
+                                                <div class="col-xs-8">{$value.nama}</div>
+                                                <div class="col-xs-4 text-right"><strong class="text-success">{$value.qty}</strong></div>
+                                            </div>
+                                        </li>
+                                        {/loop}
+                                    </ul>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="input-group">
-                                    <span class="input-group-addon" style="background:transparent;border:none;padding:0 10px 0 0;line-height:34px;">s/d</span>
-                                    <input type="date" id="filter-tgl-akhir" class="form-control" title="Tanggal Akhir" onchange="loadDisplay()">
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <select id="filter-unit" class="form-control" onchange="loadDisplay()">
-                                    <option value="">-- Semua Unit --</option>
-                                    {loop: $units}
-                                    <option value="{$value.kode_unit}">{$value.kode_unit} - {$value.nama_unit}</option>
-                                    {/loop}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row" style="margin-top: 10px;">
-                            {if: $role != 'kepala_unit' && $role != 'kepala_sie' && $role != 'kepala_bidang'}
-                            <div class="col-md-3">
-                                <select id="filter-status" class="form-control" onchange="loadDisplay()">
-                                    <option value="">-- Semua Status --</option>
-                                    {if: $jenis_page == 'Non Rutin'}
-                                    <option value="Draft">Draft</option>
-                                    <option value="Diajukan">Diajukan (Butuh ACC Ka. Unit)</option>
-                                    <option value="Disetujui Ka. Unit">Disetujui Ka. Unit (Butuh ACC KASI)</option>
-                                    <option value="Disetujui Ka. Sie">ACC KASI (Butuh ACC KABID)</option>
-                                    <option value="Disetujui Kabid">Disetujui Kabid</option>
-                                    <option value="Diserahkan ke Kasie Umum">Diserahkan ke Kasie Umum</option>
-                                    <option value="Verifikasi Kasie Umum">Verifikasi Kasie Umum</option>
-                                    <option value="Logistik Umum & Rekap">Logistik Umum & Rekap</option>
-                                    <option value="Konsul Pengajuan ke Kabid Umum">Konsul Pengajuan ke Kabid Umum</option>
-                                    <option value="Pengajuan Dana ke Bendahara">Pengajuan Dana ke Bendahara</option>
-                                    <option value="Proses Pengadaan">Proses Pengadaan</option>
-                                    <option value="Siap Diserahkan">Siap Diserahkan</option>
-                                    <option value="Tidak ACC">Tidak ACC</option>
-                                    <option value="Selesai">Selesai</option>
-                                    <option value="Ditolak">Ditolak</option>
-                                    {else}
-                                    <option value="Draft">Draft</option>
-                                    <option value="Diajukan">Diajukan</option>
-                                    <option value="Disetujui Unit">Disetujui Unit</option>
-                                    <option value="Proses Logistik">Proses Logistik</option>
-                                    <option value="Siap Ambil">Siap Ambil / Diserahkan</option>
-                                    <option value="Selesai">Selesai</option>
-                                    <option value="Ditolak">Ditolak</option>
-                                    <option value="Dibatalkan">Dibatalkan</option>
-                                    {/if}
-                                </select>
-                            </div>
-                            {/if}
                         </div>
                     </div>
-                    {/if}
-                    {if: !empty($jenis_page) && $jenis_page == 'Rutin' && $role == 'unit'}
-                    <div id="sppb-active-rutin">
-                        {if: !empty($current_week_sppb)}
-                            {if: $current_week_sppb.status == 'Selesai' || $current_week_sppb.status == 'Diterima'}
-                            <div class="sppb-active-card">
-                                <h4><i class="fa fa-check-circle text-success"></i> Pengadaan rutin minggu ini sudah selesai</h4>
-                                <div class="sppb-status-line">
-                                    No. SPPB: <strong>{$current_week_sppb.no_sppb}</strong> | Tanggal: {$current_week_sppb.tgl_sppb_display} | Status: <span class="label label-success">{$current_week_sppb.status}</span>
+
+                    <!-- TAB 2: PERBANDINGAN PERIODE -->
+                    <div id="tab-perbandingan" class="tab-pane fade">
+                        <div class="well well-sm" style="background: #fff; border: 1px solid #e1e4e8; border-radius: 6px;">
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <label style="font-size:12px; color:#586069;">Periode 1</label>
+                                    <div class="input-group">
+                                        <input type="date" id="compare-tgl-awal-1" class="form-control input-sm" value="2026-06-01">
+                                        <span class="input-group-addon" style="background:transparent;border:none;padding:0 5px;font-size:12px;">s/d</span>
+                                        <input type="date" id="compare-tgl-akhir-1" class="form-control input-sm" value="2026-06-30">
+                                    </div>
                                 </div>
-                                <div style="margin-top:12px;">
-                                    <button class="btn btn-primary" onclick="aturBarangTambahan('{$current_week_sppb.no_sppb}')"><i class="fa fa-pencil"></i> Atur Barang Tambahan</button>
-                                    <button class="btn btn-info" onclick="aturBarangTambahan('{$current_week_sppb.no_sppb}')"><i class="fa fa-list"></i> Lihat Detail SPPB</button>
+                                <div class="col-md-5">
+                                    <label style="font-size:12px; color:#586069;">Periode 2</label>
+                                    <div class="input-group">
+                                        <input type="date" id="compare-tgl-awal-2" class="form-control input-sm" value="2026-07-01">
+                                        <span class="input-group-addon" style="background:transparent;border:none;padding:0 5px;font-size:12px;">s/d</span>
+                                        <input type="date" id="compare-tgl-akhir-2" class="form-control input-sm" value="2026-07-31">
+                                    </div>
                                 </div>
-                            </div>
-                            <div id="sppb-active-form" style="display:none;"></div>
-                            {else}
-                            <div class="sppb-active-card">
-                                <h4><i class="fa fa-clock-o text-info"></i> Pengadaan rutin minggu ini sudah diajukan</h4>
-                                <div class="sppb-status-line">
-                                    No. SPPB: <strong>{$current_week_sppb.no_sppb}</strong> | Tanggal: {$current_week_sppb.tgl_sppb_display} | Status: <span class="label label-info">{$current_week_sppb.status}</span>
-                                </div>
-                                <div style="margin-top:12px;">
-                                    <button class="btn btn-primary" onclick="aturBarangTambahan('{$current_week_sppb.no_sppb}')"><i class="fa fa-pencil"></i> Atur Barang Tambahan</button>
-                                    <button class="btn btn-info" onclick="detailSPPB('{$current_week_sppb.no_sppb}')"><i class="fa fa-eye"></i> Lihat Status</button>
+                                <div class="col-md-2" style="padding-top:23px;">
+                                    <button class="btn btn-primary btn-sm btn-block" onclick="loadPerbandingan()"><i class="fa fa-refresh"></i> Bandingkan</button>
                                 </div>
                             </div>
-                            {/if}
-                        {else}
-                            <div id="sppb-active-form">
-                                <div class="text-center" style="padding:30px;"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat form permintaan...</div>
+                        </div>
+
+                        <div id="perbandingan-result" style="display:none; margin-top: 20px;">
+                            <table class="table table-bordered table-striped" style="background: #fff;">
+                                <thead>
+                                    <tr>
+                                        <th>Nama Barang PPI</th>
+                                        <th class="text-right">Qty Periode 1</th>
+                                        <th class="text-right">Qty Periode 2</th>
+                                        <th class="text-right">Selisih</th>
+                                        <th class="text-center">Trend</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="perbandingan-tbody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: RIWAYAT LENGKAP -->
+                    <div id="tab-riwayat" class="tab-pane fade">
+
+                        {if: !empty($can_manage_distribusi_controls)}
+                        <div class="well well-sm" style="background: #fff; border: 1px solid #e1e4e8; border-radius: 6px;">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="input-group">
+                                        <input type="text" id="cari" class="form-control input-sm" placeholder="Cari SPPB/Unit/Brg...">
+                                        <span class="input-group-btn">
+                                            <button class="btn btn-default btn-sm" id="btn-cari"><i class="fa fa-search"></i></button>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <select id="filter-periode-cepat" class="form-control input-sm" onchange="setPeriodeCepat()">
+                                        <option value="">-- Pilih Periode --</option>
+                                        <option value="minggu_ini">Minggu Ini (Jum'at - Kamis)</option>
+                                        <option value="minggu_lalu">Minggu Lalu</option>
+                                        <option value="bulan_ini">Bulan Ini</option>
+                                        <option value="kustom" selected>Juli 2026 (Demo)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="input-group">
+                                        <span class="input-group-addon" style="background:transparent;border:none;padding:0 5px 0 0;font-size:12px;">Dari</span>
+                                        <input type="date" id="filter-tgl-awal" class="form-control input-sm" value="2026-07-01" onchange="$('#filter-periode-cepat').val('kustom'); loadDisplay()">
+                                        <span class="input-group-addon" style="background:transparent;border:none;padding:0 5px;font-size:12px;">s/d</span>
+                                        <input type="date" id="filter-tgl-akhir" class="form-control input-sm" value="2026-07-31" onchange="$('#filter-periode-cepat').val('kustom'); loadDisplay()">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <select id="filter-unit" class="form-control input-sm" onchange="loadDisplay()">
+                                        <option value="">-- Semua Unit --</option>
+                                        {loop: $units}
+                                        <option value="{$value.kode_unit}">{$value.kode_unit}</option>
+                                        {/loop}
+                                    </select>
+                                </div>
                             </div>
+                        </div>
                         {/if}
+                        <div id="sppb-list"></div>
+
                     </div>
-                    {/if}
-                    <div id="sppb-list"></div>
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -532,7 +565,7 @@ function loadDisplay(halaman) {
         postData.approval_tab = sppbCurrentTab;
     }
 
-    $.post('{?=url(ADMIN."/logistik_non_medis/displaysppb")?}', postData, function(data) {
+    $.post('{?=url(ADMIN."/logistik_non_medis/displaysppbppi")?}', postData, function(data) {
         $('#sppb-list').html(data);
     }).fail(function(xhr, status, error) {
         console.error("AJAX Error:", status, error);
@@ -565,12 +598,67 @@ function aturBarangTambahan(no_sppb) {
 
 function tutupEditorSPPB() {
     $('#form-container').hide().empty();
-    $('#display').show();
-    if (sppbRutinUnitMode && sppbListTab === 'active') {
+    if (sppbRutinUnitMode) {
         $('#sppb-active-rutin').show();
+        loadSppbForm('Rutin', '#sppb-active-form');
+    } else {
+        $('#display').show();
+        loadDisplay();
     }
-    loadDisplay();
 }
+
+function loadPerbandingan() {
+    var t1_start = $('#compare-tgl-awal-1').val();
+    var t1_end = $('#compare-tgl-akhir-1').val();
+    var t2_start = $('#compare-tgl-awal-2').val();
+    var t2_end = $('#compare-tgl-akhir-2').val();
+    
+    $('#perbandingan-tbody').html('<tr><td colspan="5" class="text-center"><i class="fa fa-spinner fa-spin"></i> Memuat data...</td></tr>');
+    $('#perbandingan-result').show();
+
+    $.post('{?=url(ADMIN."/logistik_non_medis/ajaxPerbandinganPpi")?}', {
+        t1_start: t1_start,
+        t1_end: t1_end,
+        t2_start: t2_start,
+        t2_end: t2_end
+    }, function(res) {
+        if (res.status === 'ok') {
+            var html = '';
+            if (res.data.length === 0) {
+                html = '<tr><td colspan="5" class="text-center">Tidak ada data distribusi pada periode tersebut.</td></tr>';
+            } else {
+                $.each(res.data, function(i, row) {
+                    var selisih = row.qty2 - row.qty1;
+                    var selisihHtml = '';
+                    var trend = '';
+                    
+                    if (selisih > 0) {
+                        selisihHtml = '<span class="text-danger">+' + selisih + '</span>';
+                        trend = '<i class="fa fa-arrow-up text-danger"></i> Naik';
+                    } else if (selisih < 0) {
+                        selisihHtml = '<span class="text-success">' + selisih + '</span>';
+                        trend = '<i class="fa fa-arrow-down text-success"></i> Turun';
+                    } else {
+                        selisihHtml = '<span class="text-muted">0</span>';
+                        trend = '<i class="fa fa-minus text-muted"></i> Tetap';
+                    }
+                    
+                    html += '<tr>' +
+                        '<td>' + row.nama + '</td>' +
+                        '<td class="text-right">' + row.qty1 + '</td>' +
+                        '<td class="text-right">' + row.qty2 + '</td>' +
+                        '<td class="text-right">' + selisihHtml + '</td>' +
+                        '<td class="text-center">' + trend + '</td>' +
+                        '</tr>';
+                });
+            }
+            $('#perbandingan-tbody').html(html);
+        } else {
+            $('#perbandingan-tbody').html('<tr><td colspan="5" class="text-center text-danger">Terjadi kesalahan sistem.</td></tr>');
+        }
+    }, 'json');
+}
+
 
 function hapusSPPB(no_sppb) {
     bootbox.confirm('Yakin ingin menghapus permintaan ini?', function(result) {
@@ -657,89 +745,6 @@ function keputusanDanaSppb(no_sppb, keputusan) {
         }
     });
 }
-function exportSppbAktif() {
-    var cari = $('#cari').val() || '';
-    var status = $('#filter-status').length ? $('#filter-status').val() : '';
-    var tgl_awal = $('#filter-tgl-awal').length ? $('#filter-tgl-awal').val() : '';
-    var tgl_akhir = $('#filter-tgl-akhir').length ? $('#filter-tgl-akhir').val() : '';
-    var unit = $('#filter-unit').length ? $('#filter-unit').val() : '';
-    var list_tab = sppbListTab;
-
-    var url = '{?=url(ADMIN."/logistik_non_medis/exportsppb")?}';
-    url += '?cari=' + encodeURIComponent(cari) + 
-           '&status=' + encodeURIComponent(status) + 
-           '&tgl_awal=' + encodeURIComponent(tgl_awal) + 
-           '&tgl_akhir=' + encodeURIComponent(tgl_akhir) + 
-           '&unit=' + encodeURIComponent(unit) + 
-           '&list_tab=' + encodeURIComponent(list_tab);
-    
-    window.location.href = url;
-}
-
-$('#form-import-sppb').on('submit', function(e) {
-    e.preventDefault();
-    var formData = new FormData(this);
-    var btn = $(this).find('button[type="submit"]');
-    var defaultBtnHtml = btn.html();
-    
-    btn.html('<i class="fa fa-spinner fa-spin"></i> Mengimpor...').prop('disabled', true);
-    
-    $.ajax({
-        url: '{?=url(ADMIN."/logistik_non_medis/importsppb")?}',
-        type: 'POST',
-        data: formData,
-        contentType: false,
-        processData: false,
-        success: function(res) {
-            btn.html(defaultBtnHtml).prop('disabled', false);
-            try {
-                var response = typeof res === 'string' ? JSON.parse(res) : res;
-                if (response.status === 'success') {
-                    bootbox.alert('Import berhasil! Data telah ditambahkan sebagai SPPB Rutin baru.', function() {
-                        $('#modal-import-sppb').modal('hide');
-                        $('#form-import-sppb')[0].reset();
-                        loadDisplay();
-                    });
-                } else {
-                    bootbox.alert('Gagal: ' + response.message);
-                }
-            } catch(e) {
-                bootbox.alert('Terjadi kesalahan saat mengurai respons dari server.');
-            }
-        },
-        error: function() {
-            btn.html(defaultBtnHtml).prop('disabled', false);
-            bootbox.alert('Terjadi kesalahan jaringan atau server.');
-        }
-    });
-});
 </script>
-
-<div class="modal fade" id="modal-import-sppb" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title"><i class="fa fa-upload"></i> Import Permintaan SPPB Rutin</h4>
-            </div>
-            <form id="form-import-sppb" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <strong>Perhatian:</strong> Silakan unggah file berformat <strong>CSV</strong>. Anda bisa mengunduh formatnya terlebih dahulu melalui menu <strong>Unduh Template Import (CSV)</strong>.
-                    </div>
-                    <div class="form-group">
-                        <label>Pilih File Excel (CSV)</label>
-                        <input type="file" name="file_excel" class="form-control" accept=".csv" required>
-                        <p class="help-block">Pastikan kolom Kode Barang terisi dengan benar. Baris dengan Kode Barang yang salah/tidak ditemukan akan otomatis diabaikan.</p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-success"><i class="fa fa-cloud-upload"></i> Mulai Import</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 {? include_once(MODULES . '/logistik_non_medis/view/admin/notifikasi.html') ?}

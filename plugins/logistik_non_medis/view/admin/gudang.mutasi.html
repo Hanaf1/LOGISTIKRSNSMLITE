@@ -148,14 +148,15 @@ $(document).ready(function() {
 
 
     // Auto-filter if coming from Stock Management
-    {if: !empty($selected_item)}
-        $('#filter-item-mutasi').val('{$selected_item}').trigger('change').trigger('change.select2');
+    var selected_item = '{$selected_item}';
+    if (selected_item !== '') {
+        $('#filter-item-mutasi').val(selected_item).trigger('change').trigger('change.select2');
         setTimeout(function() {
             loadKartuStok(1);
         }, 800);
-    {else}
+    } else {
         loadKartuStok(1);
-    {/if}
+    }
 
     $('#btn-filter-kartu').click(function() {
         loadKartuStok(1);

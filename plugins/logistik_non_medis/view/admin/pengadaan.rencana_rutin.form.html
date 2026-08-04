@@ -125,10 +125,10 @@
 </div>
 
 <script>
-var rowIdxRutin = {?=count($details) > 0 ? count($details) : 1?};
+var rowIdxRutin = parseInt('{?=count($details) > 0 ? count($details) : 1?}');
 
 // Daftar barang dari master (sudah diload dari PHP)
-var listBarangRutin = {?=json_encode($list_barang)?};
+var listBarangRutin = JSON.parse('{?=addslashes(json_encode($list_barang))?}');
 
 function buildBarangOptions(selectedKode) {
     var opts = '<option value=""></option>';

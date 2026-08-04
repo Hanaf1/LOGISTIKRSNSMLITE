@@ -825,17 +825,19 @@ $(document).ready(function() {
 
     $(document).off('click', '.btn-hapus-unit').on('click', '.btn-hapus-unit', function() {
         var id = $(this).data('id');
-        if(confirm('Yakin ingin menghapus data ini?')) {
-            $.post(baseURL + '/logistik_non_medis/hapusmasterunit?t=' + mlite.token, {id: id}, function(response) {
-                var res = (typeof response === 'object') ? response : JSON.parse(response);
-                loadMasterUnit();
-                if(res.status === 'success') {
-                    alert('Data berhasil dihapus!');
-                } else {
-                    alert(res.message || 'Gagal menghapus data unit.');
-                }
-            });
-        }
+        bootbox.confirm("Yakin ingin menghapus data unit ini?", function(result) {
+            if (result) {
+                $.post(baseURL + '/logistik_non_medis/hapusmasterunit?t=' + mlite.token, {id: id}, function(response) {
+                    var res = (typeof response === 'object') ? response : JSON.parse(response);
+                    loadMasterUnit();
+                    if(res.status === 'success') {
+                        bootbox.alert('Data berhasil dihapus!');
+                    } else {
+                        bootbox.alert(res.message || 'Gagal menghapus data unit.');
+                    }
+                });
+            }
+        });
     });
 
     // Import Unit
