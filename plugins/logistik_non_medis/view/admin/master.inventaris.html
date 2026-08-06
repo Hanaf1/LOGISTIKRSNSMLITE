@@ -182,6 +182,11 @@ var originalJenisOptions = $('#master-jenis-kode option').clone();
 var originalKelompokJenisOptions = $('#master-kelompok-jenis option').clone();
 
 function initSelect2Master() {
+  if ($.fn.selectator) {
+    $('#master-kategori, #master-kelompok, #master-jenis-kode').selectator('destroy');
+    $('#master-kategori-jenis, #master-kelompok-jenis').selectator('destroy');
+    $('#master-kategori-kelompok').selectator('destroy');
+  }
   if ($.fn.select2) {
     $('#master-kategori, #master-kelompok, #master-jenis-kode').select2({
       dropdownParent: $('#modal-master-inventaris'),
