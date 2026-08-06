@@ -46,8 +46,11 @@
           <div class="tab-pane" id="tab-master-unit">
             <button class="btn btn-primary btn-sm pull-right btn-tambah-master" data-jenis="UNIT"><i class="fa fa-plus"></i> Tambah Unit</button>
             <p class="text-muted">Kelola unit inventaris. Kode unit dipakai sebagai bagian awal nomor inventaris.</p>
+            <div class="row" style="margin-bottom:12px;">
+              <div class="col-sm-4"><input type="text" class="form-control cari-tabel" data-target="#tabel-master-unit" placeholder="Cari unit..."></div>
+            </div>
             <div class="table-responsive">
-              <table class="table table-bordered table-striped table-condensed">
+              <table id="tabel-master-unit" class="table table-bordered table-striped table-condensed">
                 <thead><tr><th style="width:120px;">Kode Unit</th><th>Nama Unit</th><th style="width:130px;">Aksi</th></tr></thead>
                 <tbody>
                   {loop: $units}
@@ -62,8 +65,11 @@
           <div class="tab-pane" id="tab-master-kategori">
             <button class="btn btn-primary btn-sm pull-right btn-tambah-master" data-jenis="KATEGORI"><i class="fa fa-plus"></i> Tambah Kategori</button>
             <p class="text-muted">Kelola kategori utama inventaris.</p>
+            <div class="row" style="margin-bottom:12px;">
+              <div class="col-sm-4"><input type="text" class="form-control cari-tabel" data-target="#tabel-master-kategori" placeholder="Cari kategori..."></div>
+            </div>
             <div class="table-responsive">
-              <table class="table table-bordered table-striped table-condensed">
+              <table id="tabel-master-kategori" class="table table-bordered table-striped table-condensed">
                 <thead><tr><th style="width:120px;">Kode</th><th>Nama Kategori</th><th style="width:130px;">Aksi</th></tr></thead>
                 <tbody>
                   {loop: $kategori_master}
@@ -78,8 +84,12 @@
           <div class="tab-pane" id="tab-master-kelompok">
             <button class="btn btn-primary btn-sm pull-right btn-tambah-master" data-jenis="KELOMPOK"><i class="fa fa-plus"></i> Tambah Kelompok</button>
             <p class="text-muted">Kelola kelompok barang berdasarkan kategori.</p>
+            <div class="row" style="margin-bottom:12px;">
+              <div class="col-sm-4"><input type="text" class="form-control cari-tabel" data-target="#tabel-master-kelompok" placeholder="Cari kelompok..."></div>
+              <div class="col-sm-3"><select class="form-control filter-tabel" data-target="#tabel-master-kelompok" data-column="0"><option value="">Semua Kategori</option>{loop: $kategori_master}<option value="{$value.nama_kategori}">{$value.nama_kategori}</option>{/loop}</select></div>
+            </div>
             <div class="table-responsive">
-              <table class="table table-bordered table-striped table-condensed">
+              <table id="tabel-master-kelompok" class="table table-bordered table-striped table-condensed">
                 <thead><tr><th>Kategori</th><th style="width:120px;">Kode</th><th>Nama Kelompok</th><th style="width:130px;">Aksi</th></tr></thead>
                 <tbody>
                   {loop: $kelompok_master}
@@ -94,8 +104,13 @@
           <div class="tab-pane" id="tab-master-jenis">
             <button class="btn btn-primary btn-sm pull-right btn-tambah-master" data-jenis="JENIS"><i class="fa fa-plus"></i> Tambah Jenis Barang</button>
             <p class="text-muted">Kelola jenis barang berdasarkan kategori dan kelompok.</p>
+            <div class="row" style="margin-bottom:12px;">
+              <div class="col-sm-4"><input type="text" class="form-control cari-tabel" data-target="#tabel-master-jenis" placeholder="Cari jenis barang..."></div>
+              <div class="col-sm-3"><select class="form-control filter-tabel" data-target="#tabel-master-jenis" data-column="0"><option value="">Semua Kategori</option>{loop: $kategori_master}<option value="{$value.nama_kategori}">{$value.nama_kategori}</option>{/loop}</select></div>
+              <div class="col-sm-3"><select class="form-control filter-tabel" data-target="#tabel-master-jenis" data-column="1"><option value="">Semua Kelompok</option>{loop: $kelompok_master}<option value="{$value.nama_kelompok}">{$value.nama_kelompok}</option>{/loop}</select></div>
+            </div>
             <div class="table-responsive">
-              <table class="table table-bordered table-striped table-condensed">
+              <table id="tabel-master-jenis" class="table table-bordered table-striped table-condensed">
                 <thead><tr><th>Kategori</th><th>Kelompok</th><th style="width:120px;">Kode</th><th>Nama Jenis</th><th style="width:130px;">Aksi</th></tr></thead>
                 <tbody>
                   {loop: $jenis_master}
@@ -279,6 +294,39 @@ $('#master-kategori').on('change', function(){ isiPilihanKelompok($(this).val())
 $('#master-kelompok').on('change', function(){ isiPilihanJenis($('#master-kategori').val(), $(this).val()); });
 $('#master-kategori-jenis').on('change', function(){ isiPilihanKelompokSelect('#master-kelompok-jenis', $(this).val(), '', originalKelompokJenisOptions); });
 $('.btn-tambah-master').on('click', function(){ bukaMaster($(this).data('jenis'), null); });
+
+function applyTableFilter(target) {
+  var tbody = $(target).find('tbody');
+  var cari = $('.cari-tabel[data-target="'+target+'"]').val().toLowerCase();
+  var filters = [];
+  $('.filter-tabel[data-target="'+target+'"]').each(function(){
+    var val = $(this).val();
+    if(val) filters.push({col: parseInt($(this).data('column')), val: val.toLowerCase()});
+  });
+  
+  tbody.find('tr').each(function(){
+    var tr = $(this);
+    if(tr.find('td').length === 1) return; // skip "Data belum ada" row
+    
+    var matchCari = true;
+    if (cari) {
+      matchCari = tr.text().toLowerCase().indexOf(cari) !== -1;
+    }
+    
+    var matchFilter = true;
+    if (filters.length > 0) {
+      filters.forEach(function(f){
+        var cellText = tr.find('td').eq(f.col).text().toLowerCase();
+        if (cellText !== f.val) matchFilter = false;
+      });
+    }
+    
+    tr.toggle(matchCari && matchFilter);
+  });
+}
+
+$('.cari-tabel').on('keyup', function(){ applyTableFilter($(this).data('target')); });
+$('.filter-tabel').on('change', function(){ applyTableFilter($(this).data('target')); });
 
 function loadMasterBarang(page) {
   $.post('{?=url([ADMIN,"logistik_non_medis","displaymasterinventaris"])?}', {halaman:page || 1, cari:$('#cari-master-barang').val(), jenis:$('#filter-jenis-master').val()}, function(html){ $('#display-master-barang').html(html); });
