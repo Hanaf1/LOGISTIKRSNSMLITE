@@ -606,6 +606,10 @@
         </div>
         {/if}
     </div>
+</div>
+                        </div>
+                        {/if}
+    </div>
     
     <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times-circle"></i> Batal</button>
@@ -616,52 +620,82 @@
 <script>
     $(document).ready(function() {
 
-        // Gunakan prop('hidden') dan prop('disabled') agar filter option bekerja di semua browser
+        var originalKelompokOptions = $('#form_master_kelompok option').clone();
+        var originalJenisOptions = $('#form_master_jenis option').clone();
+        var originalBarangOptions = $('#form_kode_item option').clone();
+
+        function initSelect2Aset() {
+            if ($.fn.selectator) {
+                $('#form_kode_unit, #form_master_kategori, #form_master_kelompok, #form_master_jenis, #form_kode_item').selectator('destroy');
+            }
+            if ($.fn.select2) {
+                $('#form_kode_unit, #form_master_kategori, #form_master_kelompok, #form_master_jenis, #form_kode_item').select2({
+                    dropdownParent: $('#modal-form-aset'),
+                    width: '100%'
+                });
+            }
+        }
+
         function filterKelompok(selected) {
+            var target = $('#form_master_kelompok');
             var kategori = $('#form_master_kategori').val();
-            var found = false;
-            $('#form_master_kelompok option').each(function() {
+            target.empty();
+            originalKelompokOptions.each(function() {
                 var cocok = !$(this).val() || String($(this).data('kategori')) === String(kategori);
-                $(this).prop('hidden', !cocok).prop('disabled', !cocok);
-                if (cocok && $(this).val() === selected) found = true;
+                if (cocok) target.append($(this).clone());
             });
-            $('#form_master_kelompok').val(found ? selected : '');
+            var found = target.find('option[value="' + selected + '"]').length > 0;
+            target.val(found ? selected : '');
+            if (target.hasClass('select2-hidden-accessible')) {
+                target.trigger('change.select2');
+            }
         }
 
         function filterJenis(selected) {
+            var target = $('#form_master_jenis');
             var kategori = $('#form_master_kategori').val();
             var kelompok = $('#form_master_kelompok').val();
-            var found = false;
-            $('#form_master_jenis option').each(function() {
+            target.empty();
+            originalJenisOptions.each(function() {
                 var cocok = !$(this).val() || (String($(this).data('kategori')) === String(kategori) && String($(this).data('kelompok')) === String(kelompok));
-                $(this).prop('hidden', !cocok).prop('disabled', !cocok);
-                if (cocok && $(this).val() === selected) found = true;
+                if (cocok) target.append($(this).clone());
             });
-            $('#form_master_jenis').val(found ? selected : '');
+            var found = target.find('option[value="' + selected + '"]').length > 0;
+            target.val(found ? selected : '');
+            if (target.hasClass('select2-hidden-accessible')) {
+                target.trigger('change.select2');
+            }
         }
 
         function filterBarang(selected) {
+            var target = $('#form_kode_item');
             var kategori = $('#form_master_kategori').val();
             var kelompok = $('#form_master_kelompok').val();
             var jenis = $('#form_master_jenis').val();
-            var found = false;
-            $('#form_kode_item option').each(function() {
+            target.empty();
+            originalBarangOptions.each(function() {
                 var cocok = !$(this).val() || (String($(this).data('kategori')) === String(kategori) && String($(this).data('kelompok')) === String(kelompok) && String($(this).data('jenis')) === String(jenis));
-                $(this).prop('hidden', !cocok).prop('disabled', !cocok);
-                if (cocok && $(this).val() === selected) found = true;
+                if (cocok) target.append($(this).clone());
             });
-            $('#form_kode_item').val(found ? selected : '');
+            var found = target.find('option[value="' + selected + '"]').length > 0;
+            target.val(found ? selected : '');
+            if (target.hasClass('select2-hidden-accessible')) {
+                target.trigger('change.select2');
+            }
         }
 
         var initialItem = $('#form_kode_item').val();
-        var initialOption = $('#form_kode_item option[value="' + initialItem + '"]');
+        var initialOption = originalBarangOptions.filter('[value="' + initialItem + '"]');
         var initialKategori = initialOption.data('kategori') || '';
         var initialKelompok = initialOption.data('kelompok') || '';
         var initialJenis   = initialOption.data('jenis') || '';
         if (initialKategori) $('#form_master_kategori').val(String(initialKategori));
+        
         filterKelompok(String(initialKelompok));
         filterJenis(String(initialJenis));
         filterBarang(initialItem);
+        
+        initSelect2Aset();
 
         $('#form_master_kategori').on('change', function() {
             filterKelompok('');
