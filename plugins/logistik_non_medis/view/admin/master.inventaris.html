@@ -176,24 +176,59 @@ function onlyDigits(value, length) {
   var cleaned = (value || '').toString().replace(/\D/g, '');
   return cleaned ? cleaned.substring(0, length) : '';
 }
-function isiPilihanKelompokSelect(selector, kategori, selected) {
-  $(selector + ' option').each(function(){
-    var ok = !$(this).data('kategori') || $(this).data('kategori').toString() === (kategori || '').toString();
-    $(this).toggle(ok);
-  });
-  $(selector).val(selected || '');
+
+var originalKelompokOptions = $('#master-kelompok option').clone();
+var originalJenisOptions = $('#master-jenis-kode option').clone();
+var originalKelompokJenisOptions = $('#master-kelompok-jenis option').clone();
+
+function initSelect2Master() {
+  if ($.fn.select2) {
+    $('#master-kategori, #master-kelompok, #master-jenis-kode').select2({
+      dropdownParent: $('#modal-master-inventaris'),
+      width: '100%'
+    });
+    $('#master-kategori-jenis, #master-kelompok-jenis').select2({
+      dropdownParent: $('#modal-master-inventaris'),
+      width: '100%'
+    });
+    $('#master-kategori-kelompok').select2({
+      dropdownParent: $('#modal-master-inventaris'),
+      width: '100%'
+    });
+  }
 }
+
+function isiPilihanKelompokSelect(selector, kategori, selected, origOptions) {
+  var target = $(selector);
+  target.empty();
+  origOptions.each(function(){
+    var ok = !$(this).data('kategori') || $(this).data('kategori').toString() === (kategori || '').toString();
+    if (ok) target.append($(this).clone());
+  });
+  target.val(selected || '');
+  if (target.hasClass('select2-hidden-accessible')) {
+      target.trigger('change.select2');
+  }
+}
+
 function isiPilihanKelompok(kategori, selected) {
-  isiPilihanKelompokSelect('#master-kelompok', kategori, selected);
+  isiPilihanKelompokSelect('#master-kelompok', kategori, selected, originalKelompokOptions);
   isiPilihanJenis(kategori, selected || '', '');
 }
+
 function isiPilihanJenis(kategori, kelompok, selected) {
-  $('#master-jenis-kode option').each(function(){
+  var target = $('#master-jenis-kode');
+  target.empty();
+  originalJenisOptions.each(function(){
     var ok = !$(this).data('kategori') || ($(this).data('kategori').toString() === (kategori || '').toString() && $(this).data('kelompok').toString() === (kelompok || '').toString());
-    $(this).toggle(ok);
+    if (ok) target.append($(this).clone());
   });
-  $('#master-jenis-kode').val(selected || '');
+  target.val(selected || '');
+  if (target.hasClass('select2-hidden-accessible')) {
+      target.trigger('change.select2');
+  }
 }
+
 function bukaMaster(jenis, data) {
   $('#form-master-inventaris')[0].reset();
   $('#master-id').val(data && data.id ? data.id : '');
@@ -217,7 +252,7 @@ function bukaMaster(jenis, data) {
   } else if (jenis === 'JENIS') {
     var kategoriJenis = data && data.kode_kategori ? data.kode_kategori : $('#master-kategori-jenis option:first').val();
     $('#master-kategori-jenis').val(kategoriJenis);
-    isiPilihanKelompokSelect('#master-kelompok-jenis', kategoriJenis, data && data.kode_kelompok ? data.kode_kelompok : '');
+    isiPilihanKelompokSelect('#master-kelompok-jenis', kategoriJenis, data && data.kode_kelompok ? data.kode_kelompok : '', originalKelompokJenisOptions);
     if (data) { $('#master-jenis-input').val(data.kode_jenis); $('#master-nama-jenis').val(data.nama_jenis); }
   } else if (jenis === 'BARANG') {
     var kategoriBarang = data && data.kode_kategori ? data.kode_kategori : $('#master-kategori').val();
@@ -229,12 +264,15 @@ function bukaMaster(jenis, data) {
       $('#master-kib').val(data.kib_jenis);
     }
   }
+  
+  initSelect2Master();
+  
   $('#modal-master-inventaris').modal('show');
 }
 
 $('#master-kategori').on('change', function(){ isiPilihanKelompok($(this).val()); });
 $('#master-kelompok').on('change', function(){ isiPilihanJenis($('#master-kategori').val(), $(this).val()); });
-$('#master-kategori-jenis').on('change', function(){ isiPilihanKelompokSelect('#master-kelompok-jenis', $(this).val(), ''); });
+$('#master-kategori-jenis').on('change', function(){ isiPilihanKelompokSelect('#master-kelompok-jenis', $(this).val(), '', originalKelompokJenisOptions); });
 $('.btn-tambah-master').on('click', function(){ bukaMaster($(this).data('jenis'), null); });
 
 function loadMasterBarang(page) {
