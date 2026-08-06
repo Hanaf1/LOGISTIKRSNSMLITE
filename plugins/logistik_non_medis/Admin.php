@@ -792,7 +792,8 @@ class Admin extends AdminModule
         'has_aset' => $has_aset,
         'has_laporan' => $has_laporan,
         'first_active_tab' => $first_active_tab,
-        'role' => $role
+        'role' => $role,
+        'is_not_unit' => ($role !== 'unit')
     ], $perm_flags));
   }
 
