@@ -641,7 +641,7 @@
                 </li>
                 {/if}
 
-                {if: $perm_distribusisppb}
+                {if: $perm_distribusisppb && $role != 'unit'}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','distribusippi'])?}" class="panel-body text-center module-card-soft">

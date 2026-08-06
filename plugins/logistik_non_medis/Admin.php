@@ -7273,6 +7273,11 @@ $(document).ready(function() {
       $role = strtolower($userRoleData['role'] ?? $this->core->getUserInfo('role', null, true) ?: 'unit');
       $user_kode_unit = $userRoleData['kode_unit'] ?? null;
       $can_manage = in_array($role, ['admin', 'logistik'], true);
+      
+      if ($role === 'unit') {
+          $this->notify('failure', 'Anda tidak memiliki akses ke halaman PPI.');
+          $this->redirect(url([ADMIN, 'logistik_non_medis', 'manage']));
+      }
 
       $units_raw = $this->db('rsns_custom_logistik_non_medis_unit')->toArray();
       $units = [];
