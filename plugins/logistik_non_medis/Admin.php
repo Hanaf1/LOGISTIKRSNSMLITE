@@ -767,6 +767,7 @@ class Admin extends AdminModule
         } catch (\Exception $e) { $dash_butuh_persetujuan = 0; }
     }
 
+    
     return $this->draw('manage.html', array_merge([
         'count_verif' => $count_verif,
         'count_packing' => $count_packing,
@@ -11735,6 +11736,10 @@ $(document).ready(function() {
             ON iu.jenis_master = 'UNIT' AND iu.kode = a.kode_unit
           LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master im
             ON im.jenis_master = 'BARANG' AND im.kode = a.kode_item
+          LEFT JOIN rsns_custom_logistik_non_medis_inventaris_kelompok ik
+            ON ik.kode_kategori = im.kode_kategori AND ik.kode_kelompok = im.kode_kelompok
+          LEFT JOIN rsns_custom_logistik_non_medis_inventaris_jenis ij
+            ON ij.kode_kategori = im.kode_kategori AND ij.kode_kelompok = im.kode_kelompok AND ij.kode_jenis = im.kode_jenis
           WHERE {$where_sql}
       ";
 
@@ -11747,8 +11752,8 @@ $(document).ready(function() {
           SELECT a.*,
                  COALESCE(iu.nama, a.kode_unit) AS nama_unit,
                  COALESCE(im.nama, a.nama_aset) AS nama_item_master,
-                 im.nama_kelompok,
-                 im.nama_jenis
+                 COALESCE(im.nama_kelompok, ik.nama_kelompok) AS nama_kelompok,
+                 COALESCE(im.nama_jenis, ij.nama_jenis) AS nama_jenis
           {$from_sql}
           GROUP BY a.id
           ORDER BY a.id DESC

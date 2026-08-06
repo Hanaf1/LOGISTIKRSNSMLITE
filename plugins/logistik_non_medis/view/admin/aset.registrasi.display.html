@@ -17,7 +17,7 @@
         <small class="text-muted">Kode sistem: {$value.kode_aset}</small>
     </td>
     <td>
-        {if: !empty($value.nama_kelompok)}<span class="label label-default">{$value.nama_kelompok}</span>{else}<span class="text-muted">-</span>{/if}
+        {if: !empty($value.merk_type)}<span class="label label-default">{$value.merk_type}</span>{else}<span class="text-muted">-</span>{/if}
     </td>
     <td>{if: !empty($value.lokasi_fisik)}{$value.lokasi_fisik}{else}{$value.nama_unit}{/if}</td>
     <td>{$value.sumber_perolehan}<br><small class="text-muted">{if: !empty($value.tahun_beli)}{$value.tahun_beli}{else}{?=date('Y', strtotime($value.tanggal_perolehan))?}{/if}</small></td>
