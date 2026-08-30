@@ -271,7 +271,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_asset_groups` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `kode_group` (`kode_group`),
   KEY `item_unit` (`kode_item`,`kode_unit`)
-) ENGINE=InnoDB AUTO_INCREMENT=9283 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9283 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_barang_rusak`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -355,7 +355,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_fonnte_config` (
   `duration` tinyint NOT NULL DEFAULT '1',
   `delay` tinyint NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_fonnte_send_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -369,7 +369,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_fonnte_send_log` (
   `tgl_kirim` datetime NOT NULL,
   PRIMARY KEY (`id`),
   KEY `dedupe` (`username`,`tipe`,`no_sppb`,`tgl_kirim`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_fonnte_template`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -380,7 +380,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_fonnte_template` (
   `pesan` text NOT NULL,
   `tgl_diperbarui` datetime NOT NULL,
   PRIMARY KEY (`tipe`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_inventaris_jenis`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -391,7 +391,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_inventaris_jenis` (
   `kode_jenis` char(2) NOT NULL,
   `nama_jenis` varchar(150) NOT NULL,
   PRIMARY KEY (`kode_kategori`,`kode_kelompok`,`kode_jenis`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_inventaris_kategori`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -400,7 +400,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_inventaris_kategori` (
   `kode_kategori` char(1) NOT NULL,
   `nama_kategori` varchar(100) NOT NULL,
   PRIMARY KEY (`kode_kategori`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_inventaris_kelompok`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -410,7 +410,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_inventaris_kelompok` (
   `kode_kelompok` char(2) NOT NULL,
   `nama_kelompok` varchar(150) NOT NULL,
   PRIMARY KEY (`kode_kategori`,`kode_kelompok`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_inventaris_master`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -437,7 +437,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_inventaris_master` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `jenis_kode` (`jenis_master`,`kode_kategori`,`kode`),
   KEY `idx_inventaris_jenis_kode` (`jenis_master`,`kode`)
-) ENGINE=InnoDB AUTO_INCREMENT=3219 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3219 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_kartu_stok`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -610,7 +610,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_notifier_event` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `no_sppb` (`no_sppb`),
   KEY `tgl_dibuat` (`tgl_dibuat`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_notifikasi`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -626,7 +626,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_notifikasi` (
   PRIMARY KEY (`id`),
   KEY `user_target` (`user_target`),
   KEY `is_read` (`is_read`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_opname`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -834,7 +834,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_push_subscription` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `endpoint_hash` (`endpoint_hash`),
   KEY `username_aktif` (`username`,`aktif`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_rekanan_jasa`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1261,7 +1261,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_wa_contact` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   KEY `aktif` (`aktif`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_waha_config`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1275,7 +1275,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_waha_config` (
   `delay` tinyint NOT NULL DEFAULT '1',
   `tgl_diperbarui` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_waha_send_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1290,7 +1290,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_waha_send_log` (
   `keterangan` text,
   PRIMARY KEY (`id`),
   KEY `dedupe` (`username`,`tipe`,`no_sppb`,`tgl_kirim`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_waha_template`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1301,7 +1301,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_waha_template` (
   `pesan` text NOT NULL,
   `tgl_diperbarui` datetime NOT NULL,
   PRIMARY KEY (`tipe`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
