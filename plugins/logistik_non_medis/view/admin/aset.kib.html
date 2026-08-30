@@ -21,7 +21,7 @@
               </div>
               <div class="col-md-3">
                 <label>Unit</label>
-                <select id="filter_unit" class="form-control">
+                <select id="filter_unit" class="form-control select2" style="width:100%;">
                   <option value="">Semua Unit</option>
                   {loop: $units}
             <option value="{$value.kode}">{$value.kode_inventaris} - {$value.nama}</option>
@@ -30,7 +30,7 @@
               </div>
               <div class="col-md-2">
                 <label>Kelompok</label>
-                <select id="filter_kelompok" class="form-control">
+                <select id="filter_kelompok" class="form-control select2" style="width:100%;">
                   <option value="">Semua Kelompok</option>
                   {loop: $kelompok}
                   <option value="{$value.kode_kelompok}">{$value.kode_kelompok} - {$value.nama_kelompok}</option>
@@ -39,15 +39,33 @@
               </div>
               <div class="col-md-2">
                 <label>Jenis Barang</label>
-                <select id="filter_jenis" class="form-control">
+                <select id="filter_jenis" class="form-control select2" style="width:100%;">
                   <option value="">Semua Jenis</option>
                   {loop: $jenis}
                   <option value="{$value.kode_kelompok}.{$value.kode_jenis}" data-kelompok="{$value.kode_kelompok}">{$value.kode_kelompok}.{$value.kode_jenis} - {$value.nama_jenis}</option>
                   {/loop}
                 </select>
               </div>
-              <div class="col-md-2" style="padding-top:25px;">
+              <div class="col-md-1">
+                <label>Harga</label>
+                <select id="filter_harga" class="form-control" style="width:100%;">
+                  <option value="">Semua</option>
+                  <option value="tersedia">Terisi</option>
+                  <option value="kosong">Belum</option>
+                </select>
+              </div>
+              <div class="col-md-1" style="padding-top:25px;">
                 <button type="button" class="btn btn-default btn-block btn-reset-filter"><i class="fa fa-refresh"></i> Reset</button>
+              </div>
+            </div>
+            <div class="row" style="margin-top:10px;">
+              <div class="col-md-12 text-right">
+                <button type="button" class="btn btn-success btn-export-kib-xlsx">
+                  <i class="fa fa-file-excel-o"></i> Export XLSX Sesuai Filter
+                </button>
+                <div class="help-block" style="display:inline-block;margin:0 0 0 8px;vertical-align:middle;">
+                  Seluruh hasil filter akan diekspor, bukan hanya halaman aktif.
+                </div>
               </div>
             </div>
           </form>
@@ -63,15 +81,18 @@
   </div>
 </div>
 
-<div class="modal fade" id="modal-detail-aset" tabindex="-1" role="dialog">
-  <div class="modal-dialog modal-lg" role="document">
-    <div class="modal-content" id="detail-aset-content"></div>
-  </div>
-</div>
-
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+<style>
+  /* Tema mLite menimpa aturan visibility bawaan Select2. */
+  #filter_unit,
+  #filter_kelompok,
+  #filter_jenis { display: none !important; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>
 <script>
 var current_page = 1;
+var kibRequest = null;
 
 $(function() {
   loadKib(1);
@@ -82,21 +103,48 @@ $(function() {
     searchTimeout = setTimeout(function(){ loadKib(1); }, 300);
   });
 
-  $('#filter_unit,#filter_kelompok,#filter_jenis').on('change', function() {
+  $('#filter_unit,#filter_kelompok,#filter_jenis,#filter_harga').on('change', function() {
     if (this.id === 'filter_kelompok') {
-      var kelompok = $(this).val();
-      $('#filter_jenis option').show();
-      if (kelompok) $('#filter_jenis option[data-kelompok]').not('[data-kelompok="'+kelompok+'"]').hide();
-      $('#filter_jenis').val('');
+      filterJenisOptionsByKelompok($(this).val());
+      $('#filter_jenis').val('').trigger('change.select2');
     }
     loadKib(1);
   });
 
   $('.btn-reset-filter').on('click', function() {
     $('#form-filter-kib')[0].reset();
-    $('#filter_jenis option').show();
+    filterJenisOptionsByKelompok('');
+    $('#filter_unit').val('').trigger('change');
+    $('#filter_kelompok').val('').trigger('change.select2');
+    $('#filter_jenis').val('').trigger('change.select2');
     loadKib(1);
   });
+
+  $('.btn-export-kib-xlsx').on('click', function() {
+    var exportUrl = '{?=url([ADMIN,"logistik_non_medis","asetkibexportxlsx"])?}';
+    var separator = exportUrl.indexOf('?') === -1 ? '?' : '&';
+    window.location.href = exportUrl + separator + $.param(getKibFilters());
+  });
+
+  // Select2 menyediakan pencarian langsung di dalam dropdown filter.
+  if ($.fn.select2) {
+    // Bersihkan wrapper Selectator lama yang kadang dibuat oleh tema mLite.
+    $('#filter_unit,#filter_kelompok,#filter_jenis').each(function() {
+      try {
+        if ($(this).data('selectator')) $(this).selectator('destroy');
+      } catch (e) {}
+      $('#selectator_' + this.id).remove();
+      $(this).siblings('.selectator_element').remove();
+      $(this).removeClass('selectator');
+
+      $(this).select2({
+        width: '100%',
+        placeholder: $(this).find('option:first').text(),
+        allowClear: false
+      });
+      $(this).addClass('select2-hidden-accessible').attr('style', 'display:none !important;');
+    });
+  }
 
   $(document).on('click', '.pagination a', function(e) {
     e.preventDefault();
@@ -104,30 +152,24 @@ $(function() {
     if (page) loadKib(page);
   });
 
-  $(document).on('click', '.btn-detail-aset', function() {
-    var id = $(this).attr('data-id');
-    $('#detail-aset-content').html('<div class="text-center" style="padding:50px;"><i class="fa fa-spinner fa-spin fa-2x"></i><p>Memuat detail aset...</p></div>');
-    $('#modal-detail-aset').modal('show');
-    $.post('{?=url([ADMIN,"logistik_non_medis","detailasetregistrasi"])?}', {id:id}, function(html) {
-      $('#detail-aset-content').html(html);
-    }).fail(function() {
-      $('#detail-aset-content').html('<div class="modal-body"><div class="alert alert-danger">Gagal memuat detail aset.</div></div>');
-    });
-  });
 });
+
+function filterJenisOptionsByKelompok(kelompok) {
+  $('#filter_jenis option').each(function() {
+    var optionKelompok = $(this).data('kelompok');
+    var disabled = kelompok && optionKelompok && optionKelompok !== kelompok;
+    $(this).prop('disabled', !!disabled);
+  });
+}
 
 function loadKib(page) {
   current_page = page || 1;
-  $.ajax({
+  if (kibRequest && kibRequest.readyState !== 4) kibRequest.abort();
+  kibRequest = $.ajax({
     url: '{?=url([ADMIN,"logistik_non_medis","displaykib"])?}',
     type: 'POST',
-    data: {
-      halaman: current_page,
-      cari: $('#filter_cari').val(),
-      filter_unit: $('#filter_unit').val(),
-      filter_kelompok: $('#filter_kelompok').val(),
-      filter_jenis: $('#filter_jenis').val()
-    },
+    timeout: 15000,
+    data: $.extend({halaman: current_page}, getKibFilters()),
     beforeSend: function() {
       $('#kib-ajax-container').hide();
       $('#kib-content-loader').show();
@@ -136,10 +178,21 @@ function loadKib(page) {
       $('#kib-content-loader').hide();
       $('#kib-ajax-container').html(html).fadeIn(150);
     },
-    error: function() {
+    error: function(xhr, status) {
+      if (status === 'abort') return;
       $('#kib-content-loader').hide();
-      $('#kib-ajax-container').html('<div class="alert alert-danger">Data KIB gagal dimuat.</div>').show();
+      $('#kib-ajax-container').html('<div class="alert alert-danger">Data KIB gagal dimuat. Silakan coba kembali.</div>').show();
     }
   });
+}
+
+function getKibFilters() {
+  return {
+    cari: $('#filter_cari').val() || '',
+    filter_unit: $('#filter_unit').val() || '',
+    filter_kelompok: $('#filter_kelompok').val() || '',
+    filter_jenis: $('#filter_jenis').val() || '',
+    filter_harga: $('#filter_harga').val() || ''
+  };
 }
 </script>

@@ -308,6 +308,11 @@
             });
         });
 
+        // Jika datang dari SPPB, PO sudah dipilih dan rincian langsung dimuat.
+        if ($('#select-po').val()) {
+            $('#select-po').trigger('change');
+        }
+
         $('#btn-add-selected-po-items').click(function() {
             $('#item-list-penerimaan').empty();
             $('.cb-po-item:checked').each(function() {

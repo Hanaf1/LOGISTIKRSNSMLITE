@@ -1,0 +1,58 @@
+<div class="table-responsive">
+    <table class="table table-striped table-hover table-bordered">
+        <thead>
+            <tr class="active">
+                <th width="45">No</th>
+                <th>No. SPPB</th>
+                <th>Tanggal</th>
+                <th>Unit Peminta</th>
+                <th>Daftar Barang</th>
+                <th class="text-right">Total Qty</th>
+                <th class="text-right">Estimasi Nilai</th>
+                <th>Status</th>
+                <th width="240" class="text-center">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {if: !empty($rows)}
+                {loop: $rows as $row}
+                <tr>
+                    <td>{?= $key + 1 ?}</td>
+                    <td><strong>{$row.no_sppb}</strong></td>
+                    <td>{$row.tgl_sppb}</td>
+                    <td>{$row.nama_unit}</td>
+                    <td><small>{$row.daftar_barang}</small><br><span class="text-muted">{$row.jml_item} item</span></td>
+                    <td class="text-right">{$row.total_qty}</td>
+                    <td class="text-right">Rp {?=number_format($row['total_nilai'], 0, ',', '.')?}</td>
+                    <td>
+                        <span class="label label-warning">{$row.status}</span>
+                        {if: !empty($row.sumber_pemenuhan)}
+                        <br><span class="label label-info" style="display:inline-block;margin-top:4px">{$row.sumber_pemenuhan}</span>
+                        {if: !empty($row.referensi_pemenuhan)}<br><small>{$row.referensi_pemenuhan}</small>{/if}
+                        {/if}
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-default btn-sm" onclick="cetakSuratNonRutin('{$row.no_sppb}')" title="Cetak Surat Pengadaan Non-Rutin">
+                            <i class="fa fa-print"></i> Cetak
+                        </button>
+                        {if: in_array($row.status, ['Proses Pengadaan', 'Logistik Umum & Rekap'])}
+                        <button class="btn btn-primary btn-sm" onclick="tindakLanjutNonRutin('{$row.no_sppb}')">
+                            <i class="fa fa-random"></i> Tindak Lanjuti
+                        </button>
+                        {/if}
+                    </td>
+                </tr>
+                {/loop}
+            {else}
+                <tr><td colspan="9" class="text-center text-muted" style="padding:30px;">Belum ada permintaan pada status ini.</td></tr>
+            {/if}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function cetakSuratNonRutin(noSppb) {
+    var url = '{?=url("plugins/logistik_non_medis/public/surat-pengadaan-nonrutin.php")?}' + '?no_sppb=' + encodeURIComponent(noSppb);
+    window.open(url, 'cetak_surat_nonrutin', 'width=900,height=700,scrollbars=yes,resizable=yes');
+}
+</script>

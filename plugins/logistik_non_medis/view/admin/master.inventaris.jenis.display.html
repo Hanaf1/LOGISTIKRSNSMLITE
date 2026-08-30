@@ -1,0 +1,17 @@
+<div class="text-muted" style="margin-bottom:8px;">Menampilkan {$jumlah_data} data jenis barang.</div>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-condensed">
+    <thead><tr><th>Kategori</th><th>Kelompok</th><th style="width:120px;">Kode</th><th>Nama Jenis</th><th style="width:130px;">Aksi</th></tr></thead>
+    <tbody>
+      {loop: $jenis_master}
+      <tr><td>{$value.nama_kategori}</td><td>{$value.nama_kelompok}</td><td><code>{$value.kode_jenis}</code></td><td>{$value.nama_jenis}</td><td><button class="btn btn-xs btn-warning btn-edit-master" data-jenis="JENIS" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}" data-jenis-kode="{$value.kode_jenis}"><i class="fa fa-pencil"></i> Edit</button> <button class="btn btn-xs btn-danger btn-hapus-master" data-jenis="JENIS" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}" data-jenis-kode="{$value.kode_jenis}"><i class="fa fa-trash"></i></button></td></tr>
+      {/loop}
+      {if: empty($jenis_master)}<tr><td colspan="5" class="text-center text-muted">Data jenis barang belum ada.</td></tr>{/if}
+    </tbody>
+  </table>
+</div>
+{if: $jml_halaman > 1}
+<ul class="pagination pagination-sm">
+  {loop: $pages}<li class="{if: $value == $halaman}active{/if}"><a href="#" class="page-master-jenis" data-page="{$value}">{$value}</a></li>{/loop}
+</ul>
+{/if}

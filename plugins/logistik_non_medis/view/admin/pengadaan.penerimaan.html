@@ -77,6 +77,7 @@
 
 <script type="text/javascript">
     $(document).ready(function() {
+        var initialNoPo = '{?= addslashes($selected_no_po) ?}';
         loadPenerimaan();
 
         function loadPenerimaan(halaman = 1) {
@@ -107,15 +108,25 @@
             loadPenerimaan(halaman);
         });
 
-        $('#btn-add-penerimaan').click(function() {
+        function openPenerimaanForm(noPo) {
             $.ajax({
                 url: '{?=url([ADMIN, "logistik_non_medis", "formpenerimaan"])?}',
                 type: 'POST',
+                data: { no_po: noPo || '' },
                 success: function(response) {
                     $('#form-penerimaan').html(response);
+                    $('.nav-tabs a[href="#penerimaan-form"]').tab('show');
                 }
             });
+        }
+
+        $('#btn-add-penerimaan').click(function() {
+            openPenerimaanForm('');
         });
+
+        if (initialNoPo !== '') {
+            openPenerimaanForm(initialNoPo);
+        }
 
         $(document).on('click', '.edit-penerimaan', function() {
             var no_penerimaan = $(this).data('no');

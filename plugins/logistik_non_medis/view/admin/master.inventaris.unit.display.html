@@ -1,0 +1,17 @@
+<div class="text-muted" style="margin-bottom:8px;">Menampilkan {$jumlah_data} data unit.</div>
+<div class="table-responsive">
+  <table class="table table-bordered table-striped table-condensed">
+    <thead><tr><th style="width:120px;">Kode Unit</th><th>Nama Unit</th><th style="width:130px;">Aksi</th></tr></thead>
+    <tbody>
+      {loop: $units}
+      <tr><td><code>{$value.kode_inventaris}</code></td><td>{$value.nama}</td><td><button class="btn btn-xs btn-warning btn-edit-master" data-jenis="UNIT" data-id="{$value.id}"><i class="fa fa-pencil"></i> Edit</button> <button class="btn btn-xs btn-danger btn-hapus-master" data-jenis="UNIT" data-id="{$value.id}"><i class="fa fa-trash"></i></button></td></tr>
+      {/loop}
+      {if: empty($units)}<tr><td colspan="3" class="text-center text-muted">Data unit belum ada.</td></tr>{/if}
+    </tbody>
+  </table>
+</div>
+{if: $jml_halaman > 1}
+<ul class="pagination pagination-sm">
+  {loop: $pages}<li class="{if: $value == $halaman}active{/if}"><a href="#" class="page-master-unit" data-page="{$value}">{$value}</a></li>{/loop}
+</ul>
+{/if}

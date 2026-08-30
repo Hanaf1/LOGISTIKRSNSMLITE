@@ -3,6 +3,14 @@
         <h3 class="panel-title pull-left" style="line-height: 34px;"><i class="fa fa-key"></i> Pengaturan Hak Akses & Role Unit (Logistik Non Medis)</h3>
     </div>
     <div class="panel-body">
+        <div class="alert alert-info" style="margin-bottom:20px;">
+            <form id="form-wa-notif-config" class="form-inline" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <strong><i class="fa fa-whatsapp" style="color:#25d366"></i> Notifikasi WhatsApp Persetujuan</strong>
+                <label style="font-weight:normal;margin:0;"><input type="checkbox" name="aktif" value="1" {if: $wa_notifikasi_aktif}checked{/if}> Aktifkan pengiriman WA</label>
+                <button type="submit" class="btn btn-xs btn-primary"><i class="fa fa-save"></i> Simpan</button>
+                <span class="text-muted"><small>Gateway diatur dari menu WA Gateway. Pesan tidak memuat detail sensitif.</small></span>
+            </form>
+        </div>
         <ul class="nav nav-tabs" role="tablist">
             <li role="presentation" class="active"><a href="#tab-users" aria-controls="tab-users" role="tab" data-toggle="tab"><i class="fa fa-users"></i> Hak Akses Pengguna</a></li>
             <li role="presentation"><a href="#tab-roles" aria-controls="tab-roles" role="tab" data-toggle="tab"><i class="fa fa-lock"></i> Izin Akses Role</a></li>
@@ -25,6 +33,7 @@
                                 <th>Nama Lengkap</th>
                                 <th>Role Logistik</th>
                                 <th>Unit Kerja Terkait</th>
+                                <th>WA Notifikasi</th>
                                 <th width="100" class="text-center">Aksi</th>
                             </tr>
                         </thead>
@@ -61,6 +70,13 @@
                                                 <span class="text-muted"><i class="fa fa-globe"></i> Semua Unit (Logistik/Admin)</span>
                                             {/if}
                                         </td>
+                                        <td>
+                                            {if: !empty($value.nomor_wa)}
+                                                <span class="label {if: !empty($value.wa_aktif)}label-success{else}label-default{/if}"><i class="fa fa-whatsapp"></i> {$value.nomor_wa}</span>
+                                            {else}
+                                                <span class="text-muted">Belum diatur</span>
+                                            {/if}
+                                        </td>
                                         <td class="text-center">
                                             <button class="btn btn-xs btn-default" onclick="editUserRole('{$value.username}')" title="Sunting Role & Unit"><i class="fa fa-pencil"></i> Edit</button>
                                         </td>
@@ -68,7 +84,7 @@
                                 {/loop}
                             {else}
                                 <tr>
-                                    <td colspan="6" class="text-center">Tidak ada user ditemukan.</td>
+                                    <td colspan="7" class="text-center">Tidak ada user ditemukan.</td>
                                 </tr>
                             {/if}
                         </tbody>
@@ -125,6 +141,17 @@
         </div>
     </div>
 </div>
+<script>
+$(function(){
+  $('#form-wa-notif-config').on('submit', function(e){
+    e.preventDefault();
+    $.post('{?=url(ADMIN."/logistik_non_medis/savewanotificationconfig")?}', $(this).serialize(), function(raw){
+      var res = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      alert(res.message || 'Selesai');
+    });
+  });
+});
+</script>
 
 <!-- Modal Form User Edit -->
 <div class="modal fade" id="modal-hakakses" tabindex="-1" role="dialog">

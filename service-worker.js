@@ -1,4 +1,4 @@
-const cacheName = 'cache-v3';
+const cacheName = 'cache-v4';
 const precacheResources = [
   '/',
   'assets/jscripts/bootstrap.min.js',
@@ -51,4 +51,41 @@ self.addEventListener('fetch', event => {
         });
       })
     );
+});
+
+self.addEventListener('push', event => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch (error) {
+    payload = { body: event.data ? event.data.text() : 'Ada notifikasi baru.' };
+  }
+
+  const title = payload.title || 'RSU Nurusyifa';
+  const options = {
+    body: payload.body || 'Ada notifikasi mLITE baru.',
+    icon: payload.icon || 'assets/images/icon-192x192.png',
+    badge: payload.badge || 'assets/images/icon-128x128.png',
+    tag: payload.tag || 'mlite-notification',
+    renotify: true,
+    requireInteraction: true,
+    data: { url: payload.url || '/' },
+    vibrate: [200, 100, 200],
+    actions: [{ action: 'open', title: 'Buka Persetujuan' }]
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const destination = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href;
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      for (const client of windowClients) {
+        if (client.url === destination && 'focus' in client) return client.focus();
+      }
+      return clients.openWindow ? clients.openWindow(destination) : undefined;
+    })
+  );
 });

@@ -6,7 +6,11 @@
     <div class="logistik-notif-box" style="display:none;">
         <div class="logistik-notif-head">
             <strong><i class="fa fa-bell"></i> Notifikasi Logistik</strong>
-            <button type="button" class="btn btn-xs btn-default" id="notifMarkAllRead"><i class="fa fa-check"></i> Tandai semua dibaca</button>
+            <div>
+                <button type="button" class="btn btn-xs btn-primary" id="notifEnablePush" title="Tetap tampil saat mLITE ditutup"><i class="fa fa-mobile"></i> Aktifkan di Perangkat</button>
+                <button type="button" class="btn btn-xs btn-default" id="notifTestPush" style="display:none;"><i class="fa fa-paper-plane"></i> Tes</button>
+                <button type="button" class="btn btn-xs btn-default" id="notifMarkAllRead"><i class="fa fa-check"></i> Tandai semua dibaca</button>
+            </div>
         </div>
         <ul class="nav nav-tabs logistik-notif-tabs" role="tablist">
             <li class="active"><a href="#notifUnread" role="tab" data-toggle="tab">Belum Dibaca <span id="notifUnreadCount" class="badge">0</span></a></li>
@@ -137,6 +141,80 @@ $(document).ready(function() {
     var lastRealtimeMode = '';
     var workermanRetry = 0;
     var workermanMaxRetry = 2;
+    var pushPublicKey = '';
+
+    function urlBase64ToUint8Array(base64String) {
+        var padding = '='.repeat((4 - base64String.length % 4) % 4);
+        var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        var rawData = window.atob(base64);
+        return Uint8Array.from(Array.prototype.map.call(rawData, function(char) { return char.charCodeAt(0); }));
+    }
+
+    function deviceName() {
+        var platform = navigator.userAgentData && navigator.userAgentData.platform ? navigator.userAgentData.platform : navigator.platform;
+        return (platform || 'Perangkat') + ' - ' + (navigator.userAgentData && navigator.userAgentData.brands ? navigator.userAgentData.brands[0].brand : 'Browser');
+    }
+
+    function updatePushButton(subscription) {
+        if (subscription && Notification.permission === 'granted') {
+            $('#notifEnablePush').removeClass('btn-primary').addClass('btn-success').html('<i class="fa fa-check"></i> Notifikasi Aktif');
+            $('#notifTestPush').show();
+        } else {
+            $('#notifEnablePush').removeClass('btn-success').addClass('btn-primary').html('<i class="fa fa-mobile"></i> Aktifkan di Perangkat');
+            $('#notifTestPush').hide();
+        }
+    }
+
+    function loadPushConfig() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+            $('#notifEnablePush').prop('disabled', true).attr('title', 'Browser ini tidak mendukung Web Push');
+            return;
+        }
+        $.getJSON(mlite.url + '/' + mlite.admin + '/logistik_non_medis/webpushconfig?t=' + mlite.token, function(res) {
+            if (res.status !== 'success') return;
+            pushPublicKey = res.public_key || '';
+            if (!window.isSecureContext) {
+                $('#notifEnablePush').prop('disabled', true).attr('title', 'Web Push memerlukan HTTPS pada jaringan lokal');
+                $('#notifRealtimeStatus').text('Push sistem: memerlukan HTTPS');
+                return;
+            }
+            navigator.serviceWorker.ready.then(function(registration) {
+                return registration.pushManager.getSubscription();
+            }).then(updatePushButton).catch(function() {});
+        });
+    }
+
+    function enablePush() {
+        if (!pushPublicKey || !window.isSecureContext) {
+            alert('Notifikasi sistem memerlukan HTTPS dan konfigurasi server yang aktif.');
+            return;
+        }
+        Notification.requestPermission().then(function(permission) {
+            if (permission !== 'granted') throw new Error('Izin notifikasi belum diberikan.');
+            return navigator.serviceWorker.ready;
+        }).then(function(registration) {
+            return registration.pushManager.getSubscription().then(function(existing) {
+                return existing || registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(pushPublicKey)
+                });
+            });
+        }).then(function(subscription) {
+            var data = subscription.toJSON();
+            data.contentEncoding = (PushManager.supportedContentEncodings || ['aesgcm'])[0];
+            return $.post(mlite.url + '/' + mlite.admin + '/logistik_non_medis/simpanwebpush?t=' + mlite.token, {
+                subscription: JSON.stringify(data),
+                nama_perangkat: deviceName()
+            }).then(function(response) {
+                if (typeof response === 'string') response = JSON.parse(response);
+                if (response.status !== 'success') throw new Error(response.message || 'Gagal menyimpan perangkat.');
+                updatePushButton(subscription);
+                alert(response.message);
+            });
+        }).catch(function(error) {
+            alert(error.message || 'Gagal mengaktifkan notifikasi perangkat.');
+        });
+    }
 
     function escapeHtml(text) {
         return $('<div>').text(text || '').html();
@@ -287,6 +365,16 @@ $(document).ready(function() {
         });
     });
 
+    $('#notifEnablePush').on('click', enablePush);
+    $('#notifTestPush').on('click', function() {
+        $.post(mlite.url + '/' + mlite.admin + '/logistik_non_medis/teswebpush?t=' + mlite.token, {}, function(response) {
+            if (typeof response === 'string') {
+                try { response = JSON.parse(response); } catch (e) { response = {}; }
+            }
+            if (response.message) alert(response.message);
+        });
+    });
+
     $(document).on('click', '.logistik-notif-item.unread', function() {
         var id = $(this).data('id');
         var url = $(this).data('url');
@@ -297,6 +385,7 @@ $(document).ready(function() {
     });
 
     checkNotifikasi(false);
+    loadPushConfig();
     setInterval(function() { checkNotifikasi(true); }, notifCheckInterval);
 });
 </script>

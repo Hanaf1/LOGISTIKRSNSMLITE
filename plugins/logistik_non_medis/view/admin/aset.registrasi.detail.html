@@ -1,9 +1,24 @@
+{if: $standalone}
+<article class="row">
+    <div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <div class="pull-right">
+                    <a href="{?=url([ADMIN,'logistik_non_medis','asetformpage'])?}&id={$aset.id}&from={$from}&group_id={$group_id}" class="btn btn-success btn-sm"><i class="fa fa-edit"></i> Edit Aset</a>
+                    <a href="{$return_url}" class="btn btn-default btn-sm"><i class="fa fa-arrow-left"></i> Kembali</a>
+                </div>
+                <h3 class="panel-title"><i class="fa fa-search"></i> Detail Aset {$aset.nomor_inventaris}</h3>
+                <div class="clearfix"></div>
+            </div>
+            <div class="panel-body" style="padding:0;">
+{else}
 <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
     <h4 class="modal-title"><i class="fa fa-search"></i> Detail Spesifikasi & Riwayat Aset</h4>
 </div>
 
 <div class="modal-body" style="padding: 0;">
+{/if}
     
     <!-- Tab Navigation -->
     <ul class="nav nav-tabs nav-justified" style="margin-bottom: 0;">
@@ -48,6 +63,10 @@
                             <td style="font-weight: bold;">{$aset.nama_aset}</td>
                         </tr>
                         <tr>
+                            <td style="font-weight: bold;">Merk / Tipe</td>
+                            <td>{if: !empty($aset.merk_type)}{$aset.merk_type}{else}-{/if}</td>
+                        </tr>
+                        <tr>
                             <td style="font-weight: bold;">Kondisi Aset</td>
                             <td>
                                 {if: $aset.status_kondisi == 'Baik'}
@@ -73,16 +92,16 @@
                             <td>{$aset.pic}</td>
                         </tr>
                         <tr>
-                            <td style="font-weight: bold;">Tanggal Perolehan</td>
-                            <td>{?=date('d F Y', strtotime($aset.tanggal_perolehan))?}</td>
+                            <td style="font-weight: bold;">Tahun Beli / Perolehan</td>
+                            <td>{$aset.tahun_perolehan}</td>
                         </tr>
                         <tr>
                             <td style="font-weight: bold;">Sumber Perolehan</td>
                             <td><span class="label label-info">{$aset.sumber_perolehan}</span></td>
                         </tr>
                         <tr>
-                            <td style="font-weight: bold;">Harga Beli / Nilai</td>
-                            <td style="font-weight: bold; font-size:15px;">Rp. {?=number_format($aset.harga_beli,0,',','.')?}</td>
+                            <td style="font-weight: bold;">Harga / Nilai</td>
+                            <td style="font-weight: bold; font-size:15px;">Rp. {?=number_format($aset.harga_tampil,0,',','.')?} <small class="text-muted">({$aset.sumber_harga_tampil})</small></td>
                         </tr>
                     </table>
                 </div>
@@ -451,7 +470,18 @@
     </div>
 </div>
 
+{if: $standalone}
+            </div>
+            <div class="panel-footer text-right">
+                <a href="{?=url([ADMIN,'logistik_non_medis','asetprintlabel',$aset['kode_aset']])?}" target="_blank" class="btn btn-primary"><i class="fa fa-print"></i> Cetak Label Fisik</a>
+                <a href="{$return_url}" class="btn btn-default"><i class="fa fa-arrow-left"></i> Kembali</a>
+            </div>
+        </div>
+    </div>
+</article>
+{else}
 <div class="modal-footer">
     <button type="button" class="btn btn-primary btn-print-aset" data-kode="{$aset.kode_aset}"><i class="fa fa-print"></i> Cetak Label Fisik</button>
     <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-check-circle"></i> Selesai</button>
 </div>
+{/if}

@@ -33,6 +33,17 @@
                         color: #337ab7;
                         font-weight: 600;
                     }
+                    #po-vendor-select-wrapper select[name="kode_vendor"] {
+                        display: none !important;
+                        width: 100% !important;
+                    }
+                    #po-vendor-select-wrapper > .select2-container {
+                        display: block !important;
+                        width: 100% !important;
+                    }
+                    #selectator_kode_vendor {
+                        display: none !important;
+                    }
                 </style>
                 <div class="custom-breadcrumb">
                     <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
@@ -44,14 +55,14 @@
 
                 <h3 class="panel-title" style="margin-top: 5px;">Purchase Order (PO)</h3>
                 <ul class="nav nav-tabs pull-right panel-options">
-                    <li class="active"><a data-toggle="tab" href="#po-list"><i class="fa fa-table"></i> Daftar PO</a></li>
-                    <li><a data-toggle="tab" href="#po-form" id="btn-add-po"><i class="fa fa-plus"></i> Buat PO Baru</a></li>
+                    <li><a data-toggle="tab" href="#po-list"><i class="fa fa-table"></i> Daftar PO</a></li>
+                    <li class="active"><a data-toggle="tab" href="#po-form" id="btn-add-po"><i class="fa fa-plus"></i> Buat PO Baru</a></li>
                 </ul>
             </div>
             <div class="panel-body">
                 <div class="tab-content">
                     <!-- Tab List -->
-                    <div id="po-list" class="tab-pane fade in active">
+                    <div id="po-list" class="tab-pane fade">
                         <div class="row" style="margin-bottom: 15px;">
                             <div class="col-md-4">
                                 <div class="input-group">
@@ -66,8 +77,9 @@
                     </div>
 
                     <!-- Tab Form -->
-                    <div id="po-form" class="tab-pane fade">
-                        <div id="form-po"></div>
+                    <div id="po-form" class="tab-pane fade in active">
+                        <!-- Form dirender di server agar handler rincian PO langsung aktif. -->
+                        <div id="form-po">{?= $form_po ?}</div>
                     </div>
                 </div>
             </div>
@@ -76,7 +88,59 @@
 </article>
 <script type="text/javascript">
     $(document).ready(function() {
-        loadPO();
+        function initVendorSelectPO() {
+            var selects = $('#form-po select[name="kode_vendor"]');
+            if (!selects.length || typeof $.fn.select2 !== 'function') return;
+
+            // Jika form pernah termuat lebih dari sekali, gunakan satu sumber saja.
+            selects.slice(1).remove();
+            var select = selects.first();
+
+            // mLITE mengaktifkan Selectator untuk semua <select>. Vendor PO
+            // hanya boleh memakai Select2 agar tidak tercipta dua widget.
+            var selectatorState = select.data('selectator');
+            try {
+                if (typeof $.fn.selectator === 'function' &&
+                    selectatorState && !selectatorState.poSelect2Guard) {
+                    select.selectator('destroy');
+                }
+            } catch (e) {}
+            $('#selectator_kode_vendor').remove();
+            select.removeClass('selectator');
+
+            // Wrapper harus selalu mengikuti elemen vendor. Template lama yang
+            // masih tersimpan di cache pernah menaruh ID ini pada kolom lain.
+            $('#form-po #po-vendor-select-wrapper').removeAttr('id');
+            var wrapper = select.parent().attr('id', 'po-vendor-select-wrapper');
+            wrapper.removeClass('po-select2-ready');
+
+            try {
+                if (select.data('select2')) select.select2('destroy');
+            } catch (e) {}
+
+            // Bersihkan container Select2 lama sebelum membuat yang baru.
+            wrapper.find('.select2-container').remove();
+            select.removeAttr('style').show();
+            select.select2({ width: '100%', dropdownAutoWidth: false });
+
+            // scripts.js mLITE dijalankan setelah script halaman dan mencoba
+            // memasang Selectator ke seluruh select. Sentinel ini membuat
+            // initializer Selectator melewati field vendor PO.
+            select.data('selectator', { poSelect2Guard: true });
+
+            function enforceSingleVendorSelect() {
+                wrapper.addClass('po-select2-ready');
+                select.get(0).style.setProperty('display', 'none', 'important');
+                var containers = wrapper.find('.select2-container');
+                if (containers.length > 1) {
+                    containers.slice(0, containers.length - 1).remove();
+                }
+            }
+
+            enforceSingleVendorSelect();
+            setTimeout(enforceSingleVendorSelect, 50);
+            setTimeout(enforceSingleVendorSelect, 300);
+        }
 
         function loadPO(halaman = 1) {
             console.log("Loading PO... Page:", halaman);
@@ -113,6 +177,11 @@
         });
 
         $('#btn-add-po').click(function() {
+            var existingId = $('#form-po input[name="id"]').val();
+            if ($('#po-form-data').length && (existingId === '' || typeof existingId === 'undefined')) {
+                $('.nav-tabs a[href="#po-form"]').tab('show');
+                return;
+            }
             openPOForm();
         });
 
@@ -123,10 +192,30 @@
                 data: { sumber_tipe: sumberTipe || '', no_rencana: noRencana || '' },
                 success: function(response) {
                     $('#form-po').html(response);
+                    initVendorSelectPO();
+                    $('.nav-tabs a[href="#po-form"]').tab('show');
+                },
+                error: function(xhr, status, error) {
+                    console.error("Failed to load PO form:", status, error, xhr.responseText);
+                    $('#form-po').html('<div class="alert alert-danger">Gagal memuat formulir PO. Silakan cek log server.</div>');
                     $('.nav-tabs a[href="#po-form"]').tab('show');
                 }
             });
         }
+
+        $('.nav-tabs a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+            var target = $(e.target).attr('href');
+
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, document.title, target);
+            }
+
+            if (target === '#po-form' && $.trim($('#form-po').html()) === '') {
+                openPOForm();
+            } else if (target === '#po-list') {
+                loadPO(1);
+            }
+        });
 
         $(document).on('click', '.edit-po', function() {
             var id = $(this).data('id');
@@ -136,6 +225,7 @@
                 data: { id: id },
                 success: function(response) {
                     $('#form-po').html(response);
+                    initVendorSelectPO();
                     $('.nav-tabs a[href="#po-form"]').tab('show');
                 }
             });
@@ -227,8 +317,17 @@
 
         var sumber_tipe = '{$sumber_tipe}';
         var no_rencana = '{$no_rencana}';
+        initVendorSelectPO();
         if (sumber_tipe !== '' && no_rencana !== '') {
             openPOForm(sumber_tipe, no_rencana);
+        } else if (window.location.hash === '#po-form') {
+            $('.nav-tabs a[href="#po-form"]').tab('show');
+            if ($.trim($('#form-po').html()) === '') {
+                openPOForm();
+            }
+        } else {
+            $('.nav-tabs a[href="#po-list"]').tab('show');
+            loadPO(1);
         }
     });
 </script>

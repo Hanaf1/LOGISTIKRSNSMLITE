@@ -96,7 +96,7 @@
                     <div class="col-md-3">
                         <div class="form-group">
                             <label>Filter Kategori</label>
-                            <select id="filter-kategori" class="form-control select2">
+                            <select id="kategori-filter-stok" class="form-control" style="width: 100%;">
                                 <option value="">Semua Kategori</option>
                                 {loop: $kategori}
                                 <option value="{$value.kode_kategori}">{$value.nama_kategori}</option>
@@ -170,16 +170,43 @@
 .popover.right > .arrow:after {
     border-right-color: #2c3e50;
 }
+/* Keep the original select hidden when Select2 is active. */
+#kategori-filter-stok.select2-hidden-accessible {
+    border: 0 !important;
+    clip: rect(0 0 0 0) !important;
+    display: none !important;
+    height: 1px !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    position: absolute !important;
+    width: 1px !important;
+}
 </style>
 
 <script>
 $(document).ready(function() {
+    var $kategoriFilter = $('#kategori-filter-stok');
+
+    // The admin theme initializes Selectator on every <select>. Remove that
+    // instance first so this field is enhanced by Select2 only once.
+    if ($kategoriFilter.data('selectator') && $.fn.selectator) {
+        $kategoriFilter.selectator('destroy');
+    }
+    $('#selectator_kategori-filter-stok').remove();
+    $kategoriFilter.removeClass('selectator').show();
+
     if ($.fn.select2) {
-        $('#filter-kategori').select2({
+        if ($kategoriFilter.hasClass('select2-hidden-accessible')) {
+            $kategoriFilter.select2('destroy');
+        }
+        $kategoriFilter.select2({
             width: '100%',
             placeholder: 'Semua Kategori',
             allowClear: true
         });
+        // Select2 creates the visible searchable control; hide its source select.
+        $kategoriFilter.hide();
     }
 
     loadStok(1);
@@ -188,7 +215,7 @@ $(document).ready(function() {
         loadStok(1);
     });
 
-    $('#filter-kategori').change(function() {
+    $('#kategori-filter-stok').change(function() {
         loadStok(1);
     });
 
@@ -237,7 +264,7 @@ $(document).ready(function() {
 
     function loadStok(halaman, callback) {
         var cari = $('#cari-stok').val();
-        var kategori = $('#filter-kategori').val();
+        var kategori = $('#kategori-filter-stok').val();
         $.post("{?=url([ADMIN, 'logistik_non_medis', 'displaygudangstok'])?}", {
             halaman: halaman,
             cari: cari,
@@ -254,8 +281,8 @@ $(document).ready(function() {
 
     function updateSummary() {
         var total = $('#real-total-item').val() || $('.stok-row').length;
-        var expired = $('.label-danger:contains("EXPIRED")').length;
-        var near = $('.label-warning:contains("DEKAT EXP")').length;
+        var critical = $('.label-danger:contains("CRITICAL")').length;
+        var reorder = $('.label-warning:contains("REORDER")').length;
         var totalValue = 0;
         $('.nilai-row').each(function() {
             var val = $(this).data('value');
@@ -265,17 +292,12 @@ $(document).ready(function() {
         });
 
         $('#summary-total-item').text(total);
-        $('#summary-reorder').text(near); // Reusing reorder for near exp for now
-        $('#summary-critical').text(expired); // Reusing critical for expired for now
+        $('#summary-reorder').text(reorder);
+        $('#summary-critical').text(critical);
         $('#summary-value').text('Rp. ' + totalValue.toLocaleString('id-ID'));
         
-        // Update labels if we want more precision
-        if(expired > 0) {
-            $('#summary-critical').closest('.card-stok').find('h5').text('Item Expired');
-        }
-        if(near > 0) {
-            $('#summary-reorder').closest('.card-stok').find('h5').text('Dekat Expire');
-        }
+        $('#summary-critical').closest('.card-stok').find('h5').text('Stok Kritis');
+        $('#summary-reorder').closest('.card-stok').find('h5').text('Perlu Reorder');
     }
 
     // Pagination handler

@@ -59,11 +59,11 @@
                 <label>Prioritas:</label>
                 <div>
                     {if: $data.prioritas == 'Vital'}
-                        <span class="label label-danger">Vital (Sangat Penting)</span>
+                        <span class="label label-danger">V — Vital (Sangat Penting/Kritis)</span>
                     {elseif: $data.prioritas == 'Essential'}
-                        <span class="label label-warning">Essential (Penting)</span>
+                        <span class="label label-warning">E — Essential (Penting/Kebutuhan Utama)</span>
                     {else}
-                        <span class="label label-info">Desirable (Tambahan)</span>
+                        <span class="label label-info">D — Desirable (Diinginkan/Penunjang)</span>
                     {/if}
                 </div>
             </div>

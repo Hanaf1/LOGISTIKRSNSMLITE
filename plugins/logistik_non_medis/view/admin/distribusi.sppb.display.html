@@ -83,22 +83,50 @@
                                     <br><small class="text-muted">Diambil: {$value.diambil_oleh}</small>
                                 {/if}
                             {elseif: $value.status == 'Ditolak'}
-                                <span class="label label-danger" title="{$value.ditolak_pada_status}">
-                                    <i class="fa fa-times-circle"></i> Ditolak{if: !empty($value.ditolak_pada_status)} ({$value.ditolak_pada_status}){/if}
+                                <span class="label label-danger" title="{$value.ditolak_pada_label}">
+                                    <i class="fa fa-times-circle"></i> Ditolak{if: !empty($value.ditolak_pada_label)} ({$value.ditolak_pada_label}){/if}
                                 </span>
                             {elseif: $value.status == 'Dibatalkan'}
                                 <span class="label label-default" style="background:#555;">Dibatalkan</span>
                             {else}
                                 <span class="label label-default">{$value.status}</span>
                             {/if}
+                            {if: $value.jenis_permintaan == 'Non Rutin' && $value.status == 'Logistik Umum & Rekap'}
+                                {if: !empty($value.sumber_pemenuhan)}
+                                    <br><span class="label label-info" style="display:inline-block;margin-top:4px"><i class="fa fa-random"></i> {$value.sumber_pemenuhan}</span>
+                                    {if: !empty($value.referensi_pemenuhan)}<br><small class="text-muted">{$value.referensi_pemenuhan}</small>{/if}
+                                {else}
+                                    <br><small class="text-muted"><i class="fa fa-question-circle"></i> Periksa stok/aset tersedia</small>
+                                {/if}
+                                {if: $value.can_tindak_lanjut}
+                                    <br><a href="{$value.pemenuhan_url}" class="label label-primary" style="display:inline-block;margin-top:5px;padding:4px 7px" title="Penuhi dari stok atau mutasi aset"><i class="fa fa-random"></i> Tindak Lanjut</a>
+                                {/if}
+                            {/if}
+                            {if: $value.jenis_permintaan == 'Non Rutin' && $value.status == 'Proses Pengadaan'}
+                                {if: !empty($value.no_po)}
+                                    <br><a href="{$value.po_url}" title="Buka PO {$value.no_po}"><small><i class="fa fa-file-text-o"></i> {$value.no_po}</small></a>
+                                    <br><small class="text-muted">Status PO: {$value.po_status}</small>
+                                {elseif: !empty($value.sumber_pemenuhan)}
+                                    <br><span class="label label-info" style="display:inline-block;margin-top:4px"><i class="fa fa-random"></i> {$value.sumber_pemenuhan}</span>
+                                    {if: !empty($value.referensi_pemenuhan)}<br><small class="text-muted">{$value.referensi_pemenuhan}</small>{/if}
+                                {else}
+                                    <br><small class="text-muted"><i class="fa fa-question-circle"></i> Sumber belum dipilih</small>
+                                {/if}
+                                {if: $value.can_tindak_lanjut}
+                                    <br><a href="{$value.pemenuhan_url}" class="label label-primary" style="display:inline-block;margin-top:5px;padding:4px 7px" title="Pilih sumber pemenuhan"><i class="fa fa-random"></i> Tindak Lanjut</a>
+                                {/if}
+                            {/if}
                         </td>
                         <td class="text-center">
                             <div class="btn-group">
+                                {if: $value.jenis_permintaan == 'Non Rutin'}
+                                    <button class="btn btn-xs btn-default" onclick="dokumenSPPB('{$value.no_sppb}')" title="Buka Dokumen Persetujuan"><i class="fa fa-file-text-o"></i></button>
+                                {/if}
                                 {if: $value.can_edit}
-                                    <button class="btn btn-xs btn-default" onclick="editSPPB('{$value.no_sppb}')" title="Edit"><i class="fa fa-pencil"></i></button>
+                                    <button class="btn btn-xs {if: $value.status == 'Ditolak'}btn-warning{else}btn-default{/if}" onclick="editSPPB('{$value.no_sppb}')" title="{if: $value.status == 'Ditolak'}Revisi Permintaan{else}Edit{/if}"><i class="fa fa-pencil"></i>{if: $value.status == 'Ditolak'} Revisi{/if}</button>
                                 {/if}
                                 {if: $value.can_delete}
-                                    <button class="btn btn-xs btn-danger" onclick="hapusSPPB('{$value.no_sppb}')" title="Hapus"><i class="fa fa-trash"></i></button>
+                                    <button class="btn btn-xs btn-danger" onclick="hapusSPPB('{$value.no_sppb}')" title="{if: $value.status == 'Diajukan'}Batalkan Permintaan{else}Hapus Draft{/if}"><i class="fa fa-trash"></i></button>
                                 {/if}
                                 {if: $value.can_approve_ka_unit}
                                     <button class="btn btn-xs btn-primary" onclick="approveUnit('{$value.no_sppb}', 'Kepala Unit')" title="Setujui Ka. Unit"><i class="fa fa-check-circle"></i></button>
@@ -117,10 +145,22 @@
                                 {/if}
                                 {if: $value.can_review_logistik}
                                     {if: $value.jenis_permintaan == 'Non Rutin'}
-                                        <button class="btn btn-xs btn-warning" onclick="lanjutAlurNonRutin('{$value.no_sppb}')" title="Lanjutkan tahap Non Rutin"><i class="fa fa-arrow-right"></i></button>
+                                        <button class="btn btn-xs btn-warning" onclick="lanjutAlurNonRutin('{$value.no_sppb}')" title="Lanjutkan tahap (PO/Beli)"><i class="fa fa-arrow-right"></i></button>
                                     {else}
                                         <button class="btn btn-xs btn-warning" onclick="openProsesLogistikModal('{$value.no_sppb}')" title="Review & Tandai Siap Ambil"><i class="fa fa-list-alt"></i></button>
                                     {/if}
+                                {/if}
+                                {if: $value.can_buat_surat_order}
+                                    <button class="btn btn-xs btn-primary" onclick="buatSuratOrderNonRutin('{$value.no_sppb}')" title="Buat Surat Order"><i class="fa fa-file-text-o"></i></button>
+                                {/if}
+                                {if: $value.can_generate_po}
+                                    <button class="btn btn-xs btn-warning" onclick="generatePoSppb('{$value.no_sppb}')" title="Generate PO Pengganti"><i class="fa fa-cart-plus"></i></button>
+                                {/if}
+                                {if: $value.can_open_po}
+                                    <a class="btn btn-xs btn-primary" href="{$value.po_url}" title="Buka PO {$value.no_po}"><i class="fa fa-shopping-cart"></i></a>
+                                {/if}
+                                {if: $value.can_receive_po}
+                                    <a class="btn btn-xs btn-info" href="{$value.penerimaan_url}" title="Terima Barang dari PO {$value.no_po}"><i class="fa fa-truck"></i></a>
                                 {/if}
                                 {if: $value.can_keputusan_dana}
                                     <button class="btn btn-xs btn-success" onclick="keputusanDanaSppb('{$value.no_sppb}', 'acc')" title="ACC Konsul Kabid Umum dan ajukan dana ke Bendahara"><i class="fa fa-check"></i></button>
@@ -131,6 +171,9 @@
                                 {/if}
                                 {if: $value.can_selesaikan}
                                     <button class="btn btn-xs btn-primary" onclick="selesaikanSppb('{$value.no_sppb}')" title="Konfirmasi Serah Terima Barang"><i class="fa fa-archive"></i><i class="fa fa-long-arrow-right" style="margin:0 2px;"></i><i class="fa fa-user"></i></button>
+                                {/if}
+                                {if: $value.has_bast}
+                                    <a class="btn btn-xs btn-success" href="{?=url(ADMIN.'/logistik_non_medis/cetakbastserahterima?no_sppb='.$value.no_sppb)?}" target="_blank" title="Cetak Bukti Serah Terima Bertanda Tangan"><i class="fa fa-file-text-o"></i></a>
                                 {/if}
                                 <button class="btn btn-xs btn-info" onclick="detailSPPB('{$value.no_sppb}')" title="Detail"><i class="fa fa-eye"></i></button>
                             </div>
@@ -199,7 +242,8 @@ function lanjutAlurNonRutin(no_sppb) {
             if (data.status === 'success') {
                 loadDisplay();
                 if ($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
-                showNotif('success', 'Tahap Non Rutin berhasil dilanjutkan.');
+                if (typeof showSppbStatusResult === 'function') showSppbStatusResult(data, 'Tahap Non Rutin berhasil dilanjutkan.');
+                else showNotif('success', data.message || 'Tahap Non Rutin berhasil dilanjutkan.');
             } else {
                 showNotif('error', data.message || 'Gagal memproses.');
             }
@@ -308,7 +352,8 @@ function submitProsesLogistik() {
             if (data.status === 'success') {
                 $('#modal-proses-logistik').modal('hide');
                 loadDisplay();
-                showNotif('success', 'Berhasil diproses ke Pengadaan!');
+                if (typeof showSppbStatusResult === 'function') showSppbStatusResult(data, 'Berhasil diproses ke Pengadaan!');
+                else showNotif('success', data.message || 'Berhasil diproses ke Pengadaan!');
             } else {
                 showNotif('error', data.message || 'Gagal memproses.');
             }
@@ -327,13 +372,106 @@ function siapAmbil(no_sppb) {
             if (data.status === 'success') {
                 loadDisplay();
                 if ($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
-                showNotif('success', 'Status diubah ke Siap Ambil!');
+                showNotif('success', data.message || 'Tahap berhasil dilanjutkan.');
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                }
             } else {
                 showNotif('error', data.message || 'Gagal.');
+                if (data.redirect_url && confirm((data.message || 'Tahap sebelumnya belum selesai.') + '\n\nBuka halaman terkait sekarang?')) {
+                    window.location.href = data.redirect_url;
+                }
             }
         } catch(e) { showNotif('error', 'Kesalahan server.'); }
     });
 }
+
+function generatePoSppb(no_sppb) {
+    if (!confirm('Generate PO baru untuk permintaan ini?')) return;
+    $.post('{?=url(ADMIN."/logistik_non_medis/generateordernonrutin")?}', {no_sppb: no_sppb}, function(res) {
+        try {
+            var data = typeof res === 'string' ? JSON.parse(res) : res;
+            if (data.status === 'success') {
+                showNotif('success', data.message || 'PO berhasil dibuat.');
+                if (data.po_url) {
+                    window.location.href = data.po_url;
+                } else {
+                    loadDisplay();
+                }
+            } else {
+                showNotif('error', data.message || 'Gagal membuat PO.');
+            }
+        } catch (e) {
+            showNotif('error', 'Respons server tidak valid.');
+        }
+    });
+}
+
+var sppbSignatureStrokes = [];
+var sppbSignatureDrawing = false;
+var sppbSignatureStroke = null;
+
+function resetSppbSignature() {
+    sppbSignatureStrokes = [];
+    sppbSignatureDrawing = false;
+    sppbSignatureStroke = null;
+    var canvas = document.getElementById('selesai-signature-canvas');
+    if (!canvas) return;
+    canvas.width = Math.max(320, Math.round(canvas.getBoundingClientRect().width || 520));
+    canvas.height = 150;
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    $('#selesai-signature-hint').show();
+}
+
+function initSppbSignature() {
+    var canvas = document.getElementById('selesai-signature-canvas');
+    if (!canvas || canvas.dataset.signatureReady === '1') {
+        resetSppbSignature();
+        return;
+    }
+    canvas.dataset.signatureReady = '1';
+    var point = function(e) {
+        var rect = canvas.getBoundingClientRect();
+        return [
+            Math.round((e.clientX - rect.left) * canvas.width / rect.width * 10) / 10,
+            Math.round((e.clientY - rect.top) * canvas.height / rect.height * 10) / 10
+        ];
+    };
+    canvas.addEventListener('pointerdown', function(e) {
+        e.preventDefault();
+        canvas.setPointerCapture(e.pointerId);
+        sppbSignatureDrawing = true;
+        sppbSignatureStroke = [point(e)];
+        sppbSignatureStrokes.push(sppbSignatureStroke);
+        $('#selesai-signature-hint').hide();
+    });
+    canvas.addEventListener('pointermove', function(e) {
+        if (!sppbSignatureDrawing || !sppbSignatureStroke) return;
+        e.preventDefault();
+        var next = point(e), last = sppbSignatureStroke[sppbSignatureStroke.length - 1];
+        if (Math.abs(next[0] - last[0]) + Math.abs(next[1] - last[1]) < 1.5) return;
+        sppbSignatureStroke.push(next);
+        var ctx = canvas.getContext('2d');
+        ctx.strokeStyle = '#000080'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(next[0], next[1]); ctx.stroke();
+    });
+    var stop = function() { sppbSignatureDrawing = false; sppbSignatureStroke = null; };
+    canvas.addEventListener('pointerup', stop);
+    canvas.addEventListener('pointercancel', stop);
+    resetSppbSignature();
+}
+
+function sppbSignaturePayload() {
+    var canvas = document.getElementById('selesai-signature-canvas');
+    var clean = [];
+    $.each(sppbSignatureStrokes, function(_, stroke) { if (stroke.length >= 2) clean.push(stroke); });
+    var points = 0;
+    $.each(clean, function(_, stroke) { points += stroke.length; });
+    if (!canvas || points < 3) return '';
+    return JSON.stringify({version: 1, width: canvas.width, height: canvas.height, strokes: clean});
+}
+
+$(document).off('click.sppbSignature', '#btn-clear-selesai-signature').on('click.sppbSignature', '#btn-clear-selesai-signature', resetSppbSignature);
 
 function selesaikanSppb(no_sppb) {
     $('#selesai_no_sppb').val(no_sppb);
@@ -370,7 +508,7 @@ function selesaikanSppb(no_sppb) {
     });
 
     $('#modal-selesai-sppb').modal('show');
-    setTimeout(function() { $('#selesai_diambil_oleh').focus(); }, 400);
+    setTimeout(function() { initSppbSignature(); $('#selesai_diambil_oleh').focus(); }, 400);
 }
 
 function sppbEscapeHtml(value) {
@@ -426,15 +564,20 @@ function submitSelesaiSppb(stokFisik) {
     var btn = stokFisik ? $('#btn-submit-stok-fisik-sppb') : $('#btn-submit-selesai-sppb');
     var no_sppb = $('#selesai_no_sppb').val();
     var diambilOleh = $('#selesai_diambil_oleh').val().trim();
+    var tandaTangan = sppbSignaturePayload();
 
     if (diambilOleh === '') {
         showNotif('error', 'Nama pengambil barang wajib diisi.');
         $('#selesai_diambil_oleh').focus();
         return;
     }
+    if (tandaTangan === '') {
+        showNotif('error', 'Tanda tangan pengambil wajib diisi.');
+        return;
+    }
 
     btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
-    var postData = {no_sppb: no_sppb, diambil_oleh: diambilOleh};
+    var postData = {no_sppb: no_sppb, diambil_oleh: diambilOleh, tanda_tangan_pengambil: tandaTangan};
     if (stokFisik) postData.stok_fisik = stokFisik;
 
     $.post('{?=url(ADMIN."/logistik_non_medis/selesaikansppb")?}', postData, function(res) {

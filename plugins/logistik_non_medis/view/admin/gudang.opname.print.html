@@ -58,9 +58,8 @@
                 <th width="30">No</th>
                 <th>Kode Barang</th>
                 <th>Nama Barang</th>
-                <th width="80" class="text-right">Stok Sistem</th>
-                <th width="80" class="text-right">Stok Fisik</th>
-                <th width="80" class="text-right">Selisih</th>
+                <th width="80">Satuan</th>
+                <th width="100" class="text-right">Jumlah Terkini</th>
                 <th>Keterangan</th>
             </tr>
         </thead>
@@ -70,9 +69,8 @@
                 <td class="text-center">{?=($index+1)?}</td>
                 <td>{$item.kode_item}</td>
                 <td>{$item.nama_barang}</td>
-                <td class="text-right">{$item.stok_sistem}</td>
+                <td>{$item.satuan_dasar}</td>
                 <td class="text-right">{$item.stok_fisik}</td>
-                <td class="text-right">{$item.selisih}</td>
                 <td>{$item.keterangan}</td>
             </tr>
             {/loop}

@@ -73,25 +73,40 @@ class Admin extends AdminModule
     public function anySendMessage()
     {
       if(isset($_POST['submit'])) {
+        $number = preg_replace('/[^0-9]/', '', (string)($_POST['number'] ?? ''));
+        if (strpos($number, '0') === 0) $number = '62' . substr($number, 1);
+        $message = (string)($_POST['message'] ?? '');
         $waapitoken = $this->settings->get('wagateway.token');
         $waapiphonenumber = $this->settings->get('wagateway.phonenumber');
         $waapiserver = $this->settings->get('wagateway.server');
         $url = $waapiserver."/wagateway/kirimpesan";
+        $payload = http_build_query([
+          'type' => 'text',
+          'sender' => $waapiphonenumber,
+          'number' => $number,
+          'message' => $message,
+          'api_key' => $waapitoken
+        ], '', '&');
         $curlHandle = curl_init();
         curl_setopt($curlHandle, CURLOPT_URL, $url);
-        curl_setopt($curlHandle, CURLOPT_POSTFIELDS,"type=text&sender=".$waapiphonenumber."&number=".$_POST['number']."&message=".$_POST['message']."&api_key=".$waapitoken);
+        curl_setopt($curlHandle, CURLOPT_POSTFIELDS, $payload);
         curl_setopt($curlHandle, CURLOPT_HEADER, 0);
         curl_setopt($curlHandle, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($curlHandle, CURLOPT_TIMEOUT,30);
         curl_setopt($curlHandle, CURLOPT_POST, 1);
         curl_setopt($curlHandle, CURLOPT_SSL_VERIFYPEER, false);
-        $response = curl_exec($curlHandle);
+        $rawResponse = curl_exec($curlHandle);
+        $curlError = curl_error($curlHandle);
+        $httpCode = (int)curl_getinfo($curlHandle, CURLINFO_HTTP_CODE);
         curl_close($curlHandle);
-        $response = json_decode($response, true);
-        if($response['status'] == 'true') {
+        $response = json_decode((string)$rawResponse, true);
+        $isSuccess = is_array($response) && in_array(strtolower((string)($response['status'] ?? '')), ['true', 'success', '1'], true);
+        if($isSuccess) {
           $this->notify('success', 'Sukses mengirim pesan');
         } else {
-          $this->notify('failure', 'Gagal mengirim pesan');
+          $reason = $curlError !== '' ? $curlError : (string)($response['message'] ?? $response['error'] ?? trim((string)$rawResponse));
+          if ($reason === '') $reason = 'Gateway tidak memberikan alasan (HTTP ' . $httpCode . ').';
+          $this->notify('failure', 'Gagal mengirim pesan: ' . substr(strip_tags($reason), 0, 220));
         }
       }
       return $this->draw('send.message.html');

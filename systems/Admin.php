@@ -224,6 +224,11 @@ class Admin extends Main
             } else {
                 $attempt['attempts'] = intval($attempt['attempts']);
                 $attempt['expires'] = intval($attempt['expires']);
+                if ($attempt['expires'] > 0 && $attempt['expires'] <= time()) {
+                    $this->db('mlite_login_attempts')->where('ip', $_SERVER['REMOTE_ADDR'])->save(['attempts' => 0, 'expires' => 0]);
+                    $attempt['attempts'] = 0;
+                    $attempt['expires'] = 0;
+                }
             }
         }
 
@@ -239,7 +244,7 @@ class Admin extends Main
 
         if ($row && password_verify(trim($password), $row['password'])) {
             // Reset fail attempts for this IP
-            $this->db('mlite_login_attempts')->where('ip', $_SERVER['REMOTE_ADDR'])->save(['attempts' => 0]);
+            $this->db('mlite_login_attempts')->where('ip', $_SERVER['REMOTE_ADDR'])->save(['attempts' => 0, 'expires' => 0]);
 
             $_SESSION['mlite_user']= $row['id'];
             $_SESSION['token']      = bin2hex(openssl_random_pseudo_bytes(6));

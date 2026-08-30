@@ -1,0 +1,230 @@
+<div class="row">
+  <div class="col-md-12">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <div class="custom-breadcrumb" style="display:inline-flex;align-items:center;background:#f8f9fa;border:1px solid #e1e4e8;border-radius:6px;padding:6px 15px;font-size:13px;margin-bottom:15px;box-shadow:0 1px 2px rgba(0,0,0,.05);">
+          <a href="{?=url([ADMIN,'logistik_non_medis','manage'])?}" style="color:#4a4a4a;text-decoration:none;"><i class="fa fa-home"></i></a>
+          <i class="fa fa-chevron-right" style="margin:0 10px;color:#aaa;font-size:11px;"></i>
+          <a href="{?=url([ADMIN,'logistik_non_medis','laporaninventaris'])?}" style="color:#4a4a4a;text-decoration:none;">Aset</a>
+          <i class="fa fa-chevron-right" style="margin:0 10px;color:#aaa;font-size:11px;"></i>
+          <span style="color:#337ab7;font-weight:600;">Laporan Inventaris</span>
+        </div>
+        <h3 class="panel-title"><i class="fa fa-folder-open"></i> Laporan Inventaris</h3>
+      </div>
+      <div class="panel-body">
+        <div class="well well-sm" style="margin-bottom:15px;">
+          <form id="form-filter-kib" onsubmit="return false;">
+            <div class="row">
+              <div class="col-md-3">
+                <label>Pencarian</label>
+                <input type="text" id="filter_cari" class="form-control" placeholder="Kode aset, nama barang, nomor inventaris...">
+              </div>
+              <div class="col-md-3">
+                <label>Unit</label>
+                <select id="filter_unit" class="form-control select2" style="width:100%;">
+                  <option value="">Semua Unit</option>
+                  {loop: $units}
+            <option value="{$value.kode}">{$value.kode_inventaris} - {$value.nama}</option>
+                  {/loop}
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label>Kelompok</label>
+                <select id="filter_kelompok" class="form-control select2" style="width:100%;">
+                  <option value="">Semua Kelompok</option>
+                  {loop: $kelompok}
+                  <option value="{$value.kode_kelompok}">{$value.kode_kelompok} - {$value.nama_kelompok}</option>
+                  {/loop}
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label>Jenis Barang</label>
+                <select id="filter_jenis" class="form-control select2" style="width:100%;">
+                  <option value="">Semua Jenis</option>
+                  {loop: $jenis}
+                  <option value="{$value.kode_kelompok}.{$value.kode_jenis}" data-kelompok="{$value.kode_kelompok}">{$value.kode_kelompok}.{$value.kode_jenis} - {$value.nama_jenis}</option>
+                  {/loop}
+                </select>
+              </div>
+              <div class="col-md-1">
+                <label>Harga</label>
+                <select id="filter_harga" class="form-control" style="width:100%;">
+                  <option value="">Semua</option>
+                  <option value="tersedia">Terisi</option>
+                  <option value="kosong">Belum</option>
+                </select>
+              </div>
+              <div class="col-md-1" style="padding-top:25px;">
+                <button type="button" class="btn btn-default btn-block btn-reset-filter"><i class="fa fa-refresh"></i> Reset</button>
+              </div>
+            </div>
+            <div class="row" style="margin-top:10px;">
+              <div class="col-md-12 text-right">
+                <button type="button" class="btn btn-success btn-export-kib-xlsx">
+                  <i class="fa fa-file-excel-o"></i> Export XLSX Sesuai Filter
+                </button>
+                <div class="help-block" style="display:inline-block;margin:0 0 0 8px;vertical-align:middle;">
+                  Seluruh hasil filter akan diekspor, bukan hanya halaman aktif.
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div id="kib-content-loader" style="display:none;text-align:center;padding:45px 0;">
+          <i class="fa fa-spinner fa-spin fa-2x text-primary"></i>
+          <p style="margin-top:10px;color:#777;">Memuat data inventaris...</p>
+        </div>
+        <div id="kib-ajax-container"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modal-detail-aset" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content" id="detail-aset-content"></div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+<style>
+  /* Tema mLite menimpa aturan visibility bawaan Select2. */
+  #filter_unit,
+  #filter_kelompok,
+  #filter_jenis { display: none !important; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>
+<script>
+var current_page = 1;
+var kibRequest = null;
+
+$(function() {
+  loadKib(1);
+
+  var searchTimeout;
+  $('#filter_cari').on('keyup', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(function(){ loadKib(1); }, 300);
+  });
+
+  $('#filter_unit,#filter_kelompok,#filter_jenis,#filter_harga').on('change', function() {
+    if (this.id === 'filter_kelompok') {
+      filterJenisOptionsByKelompok($(this).val());
+      $('#filter_jenis').val('').trigger('change.select2');
+    }
+    loadKib(1);
+  });
+
+  $('.btn-reset-filter').on('click', function() {
+    $('#form-filter-kib')[0].reset();
+    filterJenisOptionsByKelompok('');
+    $('#filter_unit').val('').trigger('change');
+    $('#filter_kelompok').val('').trigger('change.select2');
+    $('#filter_jenis').val('').trigger('change.select2');
+    loadKib(1);
+  });
+
+  $('.btn-export-kib-xlsx').on('click', function() {
+    var exportUrl = '{?=url([ADMIN,"logistik_non_medis","laporaninventarisexportxlsx"])?}';
+    var separator = exportUrl.indexOf('?') === -1 ? '?' : '&';
+    window.location.href = exportUrl + separator + $.param(getKibFilters());
+  });
+
+  // Select2 menyediakan pencarian langsung di dalam dropdown filter.
+  if ($.fn.select2) {
+    // Bersihkan wrapper Selectator lama yang kadang dibuat oleh tema mLite.
+    $('#filter_unit,#filter_kelompok,#filter_jenis').each(function() {
+      try {
+        if ($(this).data('selectator')) $(this).selectator('destroy');
+      } catch (e) {}
+      $('#selectator_' + this.id).remove();
+      $(this).siblings('.selectator_element').remove();
+      $(this).removeClass('selectator');
+
+      $(this).select2({
+        width: '100%',
+        placeholder: $(this).find('option:first').text(),
+        allowClear: false
+      });
+      $(this).addClass('select2-hidden-accessible').attr('style', 'display:none !important;');
+    });
+  }
+
+  $(document).on('click', '.pagination a', function(e) {
+    e.preventDefault();
+    var page = $(this).attr('data-page');
+    if (page) loadKib(page);
+  });
+
+  $(document).on('click', '.btn-detail-aset', function() {
+    var id = $(this).attr('data-id');
+    $('#detail-aset-content').html('<div class="text-center" style="padding:50px;"><i class="fa fa-spinner fa-spin fa-2x"></i><p>Memuat detail aset...</p></div>');
+    $('#modal-detail-aset').modal('show');
+    $.post('{?=url([ADMIN,"logistik_non_medis","detailasetregistrasi"])?}', {id:id}, function(html) {
+      $('#detail-aset-content').html(html);
+    }).fail(function() {
+      $('#detail-aset-content').html('<div class="modal-body"><div class="alert alert-danger">Gagal memuat detail aset.</div></div>');
+    });
+  });
+
+  $(document).on('click', '.btn-isi-harga', function() {
+    var id = $(this).data('id');
+    var input = window.prompt('Masukkan total harga perolehan aset ini (angka saja):');
+    if (input === null) return;
+    var harga = String(input).replace(/[^0-9]/g, '');
+    if (!harga || parseInt(harga, 10) <= 0) {
+      alert('Harga harus lebih dari nol.');
+      return;
+    }
+    $.post('{?=url([ADMIN,"logistik_non_medis","updatehargaaset"])?}', {id:id, harga:harga}, function(response) {
+      try { if (typeof response === 'string') response = JSON.parse(response); } catch (e) {}
+      alert(response.message || 'Proses selesai.');
+      if (response.status === 'success') loadKib(current_page);
+    });
+  });
+});
+
+function filterJenisOptionsByKelompok(kelompok) {
+  $('#filter_jenis option').each(function() {
+    var optionKelompok = $(this).data('kelompok');
+    var disabled = kelompok && optionKelompok && optionKelompok !== kelompok;
+    $(this).prop('disabled', !!disabled);
+  });
+}
+
+function loadKib(page) {
+  current_page = page || 1;
+  if (kibRequest && kibRequest.readyState !== 4) kibRequest.abort();
+  kibRequest = $.ajax({
+    url: '{?=url([ADMIN,"logistik_non_medis","displaykib"])?}',
+    type: 'POST',
+    timeout: 15000,
+    data: $.extend({halaman: current_page}, getKibFilters()),
+    beforeSend: function() {
+      $('#kib-ajax-container').hide();
+      $('#kib-content-loader').show();
+    },
+    success: function(html) {
+      $('#kib-content-loader').hide();
+      $('#kib-ajax-container').html(html).fadeIn(150);
+    },
+    error: function(xhr, status) {
+      if (status === 'abort') return;
+      $('#kib-content-loader').hide();
+      $('#kib-ajax-container').html('<div class="alert alert-danger">Data KIB gagal dimuat. Silakan coba kembali.</div>').show();
+    }
+  });
+}
+
+function getKibFilters() {
+  return {
+    cari: $('#filter_cari').val() || '',
+    filter_unit: $('#filter_unit').val() || '',
+    filter_kelompok: $('#filter_kelompok').val() || '',
+    filter_jenis: $('#filter_jenis').val() || '',
+    filter_harga: $('#filter_harga').val() || ''
+  };
+}
+</script>

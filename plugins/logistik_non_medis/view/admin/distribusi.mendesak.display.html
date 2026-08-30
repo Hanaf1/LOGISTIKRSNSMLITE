@@ -1,0 +1,53 @@
+{if: empty($rows)}
+<div class="text-muted text-center" style="padding:20px">Tidak ada data yang sesuai dengan filter.</div>
+{else}
+<div class="table-responsive">
+  <table class="table table-striped table-bordered">
+    <thead>
+      <tr><th>No</th><th>Tanggal</th><th>Unit</th><th>Peminta</th><th>Disetujui/Jenis</th><th>Keperluan</th><th>Status</th><th>Aksi</th></tr>
+    </thead>
+    <tbody>
+      {loop: $rows}
+      <tr>
+        <td>{$value.no_sppb}</td>
+        <td>{?=date('d/m/Y',strtotime($value.tgl_sppb))?}</td>
+        <td>{$value.nama_unit}</td>
+        <td>{$value.diajukan_oleh}</td>
+        <td>{$value.total_qty} / {$value.jumlah_jenis} jenis</td>
+        <td>{$value.keterangan}</td>
+        <td>
+          {if: $value.status == 'Proses Logistik'}<span class="label label-info">Sedang Disiapkan</span>
+          {elseif: $value.status == 'Siap Diserahkan'}<span class="label label-warning">Siap Diambil</span>
+          {else}<span class="label label-success">Selesai</span>{/if}
+        </td>
+        <td style="white-space:nowrap">
+          {if: $value.status == 'Proses Logistik'}
+          <button class="btn btn-info btn-xs btn-siap-langsung" data-no="{$value.no_sppb}"><i class="fa fa-check"></i> Sudah Siap</button>
+          {elseif: $value.status == 'Siap Diserahkan'}
+          <button class="btn btn-primary btn-xs btn-serah-mendesak" data-no="{$value.no_sppb}"><i class="fa fa-hand-paper-o"></i> Pengambilan</button>
+          {elseif: $value.status == 'Selesai'}
+          <a class="btn btn-success btn-xs" target="_blank" href="{?=url(ADMIN.'/logistik_non_medis/cetakdistribusimendesak?no_sppb='.$value.no_sppb)?}"><i class="fa fa-print"></i> Bukti Ambil</a>
+          {/if}
+        </td>
+      </tr>
+      {/loop}
+    </tbody>
+  </table>
+</div>
+<div class="clearfix">
+  <div class="pull-left text-muted" style="padding-top:8px">Menampilkan {$from}–{$to} dari {$total} data</div>
+  {if: $total_pages > 1}
+  <ul class="pagination pagination-sm pagination-mendesak pull-right" style="margin:0">
+    {if: $has_prev}<li><a href="#" data-page="{$prev_page}">&laquo;</a></li>{else}<li class="disabled"><span>&laquo;</span></li>{/if}
+    {loop: $pages}
+      {if: $value.active}<li class="active"><span>{$value.number}</span></li>{else}<li><a href="#" data-page="{$value.number}">{$value.number}</a></li>{/if}
+    {/loop}
+    {if: $has_next}<li><a href="#" data-page="{$next_page}">&raquo;</a></li>{else}<li class="disabled"><span>&raquo;</span></li>{/if}
+  </ul>
+  {/if}
+</div>
+{/if}
+<script>
+$(document).off('click.mendesak','.btn-serah-mendesak').on('click.mendesak','.btn-serah-mendesak',function(){var no=$(this).data('no');$.post('{?=url(ADMIN."/logistik_non_medis/distribusimendesakformserah")?}',{no_sppb:no},function(h){$('#formMendesakSerah').html(h);$('#modalMendesakSerah').modal('show');setTimeout(window.initMendesakTtd,150);});});
+$(document).off('click.siaplangsung','.btn-siap-langsung').on('click.siaplangsung','.btn-siap-langsung',function(){var no=$(this).data('no'),btn=$(this).prop('disabled',true);$.post('{?=url(ADMIN."/logistik_non_medis/distribusimendesaksiapkan")?}',{no_sppb:no},function(r){if(typeof r==='string')try{r=JSON.parse(r);}catch(e){}if(r.status==='success')location.reload();else{alert(r.message||'Gagal mengubah status.');btn.prop('disabled',false);}},'json');});
+</script>

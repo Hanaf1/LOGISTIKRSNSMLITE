@@ -1,0 +1,134 @@
+<style>
+.mendesak-item-row{position:relative;border:1px solid #ddd;background:#fafafa;padding:12px;margin-bottom:10px;border-radius:3px;overflow:visible}
+.mendesak-item-row.select2-row-open{z-index:1001}
+.mendesak-item-row label{font-size:12px;color:#666}
+.mendesak-satuan{height:34px;padding:7px 10px;background:#eee;border:1px solid #ccc;border-radius:3px}
+.mendesak-item-row .select2-container{display:block;width:100%!important;max-width:100%}
+.mendesak-item-row .select2-selection{overflow:hidden}
+.mendesak-item-row .select2-selection__rendered{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.select2-container--open{z-index:1100!important}
+.select2-results__option{white-space:normal;word-break:normal}
+.custom-breadcrumb{display:inline-flex;align-items:center;background:#f8f9fa;border:1px solid #e1e4e8;border-radius:6px;padding:7px 15px;font-size:13px;margin-bottom:15px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.custom-breadcrumb a{color:#4a4a4a;text-decoration:none;font-weight:500}
+.custom-breadcrumb a:hover{color:#337ab7}
+.custom-breadcrumb .separator{margin:0 10px;color:#aaa;font-size:11px}
+.custom-breadcrumb .active{color:#337ab7;font-weight:600}
+</style>
+<article class="row"><div class="col-md-12">
+    <div class="custom-breadcrumb">
+      <a href="{?=url([ADMIN,'logistik_non_medis','manage'])?}" title="Dashboard Logistik"><i class="fa fa-home"></i></a>
+      <i class="fa fa-chevron-right separator"></i>
+      <a href="{?=url([ADMIN,'logistik_non_medis','manage'])?}#distribusi">Distribusi</a>
+      <i class="fa fa-chevron-right separator"></i>
+      <span class="active">Permintaan Langsung</span>
+    </div>
+    <div class="panel panel-default"><div class="panel-heading"><h3
+          class="panel-title"><i class="fa fa-hand-paper-o"></i> Permintaan
+          Langsung</h3></div><div class="panel-body">
+        <div class="alert alert-info"><i class="fa fa-info-circle"></i> Untuk
+          kebutuhan di luar jadwal rutin. Barang dapat disiapkan terlebih dahulu
+          atau langsung diambil di Logistik.</div>
+        <form id="formMendesak"><div class="row">
+            <datalist id="unitMendesakList">{loop: $units}<option
+                value="{$value.nama_unit}"
+                data-kode="{$value.kode_unit}"></option>{/loop}</datalist>
+            <div class="col-md-4"><label>Unit Peminta <span
+                  class="text-danger">*</span></label><input type="text"
+                id="unitMendesakCari" class="form-control"
+                list="unitMendesakList" value="{$default_unit_name}"
+                placeholder="Ketik nama unit..." autocomplete="off"
+                required><input type="hidden" name="kode_unit"
+                id="unitMendesakKode" value="{$default_unit}"></div>
+            <div class="col-md-4"><label>Nama Peminta/Pengambil <span
+                  class="text-danger">*</span></label><input
+                name="diajukan_oleh" class="form-control" required
+                placeholder="Nama petugas/unit"></div>
+            <div class="col-md-2"><label>Keperluan <span
+                  class="text-danger">*</span></label><input name="keterangan"
+                class="form-control" required
+                placeholder="Keperluan barang"></div>
+            <div class="col-md-2"><label>Proses <span
+                  class="text-danger">*</span></label><select name="cara_proses"
+                class="form-control"><option value="siapkan">Siapkan
+                  Barang</option><option value="langsung">Langsung
+                  Diambil</option></select></div>
+          </div><hr>
+          <datalist id="kategoriMendesakList">{loop: $categories}<option
+              value="{$value.nama}"
+              data-kode="{$value.kode}"></option>{/loop}</datalist>
+          <div id="mendesakItemRows"><div class="mendesak-item-row"><div
+                class="row">
+                <div class="col-md-3"><label>Kelompok Barang</label><input
+                    type="text" class="form-control filter-kategori"
+                    list="kategoriMendesakList"
+                    placeholder="Semua kelompok barang"
+                    autocomplete="off"></div>
+                <div class="col-md-4"><label>Cari dan Pilih Barang <span
+                      class="text-danger">*</span></label><select
+                    name="kode_item[]" class="form-control pilih-item"
+                    style="width:100%" required></select></div>
+                <div class="col-md-1"><label>Diminta <span
+                      class="text-danger">*</span></label><input type="number"
+                    name="jumlah[]" class="form-control jumlah-item" min="0.01"
+                    step="0.01" required></div>
+                <div class="col-md-1"><label>Disetujui <span
+                      class="text-danger">*</span></label><input type="number"
+                    name="jumlah_disetujui[]" class="form-control jumlah-setuju"
+                    min="0.01" step="0.01" required></div>
+                <div class="col-md-2"><label>Satuan</label><div
+                    class="mendesak-satuan">-</div></div>
+                <div class="col-md-1"><label>&nbsp;</label><button type="button"
+                    class="btn btn-danger btn-block hapus-baris"><i
+                      class="fa fa-trash"></i></button></div>
+              </div></div></div>
+          <button type="button" class="btn btn-default" id="tambahBaris"><i
+              class="fa fa-plus"></i> Tambah Barang</button><button
+            type="submit" class="btn btn-primary pull-right"><i
+              class="fa fa-save"></i> Simpan & Lanjut Serah Terima</button>
+        </form></div></div>
+    <div class="panel panel-default"><div class="panel-heading"><h3
+          class="panel-title"><i class="fa fa-list"></i> Riwayat Permintaan
+          Langsung</h3></div><div class="panel-body"><div class="row">
+          <div class="col-md-4"><label>Filter Unit</label><input type="text"
+              id="filterUnitRiwayatMendesak" class="form-control"
+              list="unitMendesakList" placeholder="Semua unit..."
+              autocomplete="off"></div>
+          <div class="col-md-8"><label>Pencarian</label><div
+              class="input-group"><input id="cariMendesak"
+                class="form-control"
+                placeholder="Cari nomor, peminta, atau keperluan..."><span
+                class="input-group-btn"><button id="btnCariMendesak"
+                  class="btn btn-default"><i class="fa fa-search"></i>
+                  Cari</button><button id="btnResetRiwayatMendesak"
+                  class="btn btn-default"><i class="fa fa-refresh"></i>
+                  Reset</button></span></div></div>
+        </div><div id="displayMendesak"
+          style="margin-top:15px"></div></div></div>
+  </div></article>
+<div class="modal fade" id="modalMendesakSerah" tabindex="-1"
+  data-backdrop="static"><div class="modal-dialog modal-lg"><div
+      class="modal-content" id="formMendesakSerah"></div></div></div>
+<script>
+(function($){
+var barangUrl='{?=url(ADMIN."/logistik_non_medis/ajaxmasterbarang")?}',timer=null;
+function syncUnit(){var name=$.trim($('#unitMendesakCari').val()),code='';$('#unitMendesakList option').each(function(){if($(this).val()===name){code=$(this).data('kode')||'';return false;}});$('#unitMendesakKode').val(code);return code;}
+function load(page){page=parseInt(page||1,10);$.post('{?=url(ADMIN."/logistik_non_medis/displaydistribusimendesak")?}',{halaman:page,cari:$('#cariMendesak').val(),unit:$('#filterUnitRiwayatMendesak').val()},function(x){$('#displayMendesak').html(x);});}
+function clearItem($row){$row.find('.pilih-item').val(null).trigger('change');$row.find('.mendesak-satuan').text('-');}
+function categoryCode($row){var name=$.trim($row.find('.filter-kategori').val()),code='';$('#kategoriMendesakList option').each(function(){if($(this).val()===name){code=$(this).data('kode')||'';return false;}});return code;}
+function initItemSelect($row){var $item=$row.find('.pilih-item');try{if($item.data('selectator'))$item.selectator('destroy');}catch(e){}$item.siblings('.selectator_element').remove();$item.removeClass('selectator');try{if($item.hasClass('select2-hidden-accessible'))$item.select2('destroy');}catch(e){}$item.show().select2({width:'100%',placeholder:'Ketik kode atau nama barang...',allowClear:true,minimumInputLength:0,ajax:{url:barangUrl,dataType:'json',delay:250,data:function(p){return{q:p.term||'',jenis_permintaan:'Rutin',non_aset:1,kelompok_barang:categoryCode($row)};},processResults:function(data){return{results:$.map(data||[],function(x){return{id:x.kode_item,text:x.kode_item+' - '+x.nama_barang,satuan:x.satuan_dasar};})};},cache:true}}).on('select2:open',function(){$row.addClass('select2-row-open');}).on('select2:close',function(){$row.removeClass('select2-row-open');}).on('select2:select',function(e){$row.find('.mendesak-satuan').text(e.params.data.satuan||'-');}).on('select2:clear',function(){$row.find('.mendesak-satuan').text('-');});}
+$(document).on('change','.filter-kategori',function(){clearItem($(this).closest('.mendesak-item-row'));});
+$(document).on('input','.jumlah-item',function(){var $s=$(this).closest('.mendesak-item-row').find('.jumlah-setuju');if(!$s.data('manual'))$s.val(this.value);});
+$(document).on('input','.jumlah-setuju',function(){$(this).data('manual',true);});
+$(document).on('click',function(e){if(!$(e.target).closest('.mendesak-search-box').length)$('.mendesak-results').hide();});
+$('#unitMendesakCari').on('input change',syncUnit);
+$('#tambahBaris').on('click',function(){var $r=$('.mendesak-item-row:first').clone(false);$r.find('.select2-container').remove();$r.find('.pilih-item').removeClass('select2-hidden-accessible').removeAttr('data-select2-id aria-hidden tabindex').off().empty().show();$r.find('.filter-kategori').val('');$r.find('.mendesak-satuan').text('-');$r.find('.jumlah-item').val('');$r.find('.jumlah-setuju').val('').removeData('manual');$('#mendesakItemRows').append($r);initItemSelect($r);});
+$(document).on('click','.hapus-baris',function(){if($('.mendesak-item-row').length>1)$(this).closest('.mendesak-item-row').remove();});
+$('#btnCariMendesak').on('click',function(){load(1);});$('#cariMendesak').on('keypress',function(e){if(e.which===13){e.preventDefault();load(1);}});$('#filterUnitRiwayatMendesak').on('keypress',function(e){if(e.which===13){e.preventDefault();load(1);}}).on('change',function(){load(1);});$('#btnResetRiwayatMendesak').on('click',function(){$('#cariMendesak').val('');$('#filterUnitRiwayatMendesak').val('');load(1);});$(document).on('click','.pagination-mendesak a',function(e){e.preventDefault();var page=parseInt($(this).data('page'),10);if(page>0)load(page);});
+$('#formMendesak').on('submit',function(e){e.preventDefault();if(!syncUnit()){alert('Pilih Unit Peminta dari daftar hasil pencarian.');$('#unitMendesakCari').focus();return;}if(!$('.pilih-item').filter(function(){return $(this).val();}).length){alert('Pilih minimal satu barang dari hasil pencarian.');return;}var f=this,b=$(f).find('button[type=submit]').prop('disabled',true);$.post('{?=url(ADMIN."/logistik_non_medis/simpanDistribusiMendesak")?}',$(f).serialize(),function(r){if(typeof r==='string')try{r=JSON.parse(r);}catch(e){}if(r.status!=='success'){alert(r.message||'Gagal menyimpan');return;}if(!r.lanjut_serah){alert('Permintaan langsung tersimpan. Barang masuk daftar untuk disiapkan.');location.reload();return;}$.post('{?=url(ADMIN."/logistik_non_medis/distribusimendesakformserah")?}',{no_sppb:r.no_sppb},function(html){$('#formMendesakSerah').html(html);$('#modalMendesakSerah').modal('show');setTimeout(window.initMendesakTtd,150);load();});},'json').always(function(){b.prop('disabled',false);});});
+window.initMendesakTtd=function(){var canvas=document.getElementById('ttdMendesakCanvas');if(!canvas||canvas._ttdReady)return;canvas._ttdReady=true;var ctx=canvas.getContext('2d'),ratio=Math.max(window.devicePixelRatio||1,1),rect=canvas.getBoundingClientRect(),drawing=false,strokes=[],active=null,signed=false;canvas.width=Math.max(1,Math.round(rect.width*ratio));canvas.height=Math.round(210*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);ctx.strokeStyle='#163a70';ctx.lineWidth=2;ctx.lineCap='round';ctx.lineJoin='round';function source(e){return(e.touches&&e.touches.length)?e.touches[0]:e;}function point(e){var s=source(e),r=canvas.getBoundingClientRect();return{x:s.clientX-r.left,y:s.clientY-r.top};}function start(e){e.preventDefault();drawing=true;signed=true;active=[];strokes.push(active);var p=point(e);active.push([p.x,p.y]);ctx.beginPath();ctx.moveTo(p.x,p.y);}function move(e){if(!drawing)return;e.preventDefault();var p=point(e);active.push([p.x,p.y]);ctx.lineTo(p.x,p.y);ctx.stroke();}function end(e){if(drawing&&e)e.preventDefault();drawing=false;}canvas.addEventListener('mousedown',start,false);canvas.addEventListener('mousemove',move,false);window.addEventListener('mouseup',end,false);canvas.addEventListener('touchstart',start,{passive:false});canvas.addEventListener('touchmove',move,{passive:false});canvas.addEventListener('touchend',end,{passive:false});canvas._ttdState={ctx:ctx,getStrokes:function(){return strokes;},isSigned:function(){return signed;},clear:function(){ctx.clearRect(0,0,canvas.width,canvas.height);strokes=[];signed=false;}};};
+$(document).on('shown.bs.modal','#modalMendesakSerah',window.initMendesakTtd);
+$(document).on('click','#hapusTtdMendesak',function(){var c=document.getElementById('ttdMendesakCanvas');if(c&&c._ttdState)c._ttdState.clear();});
+$(document).on('click','#simpanSerahMendesak',function(){var form=document.getElementById('formSerahMendesak'),canvas=document.getElementById('ttdMendesakCanvas');if(!form||!canvas)return;if(!form.checkValidity()){form.reportValidity();return;}if(!canvas._ttdState||!canvas._ttdState.isSigned()){alert('Tanda tangan pengambil wajib diisi.');return;}$('#ttdMendesakData').val(JSON.stringify({version:1,width:Math.round(canvas.clientWidth),height:210,strokes:canvas._ttdState.getStrokes()}));var btn=$(this).prop('disabled',true);$.ajax({url:'{?=url(ADMIN."/logistik_non_medis/saveSerahTerima")?}',type:'POST',data:new FormData(form),processData:false,contentType:false,dataType:'json'}).done(function(r){if(r.status==='success'){alert('Pengambilan barang berhasil dicatat dan stok sudah dimutasi.');$('#modalMendesakSerah').modal('hide');location.reload();}else alert(r.message||'Gagal menyimpan pengambilan.');}).fail(function(xhr){alert('Gagal menyimpan pengambilan. '+(xhr.responseText||''));}).always(function(){btn.prop('disabled',false);});});
+$(document).ready(function(){initItemSelect($('.mendesak-item-row:first'));load();});
+})(jQuery);
+</script>

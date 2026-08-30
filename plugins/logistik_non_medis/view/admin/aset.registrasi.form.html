@@ -1,6 +1,19 @@
+{if: $standalone}
+<article class="row">
+    <div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <a href="{$return_url}" class="btn btn-default btn-sm pull-right"><i class="fa fa-arrow-left"></i> Kembali</a>
+                <h3 class="panel-title"><i class="fa fa-pencil-square-o"></i> {if: $mode == 'add'}Registrasi Aset Baru{else}Edit Aset: {$aset.kode_aset}{/if}</h3>
+                <div class="clearfix"></div>
+            </div>
+            <div class="panel-body">
+{/if}
 <form id="form-save-aset" method="POST" enctype="multipart/form-data">
     <input type="hidden" name="id" value="{$aset.id}">
-    
+    {if: $standalone}
+    <div>
+    {else}
     <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h4 class="modal-title">
@@ -9,6 +22,7 @@
     </div>
     
     <div class="modal-body">
+    {/if}
         <div class="row">
             
             <!-- Sektor Kiri: Identitas Utama & Spesifikasi -->
@@ -40,7 +54,7 @@
                                     <div class="form-group" style="margin-bottom:0;">
                                         <label>Kategori</label>
                                         <select id="form_master_kategori" class="form-control">
-                                            {loop: $kategori_master}<option value="{$value.kode_kategori}">{$value.nama_kategori}</option>{/loop}
+                                            {loop: $kategori_master}<option value="{$value.kode_kategori}" {if: $value.kode_kategori == $aset.master_kategori}selected{/if}>{$value.nama_kategori}</option>{/loop}
                                         </select>
                                     </div>
                                 </div>
@@ -49,7 +63,7 @@
                                         <label>Kelompok <span class="text-danger">*</span></label>
                                         <select id="form_master_kelompok" class="form-control" required>
                                             <option value="">-- Pilih Kelompok --</option>
-                                            {loop: $kelompok_master}<option value="{$value.kode_kelompok}" data-kategori="{$value.kode_kategori}">{$value.nama_kelompok}</option>{/loop}
+                                            {loop: $kelompok_master}<option value="{$value.kode_kategori}|{$value.kode_kelompok}" data-kategori="{$value.kode_kategori}" data-kode="{$value.kode_kelompok}" {if: $value.kode_kelompok == $aset.master_kelompok && $value.kode_kategori == $aset.master_kategori}selected{/if}>{$value.nama_kelompok}</option>{/loop}
                                         </select>
                                     </div>
                                 </div>
@@ -58,17 +72,18 @@
                                         <label>Jenis <span class="text-danger">*</span></label>
                                         <select id="form_master_jenis" class="form-control" required>
                                             <option value="">-- Pilih Jenis --</option>
-                                            {loop: $jenis_master}<option value="{$value.kode_jenis}" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}">{$value.nama_jenis}</option>{/loop}
+                                            {loop: $jenis_master}<option value="{$value.kode_kategori}|{$value.kode_kelompok}|{$value.kode_jenis}" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}" data-kode="{$value.kode_jenis}" {if: $value.kode_jenis == $aset.master_jenis && $value.kode_kelompok == $aset.master_kelompok && $value.kode_kategori == $aset.master_kategori}selected{/if}>{$value.nama_jenis}</option>{/loop}
                                         </select>
                                     </div>
                                 </div>
                             </div>
                             <div class="form-group" style="margin:12px 0 0;">
                                 <label>Pilih Barang Inventaris <span class="text-danger">*</span></label>
+                                <input type="hidden" name="kode_kategori_aset" id="form_kode_kategori_aset" value="{$aset.kode_kategori_aset}">
                                 <select name="kode_item" id="form_kode_item" class="form-control" required>
                                     <option value="">-- Pilih dari Master Inventaris --</option>
                                     {loop: $master_barang}
-                                    <option value="{$value.kode}" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}" data-jenis="{$value.kode_jenis}" data-nama="{$value.nama}" {if: $value.kode == $aset.kode_item}selected{/if}>[{$value.kode_barang}] {$value.nama}</option>
+                                    <option value="{$value.kode}" data-kategori="{$value.kode_kategori}" data-kelompok="{$value.kode_kelompok}" data-jenis="{$value.kode_jenis}" data-nama="{$value.nama}" {if: $value.kode == $aset.kode_item && $value.kode_kategori == $aset.kode_kategori_aset}selected{/if}>[{$value.kode_barang}] {$value.nama}</option>
                                     {/loop}
                                 </select>
                             </div>
@@ -87,7 +102,7 @@
                                 <div class="form-group">
                                     <label>Nomor Inventaris / Kode Barang</label>
                                     <input type="text" name="nomor_inventaris" id="form_nomor_inventaris" class="form-control" value="{$aset.nomor_inventaris}" readonly placeholder="Pilih unit, kategori aset, dan item barang">
-                                    <p class="help-block">Dibuat otomatis sesuai Excel: unit (2) + kategori (1) + kelompok (2) + jenis (2) + barang (2) + urutan (2).</p>
+                                    <p class="help-block">Dibuat otomatis: unit (2–3) + kategori (1) + kelompok (2) + jenis (2) + barang (2) + urutan (3). Contoh: <code>292090409001</code>.</p>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6"><div class="form-group"><label>Merk / Type</label><input type="text" name="merk_type" class="form-control" value="{$aset.merk_type}" placeholder="Contoh: Sharp AH-A5UDY"></div></div>
@@ -150,8 +165,8 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="control-label">Tanggal Perolehan</label>
-                                    <input type="date" name="tanggal_perolehan" class="form-control" value="{$aset.tanggal_perolehan}" required>
+                                    <label class="control-label">Tanggal Perolehan <small class="text-muted">(Opsional)</small></label>
+                                    <input type="date" name="tanggal_perolehan" class="form-control" value="{$aset.tanggal_perolehan}">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -167,9 +182,15 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-4"><div class="form-group"><label>Tahun Beli</label><input type="number" name="tahun_beli" class="form-control" value="{$aset.tahun_beli}" min="1900" max="2100" placeholder="2026"></div></div>
+                            <div class="col-md-4"><div class="form-group"><label>Tahun Beli / Perolehan</label><input type="number" name="tahun_beli" class="form-control" value="{$aset.tahun_beli}" min="1900" max="2100" placeholder="2026"></div></div>
                             <div class="col-md-4"><div class="form-group"><label>Satuan</label><input type="text" name="satuan" class="form-control" value="{$aset.satuan}" placeholder="Buah"></div></div>
-                            <div class="col-md-4"><div class="form-group"><label>Jumlah</label><input type="number" name="jumlah" class="form-control" value="{$aset.jumlah}" min="1"></div></div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Jumlah</label>
+                                    <input type="number" name="jumlah" class="form-control" value="{if: $mode == 'edit'}1{else}{$aset.jumlah}{/if}" min="1" max="999" {if: $mode == 'edit'}readonly{/if}>
+                                    <p class="help-block" style="font-size:11px;margin-bottom:0;">{if: $mode == 'add'}Sistem membuat satu kelompok dan nomor inventaris individual 001–999 untuk setiap item.{else}Satu detail aset mewakili satu item fisik.{/if}</p>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="row">
@@ -607,11 +628,17 @@
         {/if}
     </div>
     
-    <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times-circle"></i> Batal</button>
+    <div class="{if: $standalone}text-right{else}modal-footer{/if}" style="padding-top:15px;border-top:1px solid #eee;">
+        {if: $standalone}<a href="{$return_url}" class="btn btn-default"><i class="fa fa-times-circle"></i> Batal</a>{else}<button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times-circle"></i> Batal</button>{/if}
         <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan Data Aset</button>
     </div>
 </form>
+{if: $standalone}
+            </div>
+        </div>
+    </div>
+</article>
+{/if}
 
 <script>
     $(document).ready(function() {
@@ -619,49 +646,77 @@
         // Gunakan prop('hidden') dan prop('disabled') agar filter option bekerja di semua browser
         function filterKelompok(selected) {
             var kategori = $('#form_master_kategori').val();
+            var selectedValue = selected ? String(kategori) + '|' + String(selected) : '';
             var found = false;
             $('#form_master_kelompok option').each(function() {
                 var cocok = !$(this).val() || String($(this).data('kategori')) === String(kategori);
                 $(this).prop('hidden', !cocok).prop('disabled', !cocok);
-                if (cocok && $(this).val() === selected) found = true;
+                if (cocok && $(this).val() === selectedValue) found = true;
             });
-            $('#form_master_kelompok').val(found ? selected : '');
+            $('#form_master_kelompok').val(found ? selectedValue : '');
+            if ($('#form_master_kelompok').hasClass('select2-hidden-accessible')) $('#form_master_kelompok').trigger('change.select2');
         }
 
         function filterJenis(selected) {
             var kategori = $('#form_master_kategori').val();
-            var kelompok = $('#form_master_kelompok').val();
+            var kelompok = $('#form_master_kelompok option:selected').data('kode') || '';
+            var selectedValue = selected ? String(kategori) + '|' + String(kelompok) + '|' + String(selected) : '';
             var found = false;
             $('#form_master_jenis option').each(function() {
                 var cocok = !$(this).val() || (String($(this).data('kategori')) === String(kategori) && String($(this).data('kelompok')) === String(kelompok));
                 $(this).prop('hidden', !cocok).prop('disabled', !cocok);
-                if (cocok && $(this).val() === selected) found = true;
+                if (cocok && $(this).val() === selectedValue) found = true;
             });
-            $('#form_master_jenis').val(found ? selected : '');
+            $('#form_master_jenis').val(found ? selectedValue : '');
+            if ($('#form_master_jenis').hasClass('select2-hidden-accessible')) $('#form_master_jenis').trigger('change.select2');
         }
 
         function filterBarang(selected) {
             var kategori = $('#form_master_kategori').val();
-            var kelompok = $('#form_master_kelompok').val();
-            var jenis = $('#form_master_jenis').val();
+            var kelompok = $('#form_master_kelompok option:selected').data('kode') || '';
+            var jenis = $('#form_master_jenis option:selected').data('kode') || '';
             var found = false;
             $('#form_kode_item option').each(function() {
                 var cocok = !$(this).val() || (String($(this).data('kategori')) === String(kategori) && String($(this).data('kelompok')) === String(kelompok) && String($(this).data('jenis')) === String(jenis));
                 $(this).prop('hidden', !cocok).prop('disabled', !cocok);
-                if (cocok && $(this).val() === selected) found = true;
+                if (cocok && $(this).val() === selected) {
+                    $(this).prop('selected', true);
+                    found = true;
+                }
             });
-            $('#form_kode_item').val(found ? selected : '');
+            if (!found) $('#form_kode_item').val('');
+            $('#form_kode_kategori_aset').val(found ? ($('#form_kode_item option:selected').data('kategori') || '') : '');
+            if ($('#form_kode_item').hasClass('select2-hidden-accessible')) $('#form_kode_item').trigger('change.select2');
+        }
+
+        function pasangSelectInventaris(selector) {
+            if (!$.fn.select2) return;
+            $(selector).each(function() {
+                var select = $(this);
+                try { if (select.data('selectator')) select.selectator('destroy'); } catch (e) {}
+                $('#selectator_' + this.id).remove();
+                select.siblings('.selectator_element, .select2-container').remove();
+                select.removeClass('selectator');
+                try { if (select.hasClass('select2-hidden-accessible')) select.select2('destroy'); } catch (e) {}
+                select.show().select2({ width: '100%' });
+            });
         }
 
         var initialItem = $('#form_kode_item').val();
-        var initialOption = $('#form_kode_item option[value="' + initialItem + '"]');
-        var initialKategori = initialOption.data('kategori') || '';
-        var initialKelompok = initialOption.data('kelompok') || '';
-        var initialJenis   = initialOption.data('jenis') || '';
+        var initialKategori = '{$aset.master_kategori}';
+        var initialKelompok = '{$aset.master_kelompok}';
+        var initialJenis = '{$aset.master_jenis}';
+        if (!initialKategori) {
+            var initialOption = $('#form_kode_item option:selected');
+            initialKategori = initialOption.data('kategori') || '';
+            initialKelompok = initialOption.data('kelompok') || '';
+            initialJenis = initialOption.data('jenis') || '';
+        }
         if (initialKategori) $('#form_master_kategori').val(String(initialKategori));
         filterKelompok(String(initialKelompok));
         filterJenis(String(initialJenis));
         filterBarang(initialItem);
+        pasangSelectInventaris('#form_kode_unit, #form_master_kategori, #form_master_kelompok, #form_master_jenis, #form_kode_item');
 
         $('#form_master_kategori').on('change', function() {
             filterKelompok('');
@@ -679,7 +734,8 @@
         function generateNomorInventaris() {
             var data = {
                 kode_unit: $('#form_kode_unit').val(),
-                kode_item: $('#form_kode_item').val()
+                kode_item: $('#form_kode_item').val(),
+                kode_kategori_aset: $('#form_kode_item option:selected').data('kategori') || ''
             };
             if (!data.kode_unit || !data.kode_item) {
                 $('#form_nomor_inventaris').val('').attr('placeholder', 'Pilih unit dan item barang');
@@ -708,6 +764,7 @@
         // Nama aset mengikuti barang pada Master Inventaris.
         $('#form_kode_item').on('change', function() {
             var selectedOption = $(this).find('option:selected');
+            $('#form_kode_kategori_aset').val(selectedOption.data('kategori') || '');
             var barangName = selectedOption.attr('data-nama');
 
             if (barangName && $('#form_nama_aset').val() === '') {
@@ -770,9 +827,13 @@
                 },
                 success: function(response) {
                     if(response.status === 'success') {
-                        alert('Data Registrasi Aset berhasil disimpan!');
+                        alert(response.message || 'Data Registrasi Aset berhasil disimpan!');
+                        {if: $standalone}
+                        window.location.href = '{$return_url}';
+                        {else}
                         $('#modal-form-aset').modal('hide');
                         loadAset(1);
+                        {/if}
                     } else {
                         alert('Gagal menyimpan: ' + response.message);
                         $('#form-save-aset button[type="submit"]').prop('disabled', false).html('<i class="fa fa-save"></i> Simpan Data Aset');

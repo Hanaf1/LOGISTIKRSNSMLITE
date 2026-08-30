@@ -554,7 +554,12 @@
 .panel-kpi .panel-heading {
     background: transparent !important;
     border: none !important;
+    color: #334155 !important;
     padding: 12px 15px 0 15px;
+}
+.panel-kpi .panel-title,
+.panel-kpi .panel-body h2 {
+    color: #334155 !important;
 }
 .panel-kpi .panel-body {
     padding: 5px 15px 15px 15px;
@@ -684,6 +689,7 @@ $(document).ready(function() {
             '.panel-primary.panel-kpi { border-left: 4px solid ' + themeColors.primary + ' !important; }' +
             '.panel-warning.panel-kpi { border-left: 4px solid ' + themeColors.warning + ' !important; }' +
             '.panel-danger.panel-kpi { border-left: 4px solid ' + themeColors.danger + ' !important; }' +
+            '.panel-kpi .panel-heading, .panel-kpi .panel-title, .panel-kpi .panel-body h2 { color: ' + (isDark ? '#eaecf4' : '#334155') + ' !important; }' +
             '.global-cockpit { background-color: ' + themeColors.wellBg + ' !important; border: 1px solid ' + themeColors.wellBorder + ' !important; border-left: 5px solid ' + themeColors.primary + ' !important; }' +
             '.filter-well { background-color: ' + themeColors.wellBg + ' !important; border: 1px solid ' + themeColors.wellBorder + ' !important; }'
         )

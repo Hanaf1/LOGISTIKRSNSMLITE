@@ -1,0 +1,89 @@
+<article class="row">
+  <div class="col-md-12">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <div style="margin-bottom:12px">
+          <a href="{?=url([ADMIN,'logistik_non_medis','manage'])?}"><i class="fa fa-home"></i> Dashboard</a>
+          <i class="fa fa-chevron-right" style="margin:0 8px;color:#aaa"></i>
+          <span>Rekap Cetak Non Rutin</span>
+        </div>
+        <h3 class="panel-title"><i class="fa fa-file-text-o"></i> Detail Rekap Barang Permintaan Non Rutin</h3>
+      </div>
+      <div class="panel-body">
+        <div class="well well-sm" style="margin-bottom:15px">
+          <div class="row">
+            <div class="col-md-2">
+              <label>Tanggal Awal</label>
+              <input type="date" id="rekap-nr-awal" class="form-control" value="{$tanggal_awal}">
+            </div>
+            <div class="col-md-2">
+              <label>Tanggal Akhir</label>
+              <input type="date" id="rekap-nr-akhir" class="form-control" value="{$tanggal_akhir}">
+            </div>
+            <div class="col-md-3">
+              <label>Status</label>
+              <select id="rekap-nr-status" class="form-control">
+                <option value="aktif">Aktif / Disetujui / Selesai</option>
+                <option value="semua">Semua Status</option>
+                <option value="Disetujui Ka. Unit">Disetujui Ka. Unit</option>
+                <option value="Disetujui Ka. Sie">Disetujui Ka. Sie</option>
+                <option value="Konsul Pengajuan ke Kabid Umum">Konsul ke Kabid Umum</option>
+                <option value="Disetujui Kabid">Disetujui Kabid</option>
+                <option value="Diserahkan ke Kasie Umum">Diserahkan ke Kasie Umum</option>
+                <option value="Proses Pengadaan">Proses Pengadaan</option>
+                <option value="Siap Diserahkan">Siap Diserahkan</option>
+                <option value="Selesai">Selesai</option>
+                <option value="Ditolak">Ditolak</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label>Pencarian</label>
+              <input type="text" id="rekap-nr-cari" class="form-control" placeholder="Barang, unit, atau No. SPPB">
+            </div>
+            <div class="col-md-2" style="padding-top:25px;white-space:nowrap">
+              <button type="button" id="rekap-nr-tampil" class="btn btn-primary"><i class="fa fa-search"></i> Tampilkan</button>
+              <button type="button" id="rekap-nr-cetak" class="btn btn-success"><i class="fa fa-print"></i> Cetak</button>
+            </div>
+          </div>
+        </div>
+        <div class="alert alert-info" style="padding:9px 12px">
+          <i class="fa fa-info-circle"></i> Rekap ini hanya membaca data permintaan Non Rutin; proses dan status persetujuan tidak diubah.
+        </div>
+        <div id="rekap-nr-display"><div class="text-center text-muted" style="padding:35px"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat rekap...</div></div>
+      </div>
+    </div>
+  </div>
+</article>
+
+<script>
+(function($){
+  function filterRekapNonRutin(){
+    return {
+      tanggal_awal: $('#rekap-nr-awal').val(),
+      tanggal_akhir: $('#rekap-nr-akhir').val(),
+      status: $('#rekap-nr-status').val(),
+      cari: $('#rekap-nr-cari').val()
+    };
+  }
+  function loadRekapNonRutin(){
+    $('#rekap-nr-display').html('<div class="text-center text-muted" style="padding:35px"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat rekap...</div>');
+    $.ajax({
+      url: '{?=url(ADMIN."/logistik_non_medis/displayrekapnonrutin")?}',
+      type: 'POST', data: filterRekapNonRutin(), timeout: 30000
+    }).done(function(html){
+      $('#rekap-nr-display').html(html);
+    }).fail(function(xhr){
+      $('#rekap-nr-display').html('<div class="alert alert-danger">Rekap gagal dimuat. '+(xhr.responseText || '')+'</div>');
+    });
+  }
+  $('#rekap-nr-tampil').on('click', loadRekapNonRutin);
+  $('#rekap-nr-status').on('change', loadRekapNonRutin);
+  $('#rekap-nr-cari').on('keypress', function(e){ if(e.which === 13) loadRekapNonRutin(); });
+  $('#rekap-nr-cetak').on('click', function(){
+    var base = '{?=url(ADMIN."/logistik_non_medis/cetakrekapnonrutin")?}';
+    var query = $.param(filterRekapNonRutin());
+    window.open(base + (base.indexOf('?') >= 0 ? '&' : '?') + query, 'cetak_rekap_nonrutin', 'width=1200,height=760,scrollbars=yes,resizable=yes');
+  });
+  loadRekapNonRutin();
+})(jQuery);
+</script>

@@ -16,7 +16,7 @@
                 {loop: $po as $index => $row}
                 <tr>
                     <td>{?= $index + 1 + (($halaman - 1) * 10) ?}</td>
-                    <td><b>{$row.no_po}</b></td>
+                    <td><b>{$row.no_po_display}</b>{if: $row.vendor_belum_dipilih}<br><small class="text-muted">Nomor dibuat setelah vendor dipilih</small>{/if}</td>
                     <td>{$row.tgl_po}</td>
                     <td>{$row.nama_vendor}</td>
                     <td>{$row.grand_total_formatted}</td>

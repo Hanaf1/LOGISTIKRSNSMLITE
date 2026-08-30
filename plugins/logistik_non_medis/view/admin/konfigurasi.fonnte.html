@@ -1,0 +1,68 @@
+<ul class="nav nav-tabs" role="tablist" style="margin-bottom:20px;">
+  <li class="active"><a href="#pesan" role="tab" data-toggle="tab"><i class="fa fa-commenting"></i> Konfigurasi Pesan</a></li>
+  <li><a href="#tes" role="tab" data-toggle="tab"><i class="fa fa-paper-plane"></i> Tes Kirim Pesan</a></li>
+  <li><a href="#fonnte" role="tab" data-toggle="tab"><i class="fa fa-whatsapp"></i> Konfigurasi Fonnte</a></li>
+</ul>
+<div class="tab-content">
+  <div role="tabpanel" class="tab-pane" id="fonnte">
+    <div class="row"><div class="col-md-8"><div class="panel panel-default">
+      <div class="panel-heading"><h3 class="panel-title">Konfigurasi Notifikasi Fonnte</h3></div>
+      <form method="post" action="{?=url([ADMIN,'logistik_non_medis','saveKonfigurasiFonnte'])?}"><div class="panel-body">
+        <div class="form-group"><label><input type="checkbox" name="fonnte_aktif" value="1"{if: $aktif} checked{/if}> Aktifkan notifikasi WhatsApp approval</label></div>
+        <div class="form-group"><label>Fonnte API Token</label>
+          <input type="password" name="fonnte_token" class="form-control" value="" autocomplete="new-password" placeholder="{$token_placeholder}" />
+          <p class="help-block">{if: $token_tersimpan}Token sudah tersimpan (berakhir: {$token_akhir}). Kosongkan kolom ini bila tidak ingin mengganti token.{else}Token diambil dari menu Device pada dashboard Fonnte.{/if}</p>
+        </div>
+        <div class="row">
+          <div class="col-md-4"><label>Durasi mengetik (detik)</label><input type="number" name="fonnte_duration" class="form-control" min="0" max="10" value="{$duration}"><p class="help-block">Indikator mengetik sebelum pesan dikirim.</p></div>
+          <div class="col-md-4"><label>Jeda kirim (detik)</label><input type="number" name="fonnte_delay" class="form-control" min="0" max="10" value="{$delay}"><p class="help-block">Jeda yang diminta Fonnte.</p></div>
+        </div>
+        <button type="submit" class="btn btn-primary">Simpan Konfigurasi</button>
+      </div></form>
+    </div></div></div>
+  </div>
+  <div role="tabpanel" class="tab-pane active" id="pesan">
+    <div class="panel panel-default"><div class="panel-heading"><h3 class="panel-title">Pesan berdasarkan Tahap Approval</h3></div>
+      <div class="panel-body">
+        <div class="well well-sm">
+          <form method="post" action="{?=url([ADMIN,'logistik_non_medis','testTemplateFonnte'])?}">
+            <div class="row">
+              <div class="col-md-4"><label>Status yang dites</label><select name="test_tipe" class="form-control">
+                {loop: $templates}<option value="{$value.tipe}">{$value.label}</option>{/loop}
+              </select></div>
+              <div class="col-md-4"><label>Nomor tujuan</label><input type="text" name="test_target" class="form-control" placeholder="628xxxxxxxxxx" required></div>
+              <div class="col-md-2"><label>No. SPPB contoh</label><input type="text" name="test_no_sppb" class="form-control" value="TEST-SPPB"></div>
+              <div class="col-md-2" style="padding-top:25px;"><button type="submit" class="btn btn-success"><i class="fa fa-paper-plane"></i> Tes Status</button></div>
+            </div>
+          </form>
+        </div>
+        <form method="post" action="{?=url([ADMIN,'logistik_non_medis','saveTemplateFonnte'])?}">
+        <p class="text-muted">Gunakan <code>{no_sppb}</code> untuk nomor SPPB dan <code>{username}</code> untuk username penerima.</p>
+        {loop: $templates}
+        <div class="well well-sm">
+          <div class="checkbox" style="margin-top:0;"><label><input type="checkbox" name="template[{$value.tipe}][aktif]" value="1"{if: $value.aktif} checked{/if}> <strong>{$value.label}</strong></label></div>
+          <textarea class="form-control" name="template[{$value.tipe}][pesan]" rows="3">{$value.pesan}</textarea>
+        </div>
+        {/loop}
+        <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan Konfigurasi Pesan</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div role="tabpanel" class="tab-pane" id="tes">
+    <div class="row"><div class="col-md-8"><div class="panel panel-default">
+      <div class="panel-heading"><h3 class="panel-title">Tes Kirim Pesan Fonnte</h3></div>
+      <form method="post" action="{?=url([ADMIN,'logistik_non_medis','testFonnte'])?}"><div class="panel-body">
+        <div class="form-group"><label>Nomor Tujuan</label><input type="text" name="nomor_tujuan" class="form-control" placeholder="Contoh: 628123456789 atau 08123456789" required /></div>
+        <div class="form-group"><label>Isi Pesan</label><textarea name="pesan" class="form-control" rows="4" required>Pesan tes notifikasi approval dari SIMRS RSNS.</textarea></div>
+        <button type="submit" class="btn btn-success"><i class="fa fa-paper-plane"></i> Kirim Pesan Tes</button>
+      </div></form>
+    </div></div></div>
+  </div>
+</div>
+<script>
+$(function () {
+  if (window.location.hash === '#pesan') $('.nav-tabs a[href="#pesan"]').tab('show');
+  if (window.location.hash === '#tes') $('.nav-tabs a[href="#tes"]').tab('show');
+});
+</script>

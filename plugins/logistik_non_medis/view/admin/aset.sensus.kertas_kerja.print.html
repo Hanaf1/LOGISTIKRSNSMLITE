@@ -1,0 +1,13 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Kertas Kerja Sensus Aset</title><style>
+body{font-family:Arial,sans-serif;font-size:11px;color:#222;margin:24px}.toolbar{text-align:right;margin-bottom:15px}.kop{display:flex;align-items:center;border-bottom:3px double #000;padding-bottom:10px}.kop img{width:65px;margin-right:15px}.kop h2{margin:0;font-size:16px}.title{text-align:center;font-size:15px;font-weight:bold;margin:18px 0}.meta{width:100%;margin-bottom:14px}.meta td{padding:3px}.data{width:100%;border-collapse:collapse}.data th,.data td{border:1px solid #333;padding:5px}.data th{background:#eee;text-align:center}.ada{color:#267326;font-weight:bold}.tidak{color:#b52b27;font-weight:bold}.notes{border:1px solid #777;padding:10px;min-height:45px;margin-top:15px}.sign{display:flex;justify-content:space-between;margin-top:35px}.sign div{width:30%;text-align:center}.space{height:55px}@media print{.toolbar{display:none}body{margin:0}}
+</style></head><body>
+<div class="toolbar"><button onclick="window.print()">Cetak / Simpan PDF</button></div>
+<div class="kop">{if: !empty($logo)}<img src="{$logo}" alt="Logo">{/if}<div><h2>RS NUR HIDAYAH BANTUL</h2><div>Kertas Kerja Pemeriksaan Fisik Aset per Unit</div></div></div>
+<div class="title">KERTAS KERJA SENSUS ASET</div>
+<table class="meta"><tr><td width="130"><b>Periode</b></td><td>: {$meta.nama_sensus}</td><td width="100"><b>Unit/Ruangan</b></td><td>: {$nama_unit}</td></tr><tr><td><b>Tanggal</b></td><td>: {$meta.tanggal_mulai} s.d. {$meta.tanggal_selesai}</td><td><b>Petugas</b></td><td>: {$meta.petugas_scan ?: '-'}</td></tr></table>
+<table class="data"><thead><tr><th width="28">No</th><th>Kode Aset</th><th>Nama Aset</th><th>Nomor Seri</th><th>Kondisi</th><th>Keberadaan</th><th>Catatan/Keterangan</th></tr></thead><tbody>
+{loop: $items as $key => $item}<tr><td style="text-align:center">{?=$key+1?}</td><td>{$item.kode_aset}</td><td>{$item.nama_aset}</td><td>{$item.serial_number}</td><td>{$item.fisik_status_kondisi ?: '-'}</td><td class="{if: $item.keberadaan == 'Ada'}ada{else}tidak{/if}">{$item.keberadaan}</td><td>{$item.catatan_temuan ?: '-'}</td></tr>{/loop}
+</tbody></table>
+<div class="notes"><b>Catatan tambahan/penambahan di unit:</b><br>{$meta.catatan_tambahan ?: 'Tidak ada catatan tambahan.'}</div>
+<div class="sign"><div>Petugas Sensus<div class="space"></div>( {$meta.petugas_scan ?: '........................'} )</div><div>Kepala Unit<div class="space"></div>( ........................ )</div><div>Logistik/Aset<div class="space"></div>( ........................ )</div></div>
+</body></html>

@@ -1,56 +1,38 @@
 {if: !empty($aset)}
 {loop: $aset}
 <tr>
-    <td style="text-align:center; vertical-align:middle;">
-        <input type="checkbox" class="chk-aset-row" value="{$value.id}">
-    </td>
+    <td class="text-center">{$value.nomor_tabel}</td>
     <td>
-        {if: !empty($value.nomor_inventaris)}
-        <code style="font-size:12px; font-weight:bold;">{$value.nomor_inventaris}</code>
-        {else}
-        <code style="font-size:11px;">{$value.kode_aset}</code>
-        {/if}
+        <strong class="asset-name">{$value.nama_aset}</strong>
+        {if: !empty($value.merk_type)}<br><span class="label label-default">{$value.merk_type}</span>{/if}
+        <br><small class="asset-classification">{$value.nama_kelompok} &rsaquo; {$value.nama_jenis}</small>
     </td>
-    <td>
-        <strong class="asset-name">{$value.nama_aset}</strong><br>
-        <small class="asset-classification">{$value.nama_kelompok} &rsaquo; {$value.nama_jenis}</small><br>
-        <small class="text-muted">Kode sistem: {$value.kode_aset}</small>
+    <td><strong>{$value.nama_unit}</strong><br><small class="text-muted">{if: !empty($value.lokasi_fisik)}{$value.lokasi_fisik}{else}-{/if}</small></td>
+    <td>{if: !empty($value.tahun_beli)}{$value.tahun_beli}{if: $value.tahun_beli_referensi}<br><small class="text-warning">Tahun referensi</small>{/if}{else}-{/if}<br><small class="text-muted">{$value.sumber_perolehan}</small></td>
+    <td><span class="badge" style="font-size:13px;">{$value.jumlah_aset}</span> {$value.satuan}</td>
+    <td><code style="font-size:11px;">{$value.range_inventaris}</code></td>
+    <td style="white-space:nowrap;">
+        <span class="label label-success">{$value.jumlah_baik} Baik</span>
+        {if: $value.jumlah_rusak_ringan > 0}<br><span class="label label-warning">{$value.jumlah_rusak_ringan} Rusak Ringan</span>{/if}
+        {if: $value.jumlah_rusak_berat > 0}<br><span class="label label-danger">{$value.jumlah_rusak_berat} Rusak Berat</span>{/if}
     </td>
-    <td>
-        {if: !empty($value.merk_type)}<span class="label label-default">{$value.merk_type}</span>{else}<span class="text-muted">-</span>{/if}
+    <td style="white-space:nowrap;">
+        <strong>Rp. {?=number_format($value.harga_tampil,0,',','.')?}/unit</strong><br>
+        <small>Total Rp. {?=number_format($value.total_harga_tampil,0,',','.')?}</small><br>
+        <small class="text-muted">{$value.sumber_harga_tampil}</small>
     </td>
-    <td>{if: !empty($value.lokasi_fisik)}{$value.lokasi_fisik}{else}{$value.nama_unit}{/if}</td>
-    <td>{$value.sumber_perolehan}<br><small class="text-muted">{if: !empty($value.tahun_beli)}{$value.tahun_beli}{else}{?=date('Y', strtotime($value.tanggal_perolehan))?}{/if}</small></td>
-    <td><strong>{$value.jumlah}</strong> {$value.satuan}</td>
-    <td>
-        {if: $value.status_kondisi == 'Baik'}
-        <span class="label label-success"><i class="fa fa-check-circle"></i> Baik</span>
-        {elseif: $value.status_kondisi == 'Rusak Ringan'}
-        <span class="label label-warning"><i class="fa fa-warning"></i> Rusak Ringan</span>
-        {else}
-        <span class="label label-danger"><i class="fa fa-times-circle"></i> Rusak Berat</span>
-        {/if}
-    </td>
-    <td style="font-weight: bold; white-space:nowrap;">Rp. {?=number_format($value.harga_beli,0,',','.')?}</td>
     <td class="text-right">
-        <div class="btn-group">
-            <button type="button" class="btn btn-info btn-xs btn-detail-aset" data-id="{$value.id}" title="Detail Spesifikasi & Foto"><i class="fa fa-eye"></i></button>
-            <button type="button" class="btn btn-success btn-xs btn-edit-aset" data-id="{$value.id}" title="Edit Data"><i class="fa fa-edit"></i></button>
-            <button type="button" class="btn btn-warning btn-xs btn-print-aset" data-id="{$value.id}" data-kode="{$value.kode_aset}" title="Cetak Label QR/Barcode"><i class="fa fa-print"></i></button>
-            <button type="button" class="btn btn-danger btn-xs btn-hapus-aset" data-id="{$value.id}" data-kode="{$value.kode_aset}" title="Hapus Aset"><i class="fa fa-trash"></i></button>
-        </div>
+        {if: $value.jumlah_aset > 1}
+        <a href="{?=url([ADMIN,'logistik_non_medis','asetgrouppage'])?}&group_id={$value.asset_group_id}" class="btn btn-info btn-xs" title="Lihat {$value.jumlah_aset} aset"><i class="fa fa-folder-open"></i> Lihat {$value.jumlah_aset} Aset</a>
+        {else}
+        <a href="{?=url([ADMIN,'logistik_non_medis','asetdetailpage'])?}&id={$value.id}" class="btn btn-info btn-xs" title="Detail Aset"><i class="fa fa-eye"></i> Detail</a>
+        <a href="{?=url([ADMIN,'logistik_non_medis','asetformpage'])?}&id={$value.id}" class="btn btn-success btn-xs" title="Edit"><i class="fa fa-edit"></i></a>
+        {/if}
     </td>
 </tr>
 {/loop}
 {else}
-<tr>
-    <td colspan="10" class="text-center" style="padding: 30px; color: #888;">
-        <i class="fa fa-info-circle fa-2x" style="margin-bottom: 10px;"></i>
-        <p>Belum ada data aset non-medis yang terdaftar atau cocok dengan pencarian.</p>
-    </td>
-</tr>
+<tr><td colspan="9" class="text-center" style="padding:40px 0;color:#888;"><i class="fa fa-folder-open-o fa-2x"></i><p style="margin-top:10px;">Belum ada kelompok aset non-medis atau data tidak cocok dengan pencarian.</p></td></tr>
 {/if}
 
-<div id="aset-display-data" data-jumlah="{$jumlah_data}" data-halaman="{?= (int)$halaman ?}" data-jml-halaman="{?= (int)$jml_halaman ?}" style="display:none;"></div>
-
-
+<div id="aset-display-data" data-jumlah="{$jumlah_data}" data-halaman="{?=(int)$halaman?}" data-jml-halaman="{?=(int)$jml_halaman?}" style="display:none;"></div>

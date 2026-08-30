@@ -1,6 +1,6 @@
 <?php
-define('BASE_DIR', __DIR__);
-require_once(__DIR__.'/config.php');
+define('BASE_DIR', dirname(__DIR__, 3));
+require_once(__DIR__.'/../../../config.php');
 
 function e($value)
 {
@@ -12,12 +12,13 @@ function rupiah($value)
     return 'Rp '.number_format((float) ($value ?? 0), 0, ',', '.');
 }
 
-function tanggal_id($date)
+function tahun_perolehan(array $aset)
 {
-    if (empty($date) || $date === '0000-00-00') {
-        return '-';
-    }
-    return date('d/m/Y', strtotime($date));
+    $tahun = (int)($aset['tahun_beli'] ?? 0);
+    if ($tahun >= 1900 && $tahun <= 2100) return (string)$tahun;
+    $tanggal = (string)($aset['tanggal_perolehan'] ?? '');
+    if (preg_match('/^(19|20)\d{2}-\d{2}-\d{2}$/', $tanggal)) return substr($tanggal, 0, 4);
+    return '-';
 }
 
 $kode = trim($_GET['kode'] ?? '');
@@ -62,7 +63,8 @@ try {
 }
 
 $basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
-$uploadBase = $basePath.'/uploads/logistik_non_medis/aset/';
+$rootBase = preg_replace('#/plugins/logistik_non_medis/public$#', '', $basePath);
+$uploadBase = $rootBase.'/uploads/logistik_non_medis/aset/';
 $namaAset = $aset['nama_aset'] ?? 'Informasi Aset';
 $kodeLabelInventaris = '';
 if ($aset) {
@@ -151,7 +153,7 @@ if (!empty($aset['foto_depan'])) {
           <div class="item"><div class="label">Unit</div><div class="value"><?= e($aset['nama_unit'] ?: '-') ?></div></div>
           <div class="item"><div class="label">Kelompok / Jenis</div><div class="value"><?= e(trim(($aset['nama_kelompok'] ?: 'Belum terhubung').' / '.($aset['nama_jenis'] ?: '-'), ' /')) ?></div></div>
           <div class="item"><div class="label">Kondisi</div><div class="value"><?= e($aset['status_kondisi']) ?></div></div>
-          <div class="item"><div class="label">Tanggal Perolehan</div><div class="value"><?= e(tanggal_id($aset['tanggal_perolehan'])) ?></div></div>
+          <div class="item"><div class="label">Tahun Beli / Perolehan</div><div class="value"><?= e(tahun_perolehan($aset)) ?></div></div>
           <div class="item"><div class="label">Nilai Perolehan</div><div class="value"><?= e(rupiah($aset['harga_beli'])) ?></div></div>
           <div class="item"><div class="label">PIC</div><div class="value"><?= e($aset['pic'] ?: '-') ?></div></div>
           <div class="item"><div class="label">Serial Number</div><div class="value"><?= e($aset['serial_number'] ?: '-') ?></div></div>

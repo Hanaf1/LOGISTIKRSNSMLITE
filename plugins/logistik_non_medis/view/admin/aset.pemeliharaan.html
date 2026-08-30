@@ -83,6 +83,7 @@
                 <h3 class="panel-title" style="margin-top: 5px;"><i class="fa fa-wrench"></i> Pemeliharaan & Perbaikan Aset</h3>
                 <ul class="nav nav-tabs pull-right panel-options" role="tablist">
                     <li role="presentation" class="active"><a href="#dashboard-tab" aria-controls="dashboard-tab" role="tab" data-toggle="tab" onclick="loadDashboard()"><i class="fa fa-dashboard"></i> Dashboard & Alert</a></li>
+                    <li role="presentation"><a href="#bukulog-tab" aria-controls="bukulog-tab" role="tab" data-toggle="tab" onclick="loadBukuMaintenance()"><i class="fa fa-book"></i> Buku Maintenance</a></li>
                     <li role="presentation"><a href="#jadwal-tab" aria-controls="jadwal-tab" role="tab" data-toggle="tab" onclick="loadJadwal()"><i class="fa fa-calendar"></i> Jadwal PM</a></li>
                     <li role="presentation"><a href="#wo-tab" aria-controls="wo-tab" role="tab" data-toggle="tab" onclick="loadWO()"><i class="fa fa-clipboard"></i> Surat Perintah Kerja (WO)</a></li>
                     <li role="presentation"><a href="#vendor-tab" aria-controls="vendor-tab" role="tab" data-toggle="tab" onclick="loadVendor()"><i class="fa fa-truck"></i> Vendor & Teknisi</a></li>
@@ -96,6 +97,26 @@
                     <div role="tabpanel" class="tab-pane active" id="dashboard-tab">
                         <div id="container-dashboard">
                             <div class="text-center" style="padding: 40px;"><i class="fa fa-spinner fa-spin fa-2x"></i> Memuat dashboard...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB 1.5: BUKU MAINTENANCE -->
+                    <div role="tabpanel" class="tab-pane" id="bukulog-tab">
+                        <div class="well well-sm">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <select id="buku-aset-filter" class="form-control select2" style="width: 100%;">
+                                        <option value="">Pilih Aset...</option>
+                                        <!-- Opsi aset dimuat via AJAX -->
+                                    </select>
+                                </div>
+                                <div class="col-md-8 text-right">
+                                    <button class="btn btn-primary" onclick="openFormBukuMaintenance()"><i class="fa fa-plus"></i> Tambah Log Perbaikan</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="container-bukulog">
+                            <div class="text-center" style="padding: 40px;"><i class="fa fa-info-circle fa-2x"></i><br>Silakan pilih aset untuk melihat buku maintenance.</div>
                         </div>
                     </div>
                     
@@ -225,6 +246,15 @@
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div id="form-complete-body"></div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL BUKU MAINTENANCE -->
+<div class="modal fade" id="bukuMaintenanceModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div id="form-buku-maintenance-body"></div>
         </div>
     </div>
 </div>
@@ -390,4 +420,87 @@ function saveCompleteWO() {
         }
     });
 }
+
+// BUKU MAINTENANCE FUNCTIONS
+function initBukuAsetSelect2() {
+    var $select = $('#buku-aset-filter');
+    if (!$select.length) return;
+    // The admin theme automatically turns every <select> into Selectator.
+    // Remove that wrapper before attaching Select2's AJAX data source.
+    if ($select.data('selectator')) {
+        $select.selectator('destroy');
+        $select.siblings('.selectator_element').remove();
+    }
+    if ($select.hasClass('select2-hidden-accessible')) {
+        $select.select2('destroy');
+    }
+    $select.select2({
+        width: '100%',
+        placeholder: 'Pilih Aset...',
+        allowClear: true,
+        minimumInputLength: 0,
+        ajax: {
+            url: '{?=url(ADMIN."/logistik_non_medis/ajaxselect2aset")?}',
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+                return { q: params.term || '' };
+            },
+            processResults: function (data) {
+                return { results: data || [] };
+            },
+            cache: true
+        }
+    }).on('change', function() {
+        loadBukuMaintenance();
+    });
+}
+
+function loadBukuMaintenance() {
+    var aset = $('#buku-aset-filter').val();
+    if (!aset) {
+        $('#container-bukulog').html('<div class="text-center" style="padding: 40px;"><i class="fa fa-info-circle fa-2x"></i><br>Silakan pilih aset untuk melihat buku maintenance.</div>');
+        return;
+    }
+    $('#container-bukulog').html('<div class="text-center" style="padding: 40px;"><i class="fa fa-spinner fa-spin fa-2x"></i> Memuat data...</div>');
+    $.post('{?=url(ADMIN."/logistik_non_medis/displaybukumaintenance")?}', {kode_aset: aset}, function(data) {
+        $('#container-bukulog').html(data);
+    });
+}
+
+function openFormBukuMaintenance() {
+    var aset = $('#buku-aset-filter').val();
+    if (!aset) {
+        bootbox.alert("Pilih aset terlebih dahulu sebelum menambahkan log perbaikan.");
+        return;
+    }
+    $.post('{?=url(ADMIN."/logistik_non_medis/formbukumaintenance")?}', {kode_aset: aset}, function(data) {
+        $('#form-buku-maintenance-body').html(data);
+        $('#bukuMaintenanceModal').modal('show');
+    });
+}
+
+function saveBukuMaintenance() {
+    var data = $('#bukuMaintenanceForm').serialize();
+    $.post('{?=url(ADMIN."/logistik_non_medis/savebukumaintenance")?}', data, function(response) {
+        var res = (typeof response === 'object') ? response : JSON.parse(response);
+        if (res.status == 'success') {
+            $('#bukuMaintenanceModal').modal('hide');
+            loadBukuMaintenance();
+            alert('Log perbaikan berhasil disimpan!');
+        } else {
+            alert('Gagal: ' + (res.message || 'Terjadi kesalahan'));
+        }
+    }).fail(function(xhr) {
+        var message = 'Gagal menyimpan log perbaikan.';
+        if (xhr.responseText) {
+            message += '\\nPeriksa log server atau coba lagi.';
+        }
+        alert(message);
+    });
+}
+
+$(document).ready(function() {
+    initBukuAsetSelect2();
+});
 </script>

@@ -1,6 +1,30 @@
+<div class="row" style="margin-bottom:15px;">
+    <div class="col-md-6">
+        <div class="panel panel-success" style="margin-bottom:0;">
+            <div class="panel-body">
+                <div class="media"><div class="media-left"><i class="fa fa-file-text-o fa-3x text-success"></i></div><div class="media-body">
+                    <h4 class="media-heading">Penerimaan dari Purchase Order</h4>
+                    <p class="text-muted">Pilih PO pada daftar di bawah. Barang, vendor, dan sisa pesanan dimuat otomatis.</p>
+                    <a href="#po-menunggu" class="btn btn-success btn-sm"><i class="fa fa-arrow-down"></i> Pilih PO</a>
+                </div></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="panel panel-warning" style="margin-bottom:0;">
+            <div class="panel-body">
+                <div class="media"><div class="media-left"><i class="fa fa-pencil-square-o fa-3x text-warning"></i></div><div class="media-body">
+                    <h4 class="media-heading">Penerimaan Tanpa Purchase Order</h4>
+                    <p class="text-muted">Catat barang yang datang tanpa PO sistem. Sumber dan alasannya wajib dicatat.</p>
+                    <button class="btn btn-warning btn-sm" onclick="openGudangReceiptForm('', '', 'MANUAL')"><i class="fa fa-plus"></i> Buat Penerimaan Tanpa PO</button>
+                </div></div>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="row">
     <div class="col-md-8">
-        <div class="panel panel-primary">
+        <div class="panel panel-primary" id="po-menunggu">
             <div class="panel-heading">
                 <style>
                     .custom-breadcrumb {
@@ -54,7 +78,7 @@
                                 <th>Tgl PO</th>
                                 <th>Vendor</th>
                                 <th>Status</th>
-                                <th width="120">Aksi</th>
+                                <th width="190">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -62,7 +86,10 @@
                             <tr>
                                 <td><strong>{$value.no_po}</strong></td>
                                 <td>{?=date('d/m/Y', strtotime($value.tgl_po))?}</td>
-                                <td>{$value.kode_vendor}</td>
+                                <td>
+                                    <strong>{$value.nama_vendor}</strong><br>
+                                    <small class="text-muted">{$value.kode_vendor}</small>
+                                </td>
                                 <td>
                                     {if: $value.status == 'Terkirim'}
                                     <span class="label label-warning">Menunggu</span>
@@ -71,6 +98,9 @@
                                     {/if}
                                 </td>
                                 <td>
+                                    <button class="btn btn-info btn-block btn-sm" style="margin-bottom: 5px;" onclick="showGudangPoItems('{$value.no_po}')">
+                                        <i class="fa fa-list"></i> Lihat Item
+                                    </button>
                                     <button class="btn btn-success btn-block btn-sm" onclick="openGudangReceiptForm('{$value.no_po}')">
                                         <i class="fa fa-download"></i> Terima Barang
                                     </button>
@@ -100,7 +130,10 @@
                 <a href="javascript:void(0)" class="list-group-item" onclick="openGudangReceiptForm('', '{$value.no_penerimaan}')">
                     <h4 class="list-group-item-heading">{$value.no_penerimaan}</h4>
                     <p class="list-group-item-text">
-                        <small class="text-muted">{$value.tgl_penerimaan} | PO: {$value.no_po}</small>
+                        <small class="text-muted">{$value.tgl_penerimaan} |
+                            {if: $value.tipe_penerimaan == 'MANUAL'}Tanpa PO: {$value.sumber_manual}{else}PO: {$value.no_po}{/if}
+                            | {$value.status}
+                        </small>
                     </p>
                 </a>
                 {/loop}

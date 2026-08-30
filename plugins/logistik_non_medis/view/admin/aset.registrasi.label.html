@@ -4,156 +4,188 @@
     <meta charset="utf-8">
     <title>Cetak Label Aset - {$aset.kode_aset}</title>
     <style>
+        * { box-sizing: border-box; }
+
+        html,
         body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #fff;
+            background: #fff;
             color: #000;
+            font-family: Arial, Helvetica, sans-serif;
         }
-        /* Label Box Dimensions Optimized for standard 50mm x 30mm or similar thermal stickers */
+
         .label-sticker {
-            width: 380px;
-            height: 200px;
-            border: 2px solid #000;
-            border-radius: 4px;
-            padding: 10px;
-            margin: 20px auto;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: row;
-            align-items: center;
+            width: 90mm;
+            height: 40mm;
+            margin: 8mm auto;
+            border: .45mm solid #000;
             overflow: hidden;
-            background-color: #fff;
+            background: #fff;
         }
-        .qr-section {
-            width: 120px;
+
+        .label-header {
+            height: 13mm;
+            display: flex;
+            border-bottom: .35mm solid #000;
+        }
+
+        .logo-box {
+            width: 18mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-right: .35mm solid #000;
+            padding: 1.2mm;
+        }
+
+        .hospital-logo {
+            display: block;
+            width: 10.5mm;
+            height: 10.5mm;
+            object-fit: contain;
+        }
+
+        .institution-box {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin-right: 15px;
-        }
-        .qr-image {
-            width: 105px;
-            height: 105px;
-            border: 1px solid #000;
-            padding: 2px;
-        }
-        .qr-subtext {
-            font-size: 8px;
-            font-weight: bold;
-            margin-top: 5px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .info-section {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            height: 100%;
-        }
-        .header-brand {
-            font-size: 9px;
-            font-weight: 800;
-            text-transform: uppercase;
-            border-bottom: 2px double #000;
-            padding-bottom: 3px;
-            margin-bottom: 5px;
-            letter-spacing: 0.5px;
+            line-height: 1.15;
             text-align: center;
-        }
-        .asset-code {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            font-weight: 800;
-            margin: 2px 0;
-            color: #000;
-        }
-        .asset-name {
-            font-size: 11px;
-            font-weight: 700;
-            line-height: 1.2;
-            height: 2.4em;
-            overflow: hidden;
-            margin: 3px 0;
             text-transform: uppercase;
-        }
-        .meta-row {
-            font-size: 9px;
-            margin: 2px 0;
-        }
-        .meta-row span {
-            font-weight: 800;
-            text-transform: uppercase;
-        }
-        .footer-note {
-            font-size: 7px;
-            text-align: right;
-            border-top: 1px dashed #000;
-            padding-top: 2px;
-            margin-top: 3px;
-            font-style: italic;
         }
 
-        /* Print Media Styles to remove headers, margins, and force fits */
+        .hospital-name {
+            font-size: 10pt;
+            font-weight: 800;
+            letter-spacing: .15mm;
+        }
+
+        .label-body {
+            height: 26.1mm;
+            display: flex;
+        }
+
+        .asset-information {
+            min-width: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .information-row {
+            min-height: 8.7mm;
+            display: flex;
+            align-items: center;
+            border-bottom: .25mm solid #000;
+            font-size: 7.5pt;
+            line-height: 1.15;
+        }
+
+        .information-row:last-child { border-bottom: 0; }
+
+        .information-label {
+            flex: 0 0 23mm;
+            padding: 1.2mm 1.5mm;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .information-value {
+            min-width: 0;
+            flex: 1;
+            padding: 1.2mm 1.5mm 1.2mm 0;
+            font-weight: 700;
+            overflow: hidden;
+            overflow-wrap: anywhere;
+        }
+
+        .inventory-code {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 9pt;
+            letter-spacing: .08mm;
+        }
+
+        .asset-name {
+            text-transform: uppercase;
+        }
+
+        .qr-box {
+            width: 26.1mm;
+            flex: 0 0 26.1mm;
+            border-left: .35mm solid #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.2mm;
+        }
+
+        .qr-image {
+            display: block;
+            width: 20mm;
+            height: 20mm;
+            object-fit: contain;
+        }
+
+        .qr-caption {
+            margin-top: .7mm;
+            font-size: 5.5pt;
+            font-weight: 700;
+            letter-spacing: .08mm;
+            text-transform: uppercase;
+        }
+
+        @page {
+            size: 90mm 40mm;
+            margin: 0;
+        }
+
         @media print {
-            body {
-                margin: 0;
-                padding: 0;
-            }
-            .label-sticker {
-                margin: 0;
-                border: 2px solid #000;
-                page-break-inside: avoid;
-            }
-            /* Hide generic browser headers/footers */
-            @page {
-                size: auto;
-                margin: 0;
-            }
+            .label-sticker { margin: 0; }
         }
     </style>
 </head>
 <body>
-
     <div class="label-sticker">
-        
-        <!-- Left Side: QR Code -->
-        <div class="qr-section">
-            <img class="qr-image" src="{$qr_image_url}" alt="Aset QR Code">
-            <div class="qr-subtext">SCAN UNTUK DETAIL</div>
-        </div>
-        
-        <!-- Right Side: Info details -->
-        <div class="info-section">
-            <div>
-                <div class="header-brand">INVENTARIS ASET NON-MEDIS</div>
-                <div class="asset-code">Kode Inventaris: {$aset.kode_label_inventaris}</div>
-                <div class="asset-name">{$aset.nama_aset}</div>
+        <div class="label-header">
+            <div class="logo-box">
+                <img class="hospital-logo" src="{$logo_url}" alt="Logo RSU Nurusyifa">
             </div>
-            
-            <div>
-                <div class="meta-row">UNIT: <span>{$aset.nama_unit}</span></div>
-                <div class="meta-row">PIC: <span>{$aset.pic}</span></div>
-                {if: !empty($aset.serial_number)}
-                <div class="meta-row" style="font-size: 8px;">S/N: <span style="font-family: monospace;">{$aset.serial_number}</span></div>
-                {/if}
-                <div class="footer-note">SIMRS mLite - Logistik Non-Medis</div>
+            <div class="institution-box">
+                <div class="hospital-name">RSU Nurusyifa</div>
             </div>
         </div>
-        
+
+        <div class="label-body">
+            <div class="asset-information">
+                <div class="information-row">
+                    <div class="information-label">Kode Inventaris</div>
+                    <div class="information-value inventory-code">{$aset.kode_label_inventaris}</div>
+                </div>
+                <div class="information-row">
+                    <div class="information-label">Barang</div>
+                    <div class="information-value asset-name">{$aset.nama_aset}</div>
+                </div>
+                <div class="information-row">
+                    <div class="information-label">Merk</div>
+                    <div class="information-value">{if: !empty($aset.merk_type)}{$aset.merk_type}{else}-{/if}</div>
+                </div>
+            </div>
+
+            <div class="qr-box">
+                <img class="qr-image" src="{$qr_image_url}" alt="QR Code Inventaris">
+                <div class="qr-caption">Scan Inventaris</div>
+            </div>
+        </div>
     </div>
 
     <script>
-        window.onload = function() {
+        window.addEventListener('load', function() {
             window.print();
-            // Automatically close the print window after print dialog is closed
-            setTimeout(function() {
-                window.close();
-            }, 1000);
-        }
+        });
     </script>
 </body>
 </html>

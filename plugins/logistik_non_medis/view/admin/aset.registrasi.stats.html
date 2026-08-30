@@ -1,0 +1,117 @@
+<div class="row" style="margin-bottom:15px;">
+  <div class="col-md-6">
+    <div class="panel panel-default" style="border-left:4px solid #337ab7;">
+      <div class="panel-body">
+        <div style="font-size:26px;font-weight:bold;color:#2f4050;">{$jumlah_data}</div>
+        <div style="font-size:12px;color:#777;text-transform:uppercase;font-weight:bold;">Total Aset Terdaftar</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="panel panel-default" style="border-left:4px solid #5cb85c;">
+      <div class="panel-body">
+        <div style="font-size:22px;font-weight:bold;color:#2f4050;">Rp. {?=number_format($total_nilai,0,',','.')?}</div>
+        <div style="font-size:12px;color:#777;text-transform:uppercase;font-weight:bold;">Total Nilai Aset</div>
+        <small class="text-muted">Perolehan, dilengkapi harga referensi</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .aset-chart-panel .panel-body { padding: 15px; }
+  .aset-chart-wrap { position: relative; height: 300px; }
+  @media (max-width: 991px) {
+    .aset-chart-wrap { height: 260px; }
+  }
+</style>
+
+<div class="row" style="margin-bottom:15px;">
+  <div class="col-md-6">
+    <div class="panel panel-default">
+      <div class="panel-heading"><strong>Grafik Kelompok Barang</strong></div>
+      <div class="panel-body"><div class="aset-chart-wrap"><canvas id="regChartKelompok"></canvas></div></div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="panel panel-default">
+      <div class="panel-heading"><strong>Komposisi Tahun Perolehan</strong></div>
+      <div class="panel-body"><div class="aset-chart-wrap"><canvas id="regChartTahun"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="row" style="margin-bottom:15px;">
+  <div class="col-md-6">
+    <div class="panel panel-default aset-chart-panel">
+      <div class="panel-heading"><strong>Kondisi Aset</strong></div>
+      <div class="panel-body"><div class="aset-chart-wrap"><canvas id="regChartKondisi"></canvas></div></div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="panel panel-default">
+      <div class="panel-heading"><strong>Komposisi Unit</strong></div>
+      <div class="panel-body"><div class="aset-chart-wrap"><canvas id="regChartUnit"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  if (!window.Chart) return;
+  window.regChartInstances = window.regChartInstances || {};
+  if (window.regChartInstances.kondisi) window.regChartInstances.kondisi.destroy();
+  if (window.regChartInstances.kelompok) window.regChartInstances.kelompok.destroy();
+  if (window.regChartInstances.tahun) window.regChartInstances.tahun.destroy();
+  if (window.regChartInstances.unit) window.regChartInstances.unit.destroy();
+  
+  var colors = ['#337ab7','#5cb85c','#f0ad4e','#d9534f','#5bc0de','#777','#8e44ad','#16a085'];
+  var kondisiLabels = ['Baik', 'Rusak Ringan', 'Rusak Berat'];
+  var kondisiData = {$chart_kondisi_data};
+  var kelompokLabels = {$chart_kelompok_labels};
+  var kelompokData = {$chart_kelompok_data};
+  var tahunLabels = {$chart_tahun_labels};
+  var tahunData = {$chart_tahun_data};
+  var unitLabels = {$chart_unit_labels};
+  var unitData = {$chart_unit_data};
+
+  if ($('#regChartKondisi').length) {
+    window.regChartInstances.kondisi = new Chart($('#regChartKondisi')[0].getContext('2d'), {
+      type: 'horizontalBar',
+      data: {
+        labels: kondisiLabels.map(function(label, index) { return label + ' (' + kondisiData[index] + ')'; }),
+        datasets: [{ label: 'Jumlah Aset', data: kondisiData, backgroundColor: ['#5cb85c','#f0ad4e','#d9534f'] }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        legend: { display: false },
+        scales: { xAxes: [{ ticks: { beginAtZero: true, precision: 0 } }], yAxes: [{ gridLines: { display: false } }] },
+        tooltips: { callbacks: { label: function(item) { return 'Jumlah aset: ' + item.xLabel; } } }
+      }
+    });
+  }
+
+  if ($('#regChartKelompok').length) {
+    window.regChartInstances.kelompok = new Chart($('#regChartKelompok')[0].getContext('2d'), {
+      type: 'bar',
+      data: { labels: kelompokLabels, datasets: [{ label: 'Jumlah Item', data: kelompokData, backgroundColor: '#337ab7' }] },
+      options: { responsive: true, maintainAspectRatio: false, legend: { display: false }, scales: { yAxes: [{ ticks: { beginAtZero: true, precision: 0 } }] } }
+    });
+  }
+  if ($('#regChartTahun').length) {
+    window.regChartInstances.tahun = new Chart($('#regChartTahun')[0].getContext('2d'), {
+      type: 'bar',
+      data: { labels: tahunLabels, datasets: [{ label: 'Jumlah Aset', data: tahunData, backgroundColor: '#16a085' }] },
+      options: { responsive: true, maintainAspectRatio: false, legend: { display: false }, scales: { yAxes: [{ ticks: { beginAtZero: true, precision: 0 } }] } }
+    });
+  }
+  if ($('#regChartUnit').length) {
+    window.regChartInstances.unit = new Chart($('#regChartUnit')[0].getContext('2d'), {
+      type: 'doughnut',
+      data: { labels: unitLabels, datasets: [{ data: unitData, backgroundColor: colors }] },
+      options: { responsive: true, maintainAspectRatio: false, legend: { position: 'bottom' } }
+    });
+  }
+})();
+</script>

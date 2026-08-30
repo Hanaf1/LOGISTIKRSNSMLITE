@@ -65,19 +65,34 @@
             <div class="panel-body">
                 <div class="well" style="padding: 15px; margin-bottom: 20px;">
                     <form id="form-filter-opnamev2" class="row">
-                        <div class="col-md-5">
+                        <div class="col-md-2">
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label class="control-label">Tanggal Awal</label>
                                 <input type="text" name="tgl_awal" class="form-control datepicker" value="{?=date('Y-m-01')?}">
                             </div>
                         </div>
-                        <div class="col-md-5">
+                        <div class="col-md-2">
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label class="control-label">Tanggal Akhir</label>
                                 <input type="text" name="tgl_akhir" class="form-control datepicker" value="{?=date('Y-m-d')?}">
                             </div>
                         </div>
-                        <div class="col-md-2 text-right" style="padding-top: 25px;">
+                        <div class="col-md-3">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="control-label">Jenis/Kategori Barang</label>
+                                <select name="kategori" class="form-control">
+                                    <option value="">-- Semua Jenis Barang --</option>
+                                    {loop: $kategori as $kat}<option value="{$kat.kode_kategori}">{$kat.nama_kategori}</option>{/loop}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="control-label">Cari Barang</label>
+                                <input type="text" name="cari" class="form-control" placeholder="Kode atau nama barang...">
+                            </div>
+                        </div>
+                        <div class="col-md-1 text-right" style="padding-top: 25px;">
                             <button type="submit" class="btn btn-primary btn-block"><i class="fa fa-search"></i> Tampilkan</button>
                         </div>
                     </form>
@@ -98,6 +113,12 @@
     </div>
 </div>
 
+<div class="modal fade" id="modal-penyesuaian-opnamev2" tabindex="-1" role="dialog"><div class="modal-dialog" role="document"><div class="modal-content"><form id="form-penyesuaian-opnamev2">
+  <div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title"><i class="fa fa-balance-scale"></i> Penyesuaian Stok per Barang</h4></div>
+  <div class="modal-body"><input type="hidden" name="kode_item" id="adj-kode-item"><div class="alert alert-info" style="padding:10px">Jumlah fisik akan menjadi stok saat ini dan selisih dicatat sebagai transaksi <strong>Opname</strong>.</div><dl class="dl-horizontal"><dt>Barang</dt><dd id="adj-nama-barang">-</dd><dt>Stok sistem saat ini</dt><dd><strong id="adj-stok-sistem">0</strong> <span id="adj-satuan"></span></dd></dl><div class="form-group"><label>Jumlah Fisik / Stok Akhir <span class="text-danger">*</span></label><input type="number" min="0" step="0.01" required name="stok_fisik" id="adj-stok-fisik" class="form-control"></div><div class="form-group"><label>Catatan Penyesuaian <span class="text-danger">*</span></label><textarea required name="catatan" class="form-control" rows="3" placeholder="Contoh: selisih hasil hitung fisik rak A atau stok belum tercatat"></textarea></div></div>
+  <div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Batal</button><button type="submit" class="btn btn-warning" id="btn-simpan-penyesuaian"><i class="fa fa-check"></i> Simpan Penyesuaian</button></div>
+</form></div></div></div>
+
 <script>
 $(document).ready(function() {
     $('.select2').select2();
@@ -107,13 +128,29 @@ $(document).ready(function() {
         locale: 'id'
     });
 
-    $('#form-filter-opnamev2').submit(function(e) {
-        e.preventDefault();
+    var halamanOpnameV2 = 1;
+    function loadOpnameV2(halaman) {
+        halamanOpnameV2 = halaman || 1;
         $('#display-opnamev2').html('<div class="text-center" style="padding: 50px;"><i class="fa fa-spinner fa-spin fa-3x text-muted"></i><p class="text-muted">Memproses data stok... Ini mungkin membutuhkan waktu beberapa detik.</p></div>');
-        
-        $.post('{?=url([ADMIN, "logistik_non_medis", "displayopnamev2"])?}', $(this).serialize(), function(data) {
+        var formData = $('#form-filter-opnamev2').serializeArray();
+        formData.push({name: 'halaman', value: halamanOpnameV2});
+        $.post('{?=url([ADMIN, "logistik_non_medis", "displayopnamev2"])?}', $.param(formData), function(data) {
             $('#display-opnamev2').html(data);
         });
+    }
+    $('#form-filter-opnamev2').submit(function(e) {
+        e.preventDefault();
+        loadOpnameV2(1);
+    });
+    $(document).on('click', '.pagination-opnamev2 a', function(e) { e.preventDefault(); loadOpnameV2($(this).data('page')); });
+    $(document).on('click', '.btn-penyesuaian-opnamev2', function() {
+        var $btn=$(this); $('#form-penyesuaian-opnamev2')[0].reset(); $('#adj-kode-item').val($btn.data('kode')); $('#adj-nama-barang').text($btn.data('nama')); $('#adj-stok-sistem').text($btn.data('stok')); $('#adj-satuan').text($btn.data('satuan')); $('#modal-penyesuaian-opnamev2').modal('show');
+    });
+    $('#form-penyesuaian-opnamev2').submit(function(e) {
+        e.preventDefault(); var $btn=$('#btn-simpan-penyesuaian').prop('disabled',true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+        $.post('{?=url([ADMIN, "logistik_non_medis", "simpanpenyesuaianopnamev2"])?}', $(this).serialize(), function(res) {
+            if (res.status === 'success') { $('#modal-penyesuaian-opnamev2').modal('hide'); bootbox.alert(res.message, function(){ loadOpnameV2(halamanOpnameV2); }); } else bootbox.alert(res.message || 'Penyesuaian gagal disimpan.');
+        }, 'json').fail(function(){ bootbox.alert('Penyesuaian gagal diproses.'); }).always(function(){ $btn.prop('disabled',false).html('<i class="fa fa-check"></i> Simpan Penyesuaian'); });
     });
 
     $('#btn-export-excel').click(function() {
@@ -139,6 +176,6 @@ $(document).ready(function() {
     });
     
     // Auto-load on init
-    $('#form-filter-opnamev2').submit();
+    loadOpnameV2(1);
 });
 </script>

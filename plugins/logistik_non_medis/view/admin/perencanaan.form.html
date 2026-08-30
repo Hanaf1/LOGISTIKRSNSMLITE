@@ -66,6 +66,12 @@
                 </tbody>
             </table>
         </div>
+        <div class="alert alert-info" style="margin: 8px 0; padding: 8px 12px;">
+            <strong>Arti skala prioritas:</strong>
+            D = Diinginkan/penunjang (dapat ditunda),
+            E = Penting/kebutuhan utama (penundaan dapat mengganggu pelayanan),
+            V = Sangat penting/kritis (harus diprioritaskan).
+        </div>
         <button type="button" class="btn btn-info btn-sm" onclick="addTableRow()"><i class="fa fa-plus"></i> Tambah Barang</button>
     </div>
     <div class="modal-footer">
@@ -152,10 +158,10 @@ function addTableRow(data = null) {
                 <input type="text" name="items[${index}][harga_referensi]" class="form-control rupiah-input" id="harga_${index}" value="${harga ? formatRupiah(harga, 'Rp. ') : ''}" placeholder="Rp. 0">
             </td>
             <td>
-                <select name="items[${index}][prioritas]" class="form-control">
-                    <option value="Desirable" ${prioritas == 'Desirable' ? 'selected' : ''}>D</option>
-                    <option value="Essential" ${prioritas == 'Essential' ? 'selected' : ''}>E</option>
-                    <option value="Vital" ${prioritas == 'Vital' ? 'selected' : ''}>V</option>
+                <select name="items[${index}][prioritas]" class="form-control" title="Skala prioritas VEN">
+                    <option value="Desirable" ${prioritas == 'Desirable' ? 'selected' : ''}>D (Desirable = Diinginkan/Penunjang)</option>
+                    <option value="Essential" ${prioritas == 'Essential' ? 'selected' : ''}>E (Essential = Penting/Kebutuhan Utama)</option>
+                    <option value="Vital" ${prioritas == 'Vital' ? 'selected' : ''}>V (Vital = Sangat Penting/Kritis)</option>
                 </select>
             </td>
             <td>

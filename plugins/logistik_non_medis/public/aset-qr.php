@@ -1,7 +1,7 @@
 <?php
-define('BASE_DIR', __DIR__);
-require_once(__DIR__.'/config.php');
-require_once(__DIR__.'/systems/lib/Autoloader.php');
+define('BASE_DIR', dirname(__DIR__, 3));
+require_once(__DIR__.'/../../../config.php');
+require_once(BASE_DIR.'/systems/lib/QRCode.php');
 
 use Systems\Lib\QRCode;
 

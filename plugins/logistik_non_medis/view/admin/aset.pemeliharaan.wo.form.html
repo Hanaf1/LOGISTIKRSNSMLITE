@@ -27,15 +27,19 @@
             </div>
         </div>
         
-        <!-- Live Search Aset -->
+        <!-- Pilih Aset -->
         <div class="form-group">
             <label style="font-weight: bold; color: #444;">Pilih Aset Terkait <span class="text-danger">*</span></label>
-            <div class="input-group">
-                <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                <input type="text" id="cari_aset_wo" class="form-control" placeholder="Ketik nama atau kode aset..." value="{if: !empty($wo.nama_aset)}[{$wo.kode_aset}] {$wo.nama_aset}{/if}" required {if: !empty($jadwal_id)}readonly style="background-color: #f9f9f9;"{/if}>
-            </div>
-            <input type="hidden" id="kode_aset_wo" name="kode_aset" value="{$wo.kode_aset}">
-            <small class="help-block text-muted">Aset harus terdaftar di modul Registrasi Aset.</small>
+            <select id="kode_aset_wo" name="kode_aset" class="form-control" required {if: !empty($jadwal_id)}disabled{/if}>
+                <option value="">Ketik nama atau kode aset...</option>
+                {if: !empty($wo.kode_aset)}
+                <option value="{$wo.kode_aset}" selected>[{$wo.kode_aset}] {$wo.nama_aset}</option>
+                {/if}
+            </select>
+            {if: !empty($jadwal_id)}
+            <input type="hidden" name="kode_aset" value="{$wo.kode_aset}">
+            {/if}
+            <small class="help-block text-muted">Ketik nama atau kode aset, kemudian pilih hasilnya.</small>
         </div>
         
         <!-- Nama Kegiatan / Keluhan -->
@@ -116,14 +120,27 @@
 
 <script>
 $(function() {
-    // Autocomplete untuk pencarian aset di form WO
-    $("#cari_aset_wo").autocomplete({
-        source: "{?=url(ADMIN.'/logistik_non_medis/searchasetautocomplete')?}",
-        minLength: 1,
-        select: function(event, ui) {
-            $("#kode_aset_wo").val(ui.item.kode_aset);
-            $("#cari_aset_wo").val(ui.item.label);
-            return false;
+    var $aset = $('#kode_aset_wo');
+    if ($aset.data('selectator')) {
+        $aset.selectator('destroy');
+        $aset.siblings('.selectator_element').remove();
+    }
+    $aset.select2({
+        width: '100%',
+        dropdownParent: $('#woModal'),
+        placeholder: 'Ketik nama atau kode aset...',
+        allowClear: true,
+        minimumInputLength: 0,
+        ajax: {
+            url: '{?=url(ADMIN."/logistik_non_medis/ajaxselect2aset")?}',
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return {q: params.term || ''};
+            },
+            processResults: function(data) {
+                return {results: data || []};
+            }
         }
     });
 });

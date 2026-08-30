@@ -199,7 +199,8 @@ function lanjutAlurNonRutin(no_sppb) {
             if (data.status === 'success') {
                 loadDisplay();
                 if ($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
-                showNotif('success', 'Tahap Non Rutin berhasil dilanjutkan.');
+                if (typeof showSppbStatusResult === 'function') showSppbStatusResult(data, 'Tahap Non Rutin berhasil dilanjutkan.');
+                else showNotif('success', data.message || 'Tahap Non Rutin berhasil dilanjutkan.');
             } else {
                 showNotif('error', data.message || 'Gagal memproses.');
             }
@@ -308,7 +309,8 @@ function submitProsesLogistik() {
             if (data.status === 'success') {
                 $('#modal-proses-logistik').modal('hide');
                 loadDisplay();
-                showNotif('success', 'Berhasil diproses ke Pengadaan!');
+                if (typeof showSppbStatusResult === 'function') showSppbStatusResult(data, 'Berhasil diproses ke Pengadaan!');
+                else showNotif('success', data.message || 'Berhasil diproses ke Pengadaan!');
             } else {
                 showNotif('error', data.message || 'Gagal memproses.');
             }
@@ -334,6 +336,72 @@ function siapAmbil(no_sppb) {
         } catch(e) { showNotif('error', 'Kesalahan server.'); }
     });
 }
+
+var sppbSignatureStrokes = [];
+var sppbSignatureDrawing = false;
+var sppbSignatureStroke = null;
+
+function resetSppbSignature() {
+    sppbSignatureStrokes = [];
+    sppbSignatureDrawing = false;
+    sppbSignatureStroke = null;
+    var canvas = document.getElementById('selesai-signature-canvas');
+    if (!canvas) return;
+    canvas.width = Math.max(320, Math.round(canvas.getBoundingClientRect().width || 520));
+    canvas.height = 150;
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    $('#selesai-signature-hint').show();
+}
+
+function initSppbSignature() {
+    var canvas = document.getElementById('selesai-signature-canvas');
+    if (!canvas || canvas.dataset.signatureReady === '1') {
+        resetSppbSignature();
+        return;
+    }
+    canvas.dataset.signatureReady = '1';
+    var point = function(e) {
+        var rect = canvas.getBoundingClientRect();
+        return [
+            Math.round((e.clientX - rect.left) * canvas.width / rect.width * 10) / 10,
+            Math.round((e.clientY - rect.top) * canvas.height / rect.height * 10) / 10
+        ];
+    };
+    canvas.addEventListener('pointerdown', function(e) {
+        e.preventDefault();
+        canvas.setPointerCapture(e.pointerId);
+        sppbSignatureDrawing = true;
+        sppbSignatureStroke = [point(e)];
+        sppbSignatureStrokes.push(sppbSignatureStroke);
+        $('#selesai-signature-hint').hide();
+    });
+    canvas.addEventListener('pointermove', function(e) {
+        if (!sppbSignatureDrawing || !sppbSignatureStroke) return;
+        e.preventDefault();
+        var next = point(e), last = sppbSignatureStroke[sppbSignatureStroke.length - 1];
+        if (Math.abs(next[0] - last[0]) + Math.abs(next[1] - last[1]) < 1.5) return;
+        sppbSignatureStroke.push(next);
+        var ctx = canvas.getContext('2d');
+        ctx.strokeStyle = '#000080'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(next[0], next[1]); ctx.stroke();
+    });
+    var stop = function() { sppbSignatureDrawing = false; sppbSignatureStroke = null; };
+    canvas.addEventListener('pointerup', stop);
+    canvas.addEventListener('pointercancel', stop);
+    resetSppbSignature();
+}
+
+function sppbSignaturePayload() {
+    var canvas = document.getElementById('selesai-signature-canvas');
+    var clean = [];
+    $.each(sppbSignatureStrokes, function(_, stroke) { if (stroke.length >= 2) clean.push(stroke); });
+    var points = 0;
+    $.each(clean, function(_, stroke) { points += stroke.length; });
+    if (!canvas || points < 3) return '';
+    return JSON.stringify({version: 1, width: canvas.width, height: canvas.height, strokes: clean});
+}
+
+$(document).off('click.sppbSignature', '#btn-clear-selesai-signature').on('click.sppbSignature', '#btn-clear-selesai-signature', resetSppbSignature);
 
 function selesaikanSppb(no_sppb) {
     $('#selesai_no_sppb').val(no_sppb);
@@ -370,7 +438,7 @@ function selesaikanSppb(no_sppb) {
     });
 
     $('#modal-selesai-sppb').modal('show');
-    setTimeout(function() { $('#selesai_diambil_oleh').focus(); }, 400);
+    setTimeout(function() { initSppbSignature(); $('#selesai_diambil_oleh').focus(); }, 400);
 }
 
 function sppbEscapeHtml(value) {
@@ -426,15 +494,20 @@ function submitSelesaiSppb(stokFisik) {
     var btn = stokFisik ? $('#btn-submit-stok-fisik-sppb') : $('#btn-submit-selesai-sppb');
     var no_sppb = $('#selesai_no_sppb').val();
     var diambilOleh = $('#selesai_diambil_oleh').val().trim();
+    var tandaTangan = sppbSignaturePayload();
 
     if (diambilOleh === '') {
         showNotif('error', 'Nama pengambil barang wajib diisi.');
         $('#selesai_diambil_oleh').focus();
         return;
     }
+    if (tandaTangan === '') {
+        showNotif('error', 'Tanda tangan pengambil wajib diisi.');
+        return;
+    }
 
     btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
-    var postData = {no_sppb: no_sppb, diambil_oleh: diambilOleh};
+    var postData = {no_sppb: no_sppb, diambil_oleh: diambilOleh, tanda_tangan_pengambil: tandaTangan};
     if (stokFisik) postData.stok_fisik = stokFisik;
 
     $.post('{?=url(ADMIN."/logistik_non_medis/selesaikansppb")?}', postData, function(res) {

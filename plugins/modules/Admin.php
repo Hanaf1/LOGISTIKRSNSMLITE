@@ -273,7 +273,7 @@ class Admin extends AdminModule
 
     private function requireAdministrator()
     {
-        if ($this->getUserInfo('access') !== 'all') {
+        if ($this->core->getUserInfo('access') !== 'all') {
             http_response_code(403);
             exit('Akses ditolak. Manajemen modul hanya dapat diakses administrator.');
         }

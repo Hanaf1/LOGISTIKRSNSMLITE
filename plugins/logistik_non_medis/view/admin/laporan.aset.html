@@ -103,7 +103,8 @@
                 <div class="col-md-3">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label style="font-size: 10px; font-weight: bold; text-transform: uppercase;">Pilih Unit</label>
-                        <select id="global-unit" class="form-control select2">
+                        <input type="search" id="global-unit-search" class="form-control" placeholder="Cari kode/nama unit..." autocomplete="off" style="margin-bottom: 6px;">
+                        <select id="global-unit" class="form-control">
                             <option value="">-- Semua Unit --</option>
                             {loop: $unit as $u}
                             <option value="{$u.kode_unit}">{$u.nama_unit}</option>
@@ -630,7 +631,26 @@ $(document).ready(function() {
 
     // Setup select2
     try { $('.select2').selectator('destroy'); } catch(e) {}
-    $('.select2').select2({ width: '100%' });
+    try {
+        if ($.fn.select2) $('.select2').select2({ width: '100%' });
+    } catch(e) {
+        // Use the native select plus the live search field below.
+    }
+
+    // Search fallback for installations where Select2 is unavailable or not loaded.
+    // The option list is filtered live by unit code/name before the user selects it.
+    $('#global-unit-search').on('input', function() {
+        var term = $.trim($(this).val().toLowerCase());
+        var $unit = $('#global-unit');
+        $unit.find('option').each(function() {
+            var isAll = $(this).val() === '';
+            var matches = isAll || $(this).text().toLowerCase().indexOf(term) !== -1;
+            $(this).prop('hidden', !matches);
+        });
+        if ($unit.data('select2')) {
+            $unit.trigger('change.select2');
+        }
+    });
 
     // Chart.js instance state
     var chartKondisi = null;

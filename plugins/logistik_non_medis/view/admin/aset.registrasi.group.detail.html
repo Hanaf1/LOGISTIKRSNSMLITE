@@ -1,0 +1,92 @@
+<article class="row">
+  <div class="col-md-12">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <a href="{$return_url}" class="btn btn-default btn-sm pull-right"><i class="fa fa-arrow-left"></i> Kembali ke Registrasi Aset</a>
+        <h3 class="panel-title"><i class="fa fa-folder-open text-primary"></i> {$group.nama_group}</h3>
+        <div class="clearfix"></div>
+      </div>
+      <div class="panel-body">
+        <div class="row" style="margin-bottom:15px;">
+          <div class="col-sm-3"><strong>Unit</strong><br>{$group.nama_unit}</div>
+          <div class="col-sm-3"><strong>Jumlah</strong><br><span class="badge">{$group.jumlah_aktif} aset</span></div>
+          <div class="col-sm-3"><strong>Range Inventaris</strong><br><code>{$group.nomor_awal} – {$group.nomor_akhir}</code></div>
+          <div class="col-sm-3"><strong>Tahun</strong><br>{if: !empty($group.tahun_beli)}{$group.tahun_beli}{if: $group.tahun_beli_referensi} <small class="text-warning">(referensi)</small>{/if}{else}-{/if}</div>
+        </div>
+        <div class="alert alert-info" style="padding:8px 12px;">
+          <span class="label label-success">{$group.jumlah_baik} Baik</span>
+          <span class="label label-warning">{$group.jumlah_rusak_ringan} Rusak Ringan</span>
+          <span class="label label-danger">{$group.jumlah_rusak_berat} Rusak Berat</span>
+        </div>
+        <div class="row" style="margin-bottom:15px;">
+          <div class="col-sm-8">
+            <div class="input-group">
+              <span class="input-group-addon"><i class="fa fa-search"></i></span>
+              <input type="text" id="cari-detail-group-aset" class="form-control" value="{$q}" placeholder="Cari nomor inventaris, kode aset, serial, lokasi, atau kondisi...">
+              <span class="input-group-btn"><button type="button" id="btn-cari-detail-group" class="btn btn-primary">Cari</button></span>
+            </div>
+          </div>
+          <div class="col-sm-4 text-right" style="padding-top:7px;color:#777;">{$filtered_total} hasil · maksimal {$perpage} item per halaman</div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-bordered table-striped table-hover" id="table-detail-group-aset">
+            <thead><tr><th style="width:45px;">No.</th><th>No. Inventaris</th><th>Serial Number</th><th>Lokasi</th><th style="width:180px;">Kondisi</th><th>Harga</th><th style="width:145px;">Aksi</th></tr></thead>
+            <tbody>
+            {if: !empty($items)}
+            {loop: $items}
+            <tr>
+              <td class="text-center">{?=$offset + $key + 1?}</td>
+              <td><code>{$value.nomor_inventaris}</code></td>
+              <td>{if: !empty($value.serial_number)}{$value.serial_number}{else}<span class="text-muted">-</span>{/if}</td>
+              <td>{if: !empty($value.lokasi_fisik)}{$value.lokasi_fisik}{else}<span class="text-muted">-</span>{/if}</td>
+              <td><select class="form-control input-sm kondisi-aset-group" data-id="{$value.id}"><option value="Baik" {if: $value.status_kondisi == 'Baik'}selected{/if}>Baik</option><option value="Rusak Ringan" {if: $value.status_kondisi == 'Rusak Ringan'}selected{/if}>Rusak Ringan</option><option value="Rusak Berat" {if: $value.status_kondisi == 'Rusak Berat'}selected{/if}>Rusak Berat</option></select></td>
+              <td style="white-space:nowrap;">Rp. {?=number_format($value.harga_tampil,0,',','.')?}<br><small class="text-muted">{$value.sumber_harga_tampil}</small></td>
+              <td style="white-space:nowrap;">
+                <button type="button" class="btn btn-success btn-xs btn-simpan-kondisi-group" data-id="{$value.id}" title="Simpan kondisi"><i class="fa fa-save"></i></button>
+                <a href="{?=url([ADMIN,'logistik_non_medis','asetformpage'])?}&id={$value.id}&group_id={$group.id}" class="btn btn-default btn-xs" title="Edit"><i class="fa fa-edit"></i></a>
+                <a href="{?=url([ADMIN,'logistik_non_medis','asetprintlabel',$value['kode_aset']])?}" target="_blank" class="btn btn-warning btn-xs" title="Cetak label"><i class="fa fa-print"></i></a>
+                <a href="{?=url([ADMIN,'logistik_non_medis','asetdetailpage'])?}&id={$value.id}&group_id={$group.id}" class="btn btn-info btn-xs" title="Detail lengkap"><i class="fa fa-eye"></i></a>
+              </td>
+            </tr>
+            {/loop}
+            {else}
+            <tr><td colspan="7" class="text-center text-muted" style="padding:35px;">Tidak ada aset yang cocok dengan pencarian.</td></tr>
+            {/if}
+            </tbody>
+          </table>
+        </div>
+        {if: !empty($pagination)}<div class="text-center"><ul class="pagination pagination-sm" style="margin-bottom:0;">{$pagination}</ul></div>{/if}
+      </div>
+    </div>
+  </div>
+</article>
+<script>
+(function(){
+  function cariAsetGroup() {
+    var next = new URL(window.location.href);
+    var keyword = $('#cari-detail-group-aset').val().trim();
+    if (keyword) next.searchParams.set('q', keyword); else next.searchParams.delete('q');
+    next.searchParams.set('page', '1');
+    window.location.href = next.toString();
+  }
+  $('#btn-cari-detail-group').on('click', cariAsetGroup);
+  $('#cari-detail-group-aset').on('keypress', function(e){ if (e.which === 13) { e.preventDefault(); cariAsetGroup(); } });
+  $('.btn-simpan-kondisi-group').on('click', function(){
+    var button = $(this), id = button.data('id');
+    var kondisi = $('.kondisi-aset-group[data-id="'+id+'"]').val();
+    button.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+    $.post('{?=url([ADMIN, "logistik_non_medis", "updatekondisiasetgroup"])?}', {id:id, kondisi:kondisi}, function(response){
+      if (response.status === 'success') {
+        button.removeClass('btn-success').addClass('btn-primary').html('<i class="fa fa-check"></i>');
+        window.setTimeout(function(){ window.location.reload(); }, 350);
+      } else {
+        alert(response.message || 'Kondisi gagal disimpan.');
+        button.html('<i class="fa fa-save"></i>');
+      }
+    }, 'json').fail(function(){
+      alert('Kondisi gagal disimpan karena koneksi bermasalah.');
+      button.html('<i class="fa fa-save"></i>');
+    }).always(function(){ button.prop('disabled', false); });
+  });
+})();
+</script>

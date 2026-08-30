@@ -11,7 +11,7 @@
     <div class="panel panel-default" style="border-left:4px solid #5cb85c;">
       <div class="panel-body">
         <div style="font-size:22px;font-weight:bold;color:#2f4050;">Rp. {?=number_format($total_nilai,0,',','.')?}</div>
-        <div style="font-size:12px;color:#777;text-transform:uppercase;font-weight:bold;">Nilai Pada Halaman Ini</div>
+        <div style="font-size:12px;color:#777;text-transform:uppercase;font-weight:bold;">Total Nilai Inventaris</div>
       </div>
     </div>
   </div>
@@ -25,17 +25,40 @@
   </div>
 </div>
 
+<style>
+  .aset-chart-panel .panel-body { padding: 15px; }
+  .aset-chart-wrap { position: relative; height: 300px; }
+  @media (max-width: 991px) {
+    .aset-chart-wrap { height: 260px; }
+  }
+</style>
+
 <div class="row" style="margin-bottom:15px;">
-  <div class="col-md-7">
+  <div class="col-md-6">
     <div class="panel panel-default">
       <div class="panel-heading"><strong>Grafik Kelompok Barang</strong></div>
-      <div class="panel-body"><canvas id="kibChartKelompok" height="110"></canvas></div>
+      <div class="panel-body"><div class="aset-chart-wrap"><canvas id="kibChartKelompok"></canvas></div></div>
     </div>
   </div>
-  <div class="col-md-5">
+  <div class="col-md-6">
+    <div class="panel panel-default">
+      <div class="panel-heading"><strong>Komposisi Tahun Perolehan</strong></div>
+      <div class="panel-body"><div class="aset-chart-wrap"><canvas id="kibChartTahun"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="row" style="margin-bottom:15px;">
+  <div class="col-md-6">
+    <div class="panel panel-default aset-chart-panel">
+      <div class="panel-heading"><strong>Kondisi Aset</strong></div>
+      <div class="panel-body"><div class="aset-chart-wrap"><canvas id="kibChartKondisi"></canvas></div></div>
+    </div>
+  </div>
+  <div class="col-md-6">
     <div class="panel panel-default">
       <div class="panel-heading"><strong>Komposisi Unit</strong></div>
-      <div class="panel-body"><canvas id="kibChartUnit" height="150"></canvas></div>
+      <div class="panel-body"><div class="aset-chart-wrap"><canvas id="kibChartUnit"></canvas></div></div>
     </div>
   </div>
 </div>
@@ -49,6 +72,7 @@
         <th>Identitas Inventaris</th>
         <th>Master Barang Inventaris</th>
         <th>Unit</th>
+        <th class="text-center">Satuan / Jumlah</th>
         <th class="text-center">Kondisi</th>
         <th class="text-right">Nilai</th>
         <th class="text-center" width="150">Aksi</th>
@@ -61,6 +85,7 @@
         <td style="vertical-align:middle;">
           <div style="font-weight:bold;font-family:monospace;">{if: !empty($value.nomor_inventaris)}{$value.nomor_inventaris}{else}{$value.kode_aset}{/if}</div>
           <div style="font-size:13px;color:#444;">{$value.nama_aset}</div>
+          <div style="font-size:12px;color:#555;"><strong>Merk / Tipe:</strong> {if: !empty($value.merk_type)}{$value.merk_type}{else}-{/if}</div>
           <div style="font-size:11px;color:#888;">Kode aset: {$value.kode_aset} {if: !empty($value.nomor_dokumen)} | Dok: {$value.nomor_dokumen}{/if}</div>
         </td>
         <td style="vertical-align:middle;">
@@ -74,6 +99,7 @@
           </div>
         </td>
         <td style="vertical-align:middle;">{if: !empty($value.nama_unit)}{$value.nama_unit}{else}-{/if}</td>
+        <td class="text-center" style="vertical-align:middle;"><strong>{$value.jumlah}</strong> {if: !empty($value.satuan)}{$value.satuan}{else}Unit{/if}</td>
         <td class="text-center" style="vertical-align:middle;">
           {if: $value.status_kondisi == 'Baik'}
           <span class="label label-success">Baik</span>
@@ -83,10 +109,18 @@
           <span class="label label-danger">Rusak Berat</span>
           {/if}
         </td>
-        <td class="text-right" style="vertical-align:middle;font-weight:bold;">Rp. {?=number_format($value.harga_beli,0,',','.')?}</td>
+        <td class="text-right" style="vertical-align:middle;font-weight:bold;">
+          {if: $value.harga_beli > 0}
+            Rp. {?=number_format($value.harga_beli,0,',','.')?}
+          {else}
+            <span class="label label-danger">Belum diisi</span><br>
+            <a href="{?=url([ADMIN,'logistik_non_medis','asetformpage'])?}&id={$value.id}&from=kib" class="btn btn-link btn-xs" style="padding:3px 0 0;"><i class="fa fa-pencil"></i> Isi Harga</a>
+          {/if}
+        </td>
         <td class="text-center" style="vertical-align:middle;">
           <div class="btn-group">
-            <button type="button" class="btn btn-default btn-xs btn-detail-aset" data-id="{$value.id}" title="Detail"><i class="fa fa-search"></i></button>
+            <a href="{?=url([ADMIN,'logistik_non_medis','asetdetailpage'])?}&id={$value.id}&from=kib" class="btn btn-default btn-xs" title="Detail"><i class="fa fa-search"></i></a>
+            <a href="{?=url([ADMIN,'logistik_non_medis','asetformpage'])?}&id={$value.id}&from=kib" class="btn btn-success btn-xs" title="Edit"><i class="fa fa-edit"></i></a>
             <a href="{?=url([ADMIN,'logistik_non_medis','asetprintlabel',$value['kode_aset']])?}" target="_blank" class="btn btn-info btn-xs" title="Cetak QR"><i class="fa fa-qrcode"></i> QR</a>
           </div>
         </td>
@@ -114,24 +148,57 @@
 <script>
 (function(){
   if (!window.Chart) return;
+  window.kibChartInstances = window.kibChartInstances || {};
+  if (window.kibChartInstances.kondisi) window.kibChartInstances.kondisi.destroy();
+  if (window.kibChartInstances.kelompok) window.kibChartInstances.kelompok.destroy();
+  if (window.kibChartInstances.tahun) window.kibChartInstances.tahun.destroy();
+  if (window.kibChartInstances.unit) window.kibChartInstances.unit.destroy();
   var colors = ['#337ab7','#5cb85c','#f0ad4e','#d9534f','#5bc0de','#777','#8e44ad','#16a085'];
+  var kondisiLabels = ['Baik', 'Rusak Ringan', 'Rusak Berat'];
+  var kondisiData = {$chart_kondisi_data};
   var kelompokLabels = {$chart_kelompok_labels};
   var kelompokData = {$chart_kelompok_data};
+  var tahunLabels = {$chart_tahun_labels};
+  var tahunData = {$chart_tahun_data};
   var unitLabels = {$chart_unit_labels};
   var unitData = {$chart_unit_data};
 
+  if ($('#kibChartKondisi').length) {
+    window.kibChartInstances.kondisi = new Chart($('#kibChartKondisi')[0].getContext('2d'), {
+      type: 'horizontalBar',
+      data: {
+        labels: kondisiLabels.map(function(label, index) { return label + ' (' + kondisiData[index] + ')'; }),
+        datasets: [{ label: 'Jumlah Aset', data: kondisiData, backgroundColor: ['#5cb85c','#f0ad4e','#d9534f'] }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        legend: { display: false },
+        scales: { xAxes: [{ ticks: { beginAtZero: true, precision: 0 } }], yAxes: [{ gridLines: { display: false } }] },
+        tooltips: { callbacks: { label: function(item) { return 'Jumlah aset: ' + item.xLabel; } } }
+      }
+    });
+  }
+
   if ($('#kibChartKelompok').length) {
-    new Chart($('#kibChartKelompok')[0].getContext('2d'), {
+    window.kibChartInstances.kelompok = new Chart($('#kibChartKelompok')[0].getContext('2d'), {
       type: 'bar',
       data: { labels: kelompokLabels, datasets: [{ label: 'Jumlah Item', data: kelompokData, backgroundColor: '#337ab7' }] },
-      options: { responsive: true, legend: { display: false }, scales: { yAxes: [{ ticks: { beginAtZero: true, precision: 0 } }] } }
+      options: { responsive: true, maintainAspectRatio: false, legend: { display: false }, scales: { yAxes: [{ ticks: { beginAtZero: true, precision: 0 } }] } }
+    });
+  }
+  if ($('#kibChartTahun').length) {
+    window.kibChartInstances.tahun = new Chart($('#kibChartTahun')[0].getContext('2d'), {
+      type: 'bar',
+      data: { labels: tahunLabels, datasets: [{ label: 'Jumlah Aset', data: tahunData, backgroundColor: '#16a085' }] },
+      options: { responsive: true, maintainAspectRatio: false, legend: { display: false }, scales: { yAxes: [{ ticks: { beginAtZero: true, precision: 0 } }] } }
     });
   }
   if ($('#kibChartUnit').length) {
-    new Chart($('#kibChartUnit')[0].getContext('2d'), {
+    window.kibChartInstances.unit = new Chart($('#kibChartUnit')[0].getContext('2d'), {
       type: 'doughnut',
       data: { labels: unitLabels, datasets: [{ data: unitData, backgroundColor: colors }] },
-      options: { responsive: true, legend: { position: 'bottom' } }
+      options: { responsive: true, maintainAspectRatio: false, legend: { position: 'bottom' } }
     });
   }
 })();

@@ -1,4 +1,5 @@
 <form id="form-master-barang" enctype="multipart/form-data">
+    <input type="hidden" name="jenis_item" value="{$barang.jenis_item}">
     <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h4 class="modal-title">{if: $mode == 'edit'}Edit Data Barang{else}Tambah Data Barang{/if}</h4>
@@ -8,7 +9,7 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label>Kode Item</label>
-                    <input type="text" name="kode_item" class="form-control" value="{if: $mode == 'edit'}{$barang.kode_item}{else}(Otomatis){/if}" readonly required>
+                    <input type="text" name="kode_item" class="form-control" value="{if: $mode == 'edit'}{$barang.kode_item}{/if}" placeholder="Otomatis dibuat sistem" readonly>
                 </div>
                 <div class="form-group">
                     <label>Nama Barang</label>
@@ -35,7 +36,7 @@
                     <select name="satuan_dasar" class="form-control select2" style="width:100%" id="select-satuan-dasar" required>
                         <option value="">-- Pilih Satuan --</option>
                         {loop: $satuan}
-                        <option value="{$value.nama_satuan}" data-dasar="{$value.satuan_dasar}" data-konversi="{$value.nilai_konversi}" {if: $barang.satuan_dasar == $value.nama_satuan}selected{/if}>{$value.nama_satuan}</option>
+                        <option value="{$value.nama_satuan}" data-dasar="{$value.satuan_dasar}" data-konversi="{$value.nilai_konversi}" {if: strtolower(trim($barang.satuan_dasar)) == strtolower(trim($value.nama_satuan)) || strtolower(trim($barang.satuan_dasar)) == strtolower(trim($value.kode_satuan))}selected{/if}>{$value.nama_satuan}</option>
                         {/loop}
                     </select>
                 </div>

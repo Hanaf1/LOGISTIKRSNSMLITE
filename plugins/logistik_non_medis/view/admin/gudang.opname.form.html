@@ -59,14 +59,26 @@
                                 <input type="text" name="tgl_opname" class="form-control datepicker" value="{$opname.tgl_opname}">
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group" style="padding-top: 25px;">
-                                {if: $mode == 'add'}
-                                <button type="button" class="btn btn-info btn-block" id="btn_tarik_data">
-                                    <i class="fa fa-refresh"></i> Tarik Data Stok
-                                </button>
-                                {/if}
-                            </div>
+                    </div>
+
+                    <div class="row" style="margin-top: 20px;">
+                        <div class="col-md-4">
+                            <label>Kategori Barang</label>
+                            <select id="filter_kategori_opname" class="form-control">
+                                <option value="">Semua Kategori</option>
+                                {loop: $kategori as $kat}
+                                <option value="{$kat.kode_kategori}">{$kat.nama_kategori}</option>
+                                {/loop}
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label>Cari Barang</label>
+                            <input type="text" id="cari_barang_opname" class="form-control" placeholder="Cari kode atau nama barang...">
+                        </div>
+                        <div class="col-md-3" style="padding-top: 25px;">
+                            <button type="button" class="btn btn-info btn-block" id="btn_tarik_data">
+                                <i class="fa fa-refresh"></i> Muat Daftar Barang
+                            </button>
                         </div>
                     </div>
 
@@ -77,33 +89,32 @@
                                     <th width="50">No</th>
                                     <th>Kode Item</th>
                                     <th>Nama Barang</th>
-                                    <th width="120">Stok Sistem</th>
-                                    <th width="120">Stok Fisik</th>
-                                    <th width="120">Selisih</th>
+                                    <th width="100">Satuan</th>
+                                    <th width="160">Jumlah Terkini</th>
                                     <th>Keterangan</th>
                                 </tr>
                             </thead>
                             <tbody id="list_items_opname">
                                 {if: !empty($opname.detail_items)}
                                     {loop: $opname.detail_items as $index => $item}
-                                    <tr class="{if: $item.selisih < 0}danger{elseif: $item.selisih > 0}info{/if}">
+                                    <tr>
                                         <td>{?=($index+1)?}</td>
                                         <td>{$item.kode_item} <input type="hidden" name="kode_item[]" value="{$item.kode_item}"></td>
                                         <td>{$item.nama_barang}</td>
-                                        <td><input type="number" name="stok_sistem[]" class="form-control input-sm inp-stok-sistem" value="{$item.stok_sistem}" readonly></td>
+                                        <td>{$item.satuan_dasar}</td>
                                         <td><input type="number" step="any" name="stok_fisik[]" class="form-control input-sm inp-stok-fisik" value="{$item.stok_fisik}" {if: $opname.status == 'Selesai'}readonly{/if}></td>
-                                        <td><input type="number" name="selisih[]" class="form-control input-sm inp-selisih" value="{$item.selisih}" readonly></td>
                                         <td><input type="text" name="keterangan_item[]" class="form-control input-sm" value="{$item.keterangan}" {if: $opname.status == 'Selesai'}readonly{/if}></td>
                                     </tr>
                                     {/loop}
                                 {else}
                                     <tr>
-                                        <td colspan="7" class="text-center">Klik "Tarik Data Stok" untuk memuat daftar barang.</td>
+                                        <td colspan="6" class="text-center">Klik "Muat Daftar Barang" untuk mencatat jumlah terkini.</td>
                                     </tr>
                                 {/if}
                             </tbody>
                         </table>
                     </div>
+                    <div id="pagination_items_opname" class="text-center"></div>
 
                     <hr>
                     <div class="row">
@@ -125,6 +136,7 @@
                     </div>
                     <input type="hidden" name="status" id="opname_status" value="{$opname.status}">
                     <input type="hidden" name="tgl_jadwal" value="{$opname.tgl_jadwal}">
+                    <input type="hidden" name="kode_lokasi" value="GLOBAL">
                 </form>
             </div>
         </div>
@@ -142,56 +154,96 @@ $(document).ready(function() {
         $('#opname_container').show();
     });
 
+    var opnameItems = [];
+    var opnamePage = 1;
+    var opnamePerPage = 30;
+
+    function escapeHtml(value) {
+        return $('<div>').text(value == null ? '' : value).html();
+    }
+
+    function captureVisibleItems() {
+        $('#list_items_opname tr[data-kode-item]').each(function() {
+            var kode = $(this).attr('data-kode-item');
+            var item = opnameItems.find(function(row) { return row.kode_item === kode; });
+            if (item) {
+                item.stok_fisik = $(this).find('.inp-stok-fisik').val() || 0;
+                item.keterangan = $(this).find('.inp-keterangan').val() || '';
+            }
+        });
+    }
+
+    function renderOpnameItems() {
+        captureVisibleItems();
+        var kategori = $('#filter_kategori_opname').val() || '';
+        var cari = ($('#cari_barang_opname').val() || '').toLowerCase().trim();
+        var filtered = opnameItems.filter(function(item) {
+            var matchKategori = !kategori || item.kode_kategori === kategori;
+            var matchCari = !cari || (String(item.kode_item).toLowerCase().indexOf(cari) >= 0) || (String(item.nama_barang).toLowerCase().indexOf(cari) >= 0);
+            return matchKategori && matchCari;
+        });
+        var totalPages = Math.max(1, Math.ceil(filtered.length / opnamePerPage));
+        if (opnamePage > totalPages) opnamePage = totalPages;
+        var start = (opnamePage - 1) * opnamePerPage;
+        var pageItems = filtered.slice(start, start + opnamePerPage);
+        var html = '';
+        pageItems.forEach(function(item, index) {
+            html += '<tr data-kode-item="' + escapeHtml(item.kode_item) + '">' +
+                '<td>' + (start + index + 1) + '</td>' +
+                '<td>' + escapeHtml(item.kode_item) + '</td>' +
+                '<td>' + escapeHtml(item.nama_barang) + '</td>' +
+                '<td>' + escapeHtml(item.satuan_dasar || '') + '</td>' +
+                '<td><input type="number" step="any" class="form-control input-sm inp-stok-fisik" value="' + escapeHtml(item.stok_fisik) + '"></td>' +
+                '<td><input type="text" class="form-control input-sm inp-keterangan" value="' + escapeHtml(item.keterangan) + '"></td>' +
+                '</tr>';
+        });
+        if (!html) html = '<tr><td colspan="6" class="text-center text-danger">Tidak ada barang sesuai filter.</td></tr>';
+        $('#list_items_opname').html(html);
+
+        var pager = '';
+        if (totalPages > 1) {
+            pager += '<ul class="pagination">';
+            for (var p = 1; p <= totalPages; p++) {
+                pager += '<li class="' + (p === opnamePage ? 'active' : '') + '"><a href="#" class="opname-page" data-page="' + p + '">' + p + '</a></li>';
+            }
+            pager += '</ul>';
+        }
+        $('#pagination_items_opname').html(pager);
+    }
+
     $('#btn_tarik_data').click(function() {
         $(this).html('<i class="fa fa-spinner fa-spin"></i> Memuat...').attr('disabled', true);
         
         $.post('{?=url([ADMIN, "logistik_non_medis", "loaditemsforopname"])?}', {}, function(data) {
             try {
                 let res = JSON.parse(data);
-                $('#btn_tarik_data').html('<i class="fa fa-refresh"></i> Tarik Data Stok').attr('disabled', false);
+                $('#btn_tarik_data').html('<i class="fa fa-refresh"></i> Muat Daftar Barang').attr('disabled', false);
                 
                 if(res.status == 'success') {
-                    let html = '';
-                    res.items.forEach((item, index) => {
-                        html += `
-                            <tr>
-                                <td>${index + 1}</td>
-                                <td>${item.kode_item} <input type="hidden" name="kode_item[]" value="${item.kode_item}"></td>
-                                <td>${item.nama_barang}</td>
-                                <td><input type="number" name="stok_sistem[]" class="form-control input-sm inp-stok-sistem" value="${item.stok_sistem}" readonly></td>
-                                <td><input type="number" step="any" name="stok_fisik[]" class="form-control input-sm inp-stok-fisik" value="${item.stok_fisik}"></td>
-                                <td><input type="number" name="selisih[]" class="form-control input-sm inp-selisih" value="0" readonly></td>
-                                <td><input type="text" name="keterangan_item[]" class="form-control input-sm" value=""></td>
-                            </tr>
-                        `;
-                    });
-                    if(html == '') html = '<tr><td colspan="7" class="text-center text-danger">Belum ada stok barang untuk diopname.</td></tr>';
-                    $('#list_items_opname').html(html);
+                    opnameItems = res.items || [];
+                    opnamePage = 1;
+                    renderOpnameItems();
                 } else {
                     alert(res.message);
                 }
             } catch(e) {
                 alert('Gagal memproses data dari server.');
-                $('#btn_tarik_data').html('<i class="fa fa-refresh"></i> Tarik Data Stok').attr('disabled', false);
+                $('#btn_tarik_data').html('<i class="fa fa-refresh"></i> Muat Daftar Barang').attr('disabled', false);
             }
         }).fail(function() {
             alert('Gagal menghubungi server.');
-            $('#btn_tarik_data').html('<i class="fa fa-refresh"></i> Tarik Data Stok').attr('disabled', false);
+            $('#btn_tarik_data').html('<i class="fa fa-refresh"></i> Muat Daftar Barang').attr('disabled', false);
         });
     });
 
-    $(document).on('input', '.inp-stok-fisik', function() {
-        let row = $(this).closest('tr');
-        let sis = parseFloat(row.find('.inp-stok-sistem').val()) || 0;
-        let fis = parseFloat($(this).val()) || 0;
-        let sel = fis - sis;
-        
-        row.find('.inp-selisih').val(sel);
-        
-        row.removeClass('danger info');
-        if(sel < 0) row.addClass('danger');
-        if(sel > 0) row.addClass('info');
+    $('#filter_kategori_opname').change(function() { opnamePage = 1; renderOpnameItems(); });
+    $('#cari_barang_opname').on('input', function() { opnamePage = 1; renderOpnameItems(); });
+    $(document).on('click', '.opname-page', function(e) {
+        e.preventDefault();
+        opnamePage = parseInt($(this).data('page'), 10) || 1;
+        renderOpnameItems();
     });
+
 
     $(document).on('click', '#btn_simpan_draft', function() {
         $('#opname_status').val('Draft');
@@ -199,13 +251,24 @@ $(document).ready(function() {
     });
 
     $(document).on('click', '#btn_posting_opname', function() {
-        if(confirm('Setelah diposting, data tidak dapat diubah dan stok akan otomatis disesuaikan. Lanjutkan?')) {
+        if(confirm('Setelah diposting, data tidak dapat diubah. Jumlah terkini hanya dicatat sebagai hasil opname. Lanjutkan?')) {
             $('#opname_status').val('Selesai');
             saveOpname($(this));
         }
     });
 
     function saveOpname(btn) {
+        captureVisibleItems();
+        $('#opname_payload').remove();
+        if (opnameItems.length) {
+            var payload = $('<div id="opname_payload"></div>');
+            opnameItems.forEach(function(item) {
+                payload.append($('<input>', {type: 'hidden', name: 'kode_item[]', value: item.kode_item}));
+                payload.append($('<input>', {type: 'hidden', name: 'stok_fisik[]', value: item.stok_fisik || 0}));
+                payload.append($('<input>', {type: 'hidden', name: 'keterangan_item[]', value: item.keterangan || ''}));
+            });
+            $('#form_transaksi_opname').append(payload);
+        }
         let oldHtml = btn.html();
         btn.html('<i class="fa fa-spinner fa-spin"></i> Memproses...').attr('disabled', true);
         

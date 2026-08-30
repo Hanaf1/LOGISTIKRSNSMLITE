@@ -64,6 +64,74 @@
             margin: 8px 0 0;
             color: #68707a;
         }
+        #sppb-toast-stack {
+            position: fixed;
+            top: 72px;
+            right: 18px;
+            z-index: 20001;
+            width: min(380px, calc(100vw - 30px));
+            pointer-events: none;
+        }
+        .sppb-toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 10px;
+            padding: 13px 15px;
+            border-radius: 6px;
+            background: #fff;
+            border-left: 5px solid #31708f;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+            color: #333;
+            pointer-events: auto;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: opacity .2s ease, transform .2s ease;
+        }
+        .sppb-toast.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .sppb-toast-success {
+            border-left-color: #3c763d;
+        }
+        .sppb-toast-error {
+            border-left-color: #a94442;
+        }
+        .sppb-toast-info {
+            border-left-color: #31708f;
+        }
+        .sppb-toast-icon {
+            font-size: 22px;
+            line-height: 1;
+            margin-top: 1px;
+        }
+        .sppb-toast-success .sppb-toast-icon {
+            color: #3c763d;
+        }
+        .sppb-toast-error .sppb-toast-icon {
+            color: #a94442;
+        }
+        .sppb-toast-info .sppb-toast-icon {
+            color: #31708f;
+        }
+        .sppb-toast-title {
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .sppb-toast-message {
+            color: #555;
+            line-height: 1.35;
+        }
+        .sppb-toast-close {
+            margin-left: auto;
+            border: 0;
+            background: transparent;
+            color: #777;
+            padding: 0;
+            font-size: 18px;
+            line-height: 1;
+        }
     </style>
     <div class="custom-breadcrumb">
         <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
@@ -113,8 +181,16 @@
                                 <i class="fa fa-history"></i> Riwayat
                             </a>
                         </li>
+                        {if: !empty($can_access_rekap_nonrutin)}
+                        <li>
+                            <a href="javascript:void(0)" class="sppb-main-tab-link" data-tab="rekap">
+                                <i class="fa fa-table"></i> Rekap Konsul Kabid
+                            </a>
+                        </li>
+                        {/if}
                     </ul>
                     {/if}
+                    <div id="sppb-list-pane">
                     {if: $role == 'kepala_unit' || $role == 'kepala_sie' || $role == 'kepala_bidang'}
                     <ul class="nav nav-tabs sppb-approval-tabs" id="approvalTabs">
                         <li class="active">
@@ -260,6 +336,25 @@
                     </div>
                     {/if}
                     <div id="sppb-list"></div>
+                    </div>
+                    {if: !empty($can_access_rekap_nonrutin)}
+                    <div id="sppb-rekap-pane" style="display:none">
+                        <div class="alert alert-info" style="margin-bottom:12px">
+                            <i class="fa fa-info-circle"></i>
+                            <strong>Rekap Konsul Kabid Umum</strong> menggabungkan detail barang dari seluruh SPPB Non Rutin agar Kabid Umum dan Logistik dapat melihat unit pemintanya sebelum mengambil keputusan.
+                        </div>
+                        <div class="well well-sm">
+                            <div class="row">
+                                <div class="col-md-2"><label>Dari Tanggal</label><input type="date" id="sppb-rekap-awal" class="form-control" value="{$rekap_tanggal_awal}"></div>
+                                <div class="col-md-2"><label>Sampai Tanggal</label><input type="date" id="sppb-rekap-akhir" class="form-control" value="{$rekap_tanggal_akhir}"></div>
+                                <div class="col-md-3"><label>Status</label><select id="sppb-rekap-status" class="form-control"><option value="Konsul Pengajuan ke Kabid Umum">Konsul Pengajuan ke Kabid Umum</option><option value="aktif">Semua Aktif / Disetujui / Selesai</option><option value="semua">Semua Status</option><option value="Disetujui Kabid">Disetujui Kabid</option><option value="Diserahkan ke Kasie Umum">Diserahkan ke Kasie Umum</option><option value="Proses Pengadaan">Proses Pengadaan</option><option value="Selesai">Selesai</option></select></div>
+                                <div class="col-md-3"><label>Cari Barang / Unit / SPPB</label><input type="text" id="sppb-rekap-cari" class="form-control" placeholder="Ketik kata pencarian"></div>
+                                <div class="col-md-2" style="padding-top:25px;white-space:nowrap"><button type="button" class="btn btn-primary" id="sppb-rekap-tampil"><i class="fa fa-search"></i> Tampil</button> <button type="button" class="btn btn-success" id="sppb-rekap-cetak"><i class="fa fa-print"></i> Cetak</button></div>
+                            </div>
+                        </div>
+                        <div id="sppb-rekap-display"><div class="text-center text-muted" style="padding:35px"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat rekap konsul...</div></div>
+                    </div>
+                    {/if}
                 </div>
             </div>
         </div>
@@ -267,14 +362,71 @@
 </div>
 
 <div id="form-container" style="display:none;"></div>
+<div id="sppb-toast-stack" aria-live="polite" aria-atomic="true"></div>
 
 <div class="modal fade" id="modal-detail" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-lg sppb-detail-dialog" role="document">
         <div class="modal-content">
             <div id="detail-content"></div>
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="modal-dokumen-sppb" tabindex="-1" role="dialog" aria-labelledby="judul-dokumen-sppb">
+    <div class="modal-dialog modal-lg" role="document" style="width:calc(100vw - 50px);max-width:1200px;margin:20px auto;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="judul-dokumen-sppb"><i class="fa fa-file-text-o"></i> Dokumen Persetujuan Permintaan Non-Rutin</h4>
+            </div>
+            <div class="modal-body" style="padding:0;height:calc(100vh - 165px);min-height:480px;overflow:hidden;">
+                <div id="dokumen-sppb-loading" class="text-center" style="padding:45px;">
+                    <i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat dokumen...
+                </div>
+                <iframe id="dokumen-sppb-frame" title="Dokumen Persetujuan SPPB" style="display:none;width:100%;height:100%;border:0;background:#fff;"></iframe>
+            </div>
+            <div class="modal-footer">
+                <span id="dokumen-sppb-nomor" class="pull-left text-muted" style="line-height:34px;"></span>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-primary" onclick="cetakDokumenSPPB()"><i class="fa fa-print"></i> Cetak Dokumen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Detail SPPB membutuhkan ruang lebih lebar karena Non Rutin memiliki kolom foto,
+       spesifikasi, harga, subtotal, dan status item. */
+    #modal-detail .sppb-detail-dialog {
+        width: calc(100vw - 32px);
+        max-width: 1500px;
+        margin: 16px auto;
+    }
+    #modal-detail .modal-content {
+        max-height: calc(100vh - 32px);
+        overflow: hidden;
+    }
+    #modal-detail .modal-body {
+        max-height: calc(100vh - 145px);
+        overflow-y: auto;
+    }
+    #modal-selesai-sppb .modal-body {
+        max-height: calc(100vh - 180px);
+        overflow-y: auto;
+    }
+    @media (max-width: 767px) {
+        #modal-detail .sppb-detail-dialog {
+            width: calc(100vw - 16px);
+            margin: 8px auto;
+        }
+        #modal-detail .modal-content {
+            max-height: calc(100vh - 16px);
+        }
+        #modal-detail .modal-body {
+            max-height: calc(100vh - 125px);
+        }
+    }
+</style>
 
 <div class="modal fade" id="modal-selesai-sppb" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
@@ -293,6 +445,15 @@
                     <label>Nama Pengambil Barang <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="selesai_diambil_oleh" placeholder="Contoh: Budi / Unit Gizi" autocomplete="off">
                     <p class="help-block">Tanggal dan jam pengambilan otomatis memakai waktu sistem.</p>
+                </div>
+                <div class="form-group">
+                    <label>Tanda Tangan Pengambil <span class="text-danger">*</span></label>
+                    <div style="position:relative;border:1px solid #bbb;border-radius:3px;background:#fff;overflow:hidden;">
+                        <canvas id="selesai-signature-canvas" height="150" style="display:block;width:100%;height:150px;touch-action:none;cursor:crosshair;"></canvas>
+                        <span id="selesai-signature-hint" class="text-muted" style="position:absolute;left:0;right:0;top:62px;text-align:center;pointer-events:none;">Tanda tangan di area ini dengan digital pen, mouse, atau jari</span>
+                    </div>
+                    <button type="button" class="btn btn-default btn-xs" id="btn-clear-selesai-signature" style="margin-top:6px;"><i class="fa fa-eraser"></i> Hapus Tanda Tangan</button>
+                    <p class="help-block">Disimpan sebagai goresan terkompresi satu kali per SPPB, bukan sebagai foto besar.</p>
                 </div>
                 <div class="alert alert-info" style="margin-bottom:15px;">
                     <i class="fa fa-info-circle"></i> Setelah disimpan, status permintaan berubah menjadi <strong>Selesai</strong>.
@@ -370,8 +531,11 @@ var sppbCurrentTab = 'pending';
 var sppbJenisPage = '{$jenis_page}';
 var sppbListTab = sppbJenisPage ? 'active' : '';
 var sppbRutinUnitMode = sppbJenisPage === 'Rutin' && sppbCurrentRole === 'unit';
+var sppbToastStorageKey = 'logistik_sppb_toast';
 
 $(document).ready(function() {
+    flushStoredSppbToast();
+
     if (sppbRutinUnitMode && $('#sppb-active-form').length && $('#sppb-active-form').is(':visible')) {
         loadSppbForm('Rutin', '#sppb-active-form');
         $('#sppb-list').hide();
@@ -384,6 +548,16 @@ $(document).ready(function() {
         sppbListTab = $(this).data('tab');
         $('#sppbMainTabs li').removeClass('active');
         $(this).closest('li').addClass('active');
+
+        if (sppbListTab === 'rekap') {
+            $('#sppb-list-pane').hide();
+            $('#sppb-rekap-pane').show();
+            loadSppbRekapNonRutin();
+            return;
+        }
+
+        $('#sppb-rekap-pane').hide();
+        $('#sppb-list-pane').show();
 
         if (sppbRutinUnitMode && sppbListTab === 'active') {
             $('#sppb-active-rutin').show();
@@ -416,6 +590,17 @@ $(document).ready(function() {
 
     $('#filter-status, #filter-jenis').change(function() {
         loadDisplay();
+    });
+
+    $('#sppb-rekap-tampil').on('click', loadSppbRekapNonRutin);
+    $('#sppb-rekap-status').on('change', loadSppbRekapNonRutin);
+    $('#sppb-rekap-cari').on('keypress', function(e) {
+        if (e.which === 13) loadSppbRekapNonRutin();
+    });
+    $('#sppb-rekap-cetak').on('click', function() {
+        var base = '{?=url(ADMIN."/logistik_non_medis/cetakrekapnonrutin")?}';
+        var query = $.param(getSppbRekapFilters());
+        window.open(base + (base.indexOf('?') >= 0 ? '&' : '?') + query, 'cetak_rekap_konsul_kabid', 'width=1200,height=760,scrollbars=yes,resizable=yes');
     });
 
     $('#btn-tambah').click(function() {
@@ -498,6 +683,32 @@ $(document).ready(function() {
         $('#form-import-sppb').off('submit').on('submit.importSppb', submitImportSppb);
     }, 0);
 });
+
+function getSppbRekapFilters() {
+    return {
+        tanggal_awal: $('#sppb-rekap-awal').val(),
+        tanggal_akhir: $('#sppb-rekap-akhir').val(),
+        status: $('#sppb-rekap-status').val(),
+        cari: $('#sppb-rekap-cari').val(),
+        context: 'sppb'
+    };
+}
+
+function loadSppbRekapNonRutin() {
+    if (!$('#sppb-rekap-display').length) return;
+    $('#sppb-rekap-display').html('<div class="text-center text-muted" style="padding:35px"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat rekap konsul...</div>');
+    $.ajax({
+        url: '{?=url(ADMIN."/logistik_non_medis/displayrekapnonrutin")?}',
+        type: 'POST',
+        data: getSppbRekapFilters(),
+        timeout: 30000
+    }).done(function(html) {
+        $('#sppb-rekap-display').html(html);
+    }).fail(function(xhr) {
+        var message = (xhr.responseJSON && xhr.responseJSON.message) || 'Rekap tidak dapat dimuat.';
+        $('#sppb-rekap-display').html('<div class="alert alert-danger"><i class="fa fa-times-circle"></i> ' + $('<div>').text(message).html() + '</div>');
+    });
+}
 
 function loadSppbForm(jenis, target, hideDisplay) {
     $.post('{?=url(ADMIN."/logistik_non_medis/formsppb")?}', {jenis: jenis}, function(data) {
@@ -587,6 +798,108 @@ function hapusSPPB(no_sppb) {
     });
 }
 
+function dokumenSPPB(no_sppb) {
+    var frame = document.getElementById('dokumen-sppb-frame');
+    var documentUrl = '{?=url(ADMIN."/logistik_non_medis/cetaksppb")?}'
+        + '&no_sppb=' + encodeURIComponent(no_sppb)
+        + '&preview=1';
+    $('#dokumen-sppb-nomor').text(no_sppb);
+    $('#dokumen-sppb-loading').show();
+    $('#dokumen-sppb-frame').hide();
+    frame.onload = function() {
+        $('#dokumen-sppb-loading').hide();
+        $('#dokumen-sppb-frame').show();
+    };
+    frame.src = documentUrl;
+    $('#modal-dokumen-sppb').modal('show');
+}
+
+function cetakDokumenSPPB() {
+    var frame = document.getElementById('dokumen-sppb-frame');
+    if (frame && frame.contentWindow) {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+    }
+}
+
+$('#modal-dokumen-sppb').on('hidden.bs.modal', function() {
+    var frame = document.getElementById('dokumen-sppb-frame');
+    if (frame) frame.src = 'about:blank';
+    $('#dokumen-sppb-frame').hide();
+    $('#dokumen-sppb-loading').show();
+});
+
+function escapeSppbToastText(value) {
+    return $('<div>').text(value || '').html();
+}
+
+function showSppbToast(type, title, message, delay) {
+    type = type || 'info';
+    delay = delay || 4200;
+    var icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-times-circle' : 'fa-info-circle');
+    var $toast = $(
+        '<div class="sppb-toast sppb-toast-' + type + '" role="status">' +
+            '<i class="fa ' + icon + ' sppb-toast-icon"></i>' +
+            '<div class="sppb-toast-body">' +
+                '<div class="sppb-toast-title">' + escapeSppbToastText(title) + '</div>' +
+                '<div class="sppb-toast-message">' + escapeSppbToastText(message) + '</div>' +
+            '</div>' +
+            '<button type="button" class="sppb-toast-close" aria-label="Tutup">&times;</button>' +
+        '</div>'
+    );
+    $('#sppb-toast-stack').append($toast);
+    setTimeout(function() { $toast.addClass('is-visible'); }, 20);
+    var closeToast = function() {
+        $toast.removeClass('is-visible');
+        setTimeout(function() { $toast.remove(); }, 220);
+    };
+    $toast.find('.sppb-toast-close').on('click', closeToast);
+    setTimeout(closeToast, delay);
+}
+
+function storeSppbToast(type, title, message) {
+    try {
+        var raw = sessionStorage.getItem(sppbToastStorageKey);
+        var queue = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(queue)) queue = queue && queue.message ? [queue] : [];
+        queue.push({type: type, title: title, message: message});
+        sessionStorage.setItem(sppbToastStorageKey, JSON.stringify(queue.slice(-4)));
+    } catch (e) {}
+}
+
+function flushStoredSppbToast() {
+    try {
+        var raw = sessionStorage.getItem(sppbToastStorageKey);
+        if (!raw) return;
+        sessionStorage.removeItem(sppbToastStorageKey);
+        var queue = JSON.parse(raw);
+        if (!Array.isArray(queue)) queue = queue && queue.message ? [queue] : [];
+        $.each(queue, function(_, toast) {
+            if (toast && toast.message) showSppbToast(toast.type || 'info', toast.title || 'Informasi', toast.message, toast.type === 'error' ? 9000 : 6500);
+        });
+    } catch (e) {}
+}
+
+function showSppbNotificationResult(notification) {
+    if (!notification) return;
+    var status = notification.wa_status || 'skipped';
+    var type = status === 'sent' ? 'success' : (status === 'failed' ? 'error' : 'info');
+    var title = status === 'sent' ? 'WhatsApp berhasil dikirim' : (status === 'failed' ? 'WhatsApp gagal dikirim' : (status === 'partial' ? 'WhatsApp terkirim sebagian' : 'WhatsApp tidak dikirim'));
+    var message = notification.message || 'Tidak ada rincian hasil pengiriman pesan.';
+    showSppbToast(type, title, message, status === 'failed' ? 9000 : 7000);
+}
+
+function showSppbStatusResult(res, fallbackMessage) {
+    var message = (res && res.message) || fallbackMessage || 'Status permintaan berhasil diubah.';
+    showSppbToast('success', 'Status berhasil diubah', message, 4200);
+    if (res && res.notification) showSppbNotificationResult(res.notification);
+}
+
+function buatSuratOrderNonRutin(no_sppb) {
+    var url = '{?=url("plugins/logistik_non_medis/public/surat-pengadaan-nonrutin.php")?}' + '?no_sppb=' + encodeURIComponent(no_sppb) + '&jenis=order';
+    window.open(url, 'surat_order_nonrutin', 'width=1000,height=760,scrollbars=yes,resizable=yes');
+}
+
 function approveUnit(no_sppb, label) {
     if(!label) label = 'Penyetuju';
     bootbox.confirm('Setujui permintaan ini (' + label + ')?', function(result) {
@@ -594,6 +907,7 @@ function approveUnit(no_sppb, label) {
             $.post('{?=url(ADMIN."/logistik_non_medis/approvesppb")?}', {no_sppb: no_sppb}, function(data) {
                 var res = JSON.parse(data);
                 if(res.status == 'success') {
+                    showSppbStatusResult(res, 'Permintaan berhasil disetujui.');
                     loadDisplay();
                     if($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
                 } else {
@@ -616,6 +930,7 @@ function rejectUnit(no_sppb) {
             $.post('{?=url(ADMIN."/logistik_non_medis/rejectsppb")?}', {no_sppb: no_sppb, alasan_penolakan: alasan}, function(data) {
                 var res = JSON.parse(data);
                 if(res.status == 'success') {
+                    showSppbStatusResult(res, 'Permintaan berhasil ditolak.');
                     loadDisplay();
                     if($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
                 } else {
@@ -631,6 +946,7 @@ function verifikasiLogistik(no_sppb) {
         $.post('{?=url(ADMIN."/logistik_non_medis/verifikasisppb")?}', {no_sppb: no_sppb}, function(data) {
             var res = JSON.parse(data);
             if(res.status == 'success') {
+                showSppbStatusResult(res, 'Permintaan berhasil diteruskan ke tahap berikutnya.');
                 loadDisplay();
                 if($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
             } else {
@@ -650,7 +966,8 @@ function keputusanDanaSppb(no_sppb, keputusan) {
     $.post('{?=url(ADMIN."/logistik_non_medis/keputusandanasppb")?}', postData, function(data) {
         var res = JSON.parse(data);
         if(res.status == 'success') {
-            loadDisplay();
+            showSppbStatusResult(res, keputusan === 'acc' ? 'Keputusan ACC berhasil disimpan.' : 'Keputusan Tidak ACC berhasil disimpan.');
+            if (sppbListTab === 'rekap') loadSppbRekapNonRutin(); else loadDisplay();
             if($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
         } else {
             alert(res.message);

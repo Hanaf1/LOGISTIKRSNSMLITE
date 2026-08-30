@@ -65,7 +65,8 @@
                         <button type="button" class="btn btn-primary" id="btn-tambah-barang"><i class="fa fa-plus"></i> Tambah Barang Baru</button>
                         <a href="{?=url([ADMIN, 'logistik_non_medis', 'exportmasterbarang'])?}" target="_blank" class="btn btn-success"><i class="fa fa-download"></i> Export</a>
                         <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#modal-import-barang" style="margin-left: 5px;"><i class="fa fa-upload"></i> Import</button>
-                        
+                         
+                        <button type="button" class="btn btn-info" id="btn-bulk-category-barang" style="display:none; margin-left: 5px;"><i class="fa fa-folder-open"></i> Ganti Kategori (<span id="bulk-category-count">0</span>)</button>
                         <button type="button" class="btn btn-danger" id="btn-bulk-delete-barang" style="display:none; margin-left: 5px;"><i class="fa fa-trash"></i> Hapus Terpilih (<span id="bulk-delete-count">0</span>)</button>
                     </div>
                 </div>
@@ -156,38 +157,32 @@
     </div>
 </div>
 
-<script>
-$(document).ready(function() {
-    $('#form-import-barang').on('submit', function(e) {
-        e.preventDefault();
-        var formData = new FormData(this);
-        formData.append('type', 'barang');
-        var btn = $('#btn-submit-import-barang');
-        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Mengimpor...');
-        
-        $.ajax({
-            url: "{?=url([ADMIN, 'logistik_non_medis', 'postImportCSV'])?}",
-            type: 'POST',
-            data: formData,
-            contentType: false,
-            processData: false,
-            success: function(res) {
-                var data = JSON.parse(res);
-                if (data.status == 'success') {
-                    alert(data.message);
-                    $('#modal-import-barang').modal('hide');
-                    location.reload();
-                } else {
-                    alert(data.message);
-                }
-            },
-            error: function() {
-                alert('Terjadi kesalahan saat mengimpor data.');
-            },
-            complete: function() {
-                btn.prop('disabled', false).html('Mulai Import');
-            }
-        });
-    });
-});
-</script>
+<!-- Modal Ganti Kategori Massal -->
+<div class="modal fade" id="modal-bulk-category-barang" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="form-bulk-category-barang">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title"><i class="fa fa-folder-open"></i> Ganti Kategori Barang</h4>
+                </div>
+                <div class="modal-body">
+                    <p><strong><span id="bulk-category-modal-count">0</span> barang</strong> akan dipindahkan ke kategori berikut:</p>
+                    <div class="form-group">
+                        <label for="bulk-kode-kategori">Kategori Tujuan <span class="text-danger">*</span></label>
+                        <select id="bulk-kode-kategori" class="form-control" required>
+                            <option value="">-- Pilih Kategori --</option>
+                            {loop: $kategori}
+                            <option value="{$value.kode_kategori}">{$value.nama_kategori} ({$value.kode_kategori})</option>
+                            {/loop}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-info" id="btn-save-bulk-category"><i class="fa fa-save"></i> Terapkan Kategori</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

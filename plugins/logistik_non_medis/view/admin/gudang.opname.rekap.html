@@ -43,9 +43,8 @@
                 <th width="100">No. Opname</th>
                 <th width="70">Tanggal</th>
                 <th>Nama Barang</th>
-                <th width="60" class="text-right">Sistem</th>
-                <th width="60" class="text-right">Fisik</th>
-                <th width="60" class="text-right">Selisih</th>
+                <th width="70">Satuan</th>
+                <th width="80" class="text-right">Jumlah Terkini</th>
                 <th>Keterangan</th>
             </tr>
         </thead>
@@ -58,16 +57,15 @@
                     <td>{$row.no_opname}</td>
                     <td>{if: $row.status == 'Jadwal'}{$row.tgl_jadwal}{else}{$row.tgl_opname}{/if}</td>
                     <td>{$row.nama_barang}</td>
-                    <td class="text-right">{$row.stok_sistem}</td>
+                    <td>{$row.satuan_dasar}</td>
                     <td class="text-right">{$row.stok_fisik}</td>
-                    <td class="text-right">{$row.selisih}</td>
                     <td>{$row.keterangan}</td>
                 </tr>
                 {/if}
                 {/loop}
             {else}
                 <tr>
-                    <td colspan="8" class="text-center">Tidak ada data hasil opname pada periode ini.</td>
+                    <td colspan="7" class="text-center">Tidak ada data hasil opname pada periode ini.</td>
                 </tr>
             {/if}
         </tbody>

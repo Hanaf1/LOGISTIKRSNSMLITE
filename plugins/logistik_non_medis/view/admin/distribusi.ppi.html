@@ -83,6 +83,14 @@
                 <div style="color: #666; font-size: 13px; margin-left: 34px;">
                     Pemantauan penggunaan barang terkait Pencegahan dan Pengendalian Infeksi dari permintaan rutin unit.
                 </div>
+                <div style="margin: 12px 0 0 34px; display: flex; align-items: center; gap: 8px;">
+                    <label for="pilih-bulan-ppi" style="margin: 0; font-size: 12px; color: #586069;">Periode laporan:</label>
+                    <select id="pilih-bulan-ppi" class="form-control input-sm" style="width: 180px; display: inline-block;" onchange="ubahBulanPpi(this.value)">
+                        {loop: $periode_pilihan}
+                        <option value="{$value.value}" {if: $value.selected}selected{/if}>{$value.label}</option>
+                        {/loop}
+                    </select>
+                </div>
             </div>
             
             <div class="panel-body" style="padding: 20px;">
@@ -91,7 +99,7 @@
                 <div class="row" style="margin-bottom: 25px;">
                     <div class="col-md-4">
                         <div style="border: 1px solid #e1e4e8; border-radius: 8px; padding: 15px; position: relative;">
-                            <div style="font-size: 11px; font-weight: 700; color: #586069; text-transform: uppercase; margin-bottom: 15px;">Total Qty Keluar Juli 2026</div>
+                            <div style="font-size: 11px; font-weight: 700; color: #586069; text-transform: uppercase; margin-bottom: 15px;">Total Qty Keluar {$periode_label}</div>
                             <i class="fa fa-cube text-success" style="position: absolute; top: 15px; right: 15px;"></i>
                             <div style="font-size: 28px; font-weight: 600; color: #0366d6; line-height: 1; margin-bottom: 5px;">{$dash_qty_keluar}</div>
                             <div style="font-size: 11px; color: #6a737d;">Barang PPI didistribusikan</div>
@@ -117,7 +125,7 @@
 
                 <!-- Tabs -->
                 <ul class="nav nav-tabs" style="border-bottom: 2px solid #e1e4e8; margin-bottom: 20px;">
-                    <li class="active"><a data-toggle="tab" href="#tab-minggu-ini" style="border:none; border-bottom: 3px solid transparent; color: #586069; font-weight: 600;">Data Juli 2026</a></li>
+                    <li class="active"><a data-toggle="tab" href="#tab-minggu-ini" style="border:none; border-bottom: 3px solid transparent; color: #586069; font-weight: 600;">Data {$periode_label}</a></li>
                     <li><a data-toggle="tab" href="#tab-perbandingan" style="border:none; border-bottom: 3px solid transparent; color: #586069; font-weight: 600;">Perbandingan Periode</a></li>
                     <li><a data-toggle="tab" href="#tab-riwayat" style="border:none; border-bottom: 3px solid transparent; color: #586069; font-weight: 600;">Riwayat Lengkap</a></li>
                 </ul>
@@ -138,8 +146,8 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; min-height: 300px;">
-                                    <h4 style="margin-top: 0; font-weight: 600; color: #24292e;">Konsumsi Barang PPI Juli 2026</h4>
-                                    <div style="font-size: 12px; color: #6a737d; margin-bottom: 20px;">01 Jul 2026 - 31 Jul 2026</div>
+                                    <h4 style="margin-top: 0; font-weight: 600; color: #24292e;">Konsumsi Barang PPI {$periode_label}</h4>
+                                    <div style="font-size: 12px; color: #6a737d; margin-bottom: 20px;">{$periode_display_awal} - {$periode_display_akhir}</div>
                                     
                                     <!-- Chart -->
                                     <div style="width: 100%; height: 250px;">
@@ -186,7 +194,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; min-height: 300px;">
-                                    <h4 style="margin-top: 0; font-weight: 600; color: #24292e;">Top 10 Barang PPI Juli 2026</h4>
+                                    <h4 style="margin-top: 0; font-weight: 600; color: #24292e;">Top 10 Barang PPI {$periode_label}</h4>
                                     <div style="font-size: 12px; color: #6a737d; margin-bottom: 20px;">Berdasarkan total kuantitas keluar</div>
                                     
                                     <ul class="list-group" style="margin:0; box-shadow: none;">
@@ -211,17 +219,17 @@
                                 <div class="col-md-5">
                                     <label style="font-size:12px; color:#586069;">Periode 1</label>
                                     <div class="input-group">
-                                        <input type="date" id="compare-tgl-awal-1" class="form-control input-sm" value="2026-06-01">
+                                        <input type="date" id="compare-tgl-awal-1" class="form-control input-sm" value="{$periode_sebelumnya_tgl_awal}">
                                         <span class="input-group-addon" style="background:transparent;border:none;padding:0 5px;font-size:12px;">s/d</span>
-                                        <input type="date" id="compare-tgl-akhir-1" class="form-control input-sm" value="2026-06-30">
+                                        <input type="date" id="compare-tgl-akhir-1" class="form-control input-sm" value="{$periode_sebelumnya_tgl_akhir}">
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <label style="font-size:12px; color:#586069;">Periode 2</label>
                                     <div class="input-group">
-                                        <input type="date" id="compare-tgl-awal-2" class="form-control input-sm" value="2026-07-01">
+                                        <input type="date" id="compare-tgl-awal-2" class="form-control input-sm" value="{$periode_tgl_awal}">
                                         <span class="input-group-addon" style="background:transparent;border:none;padding:0 5px;font-size:12px;">s/d</span>
-                                        <input type="date" id="compare-tgl-akhir-2" class="form-control input-sm" value="2026-07-31">
+                                        <input type="date" id="compare-tgl-akhir-2" class="form-control input-sm" value="{$periode_tgl_akhir}">
                                     </div>
                                 </div>
                                 <div class="col-md-2" style="padding-top:23px;">
@@ -266,16 +274,16 @@
                                         <option value="">-- Pilih Periode --</option>
                                         <option value="minggu_ini">Minggu Ini (Jum'at - Kamis)</option>
                                         <option value="minggu_lalu">Minggu Lalu</option>
-                                        <option value="bulan_ini">Bulan Ini</option>
-                                        <option value="kustom" selected>Juli 2026 (Demo)</option>
+                                        <option value="bulan_ini" selected>Bulan Aktif ({$periode_label})</option>
+                                        <option value="kustom">Periode Kustom</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="input-group">
                                         <span class="input-group-addon" style="background:transparent;border:none;padding:0 5px 0 0;font-size:12px;">Dari</span>
-                                        <input type="date" id="filter-tgl-awal" class="form-control input-sm" value="2026-07-01" onchange="$('#filter-periode-cepat').val('kustom'); loadDisplay()">
+                                        <input type="date" id="filter-tgl-awal" class="form-control input-sm" value="{$periode_tgl_awal}" onchange="$('#filter-periode-cepat').val('kustom'); loadDisplay()">
                                         <span class="input-group-addon" style="background:transparent;border:none;padding:0 5px;font-size:12px;">s/d</span>
-                                        <input type="date" id="filter-tgl-akhir" class="form-control input-sm" value="2026-07-31" onchange="$('#filter-periode-cepat').val('kustom'); loadDisplay()">
+                                        <input type="date" id="filter-tgl-akhir" class="form-control input-sm" value="{$periode_tgl_akhir}" onchange="$('#filter-periode-cepat').val('kustom'); loadDisplay()">
                                     </div>
                                 </div>
                                 <div class="col-md-2">
@@ -309,6 +317,7 @@
     </div>
 </div>
 
+<style>#modal-selesai-sppb .modal-body{max-height:calc(100vh - 180px);overflow-y:auto;}</style>
 <div class="modal fade" id="modal-selesai-sppb" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -326,6 +335,15 @@
                     <label>Nama Pengambil Barang <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="selesai_diambil_oleh" placeholder="Contoh: Budi / Unit Gizi" autocomplete="off">
                     <p class="help-block">Tanggal dan jam pengambilan otomatis memakai waktu sistem.</p>
+                </div>
+                <div class="form-group">
+                    <label>Tanda Tangan Pengambil <span class="text-danger">*</span></label>
+                    <div style="position:relative;border:1px solid #bbb;border-radius:3px;background:#fff;overflow:hidden;">
+                        <canvas id="selesai-signature-canvas" height="150" style="display:block;width:100%;height:150px;touch-action:none;cursor:crosshair;"></canvas>
+                        <span id="selesai-signature-hint" class="text-muted" style="position:absolute;left:0;right:0;top:62px;text-align:center;pointer-events:none;">Tanda tangan di area ini dengan digital pen, mouse, atau jari</span>
+                    </div>
+                    <button type="button" class="btn btn-default btn-xs" id="btn-clear-selesai-signature" style="margin-top:6px;"><i class="fa fa-eraser"></i> Hapus Tanda Tangan</button>
+                    <p class="help-block">Disimpan sebagai goresan terkompresi satu kali per SPPB, bukan sebagai foto besar.</p>
                 </div>
                 <div class="alert alert-info" style="margin-bottom:15px;">
                     <i class="fa fa-info-circle"></i> Setelah disimpan, status permintaan berubah menjadi <strong>Selesai</strong>.
@@ -537,6 +555,45 @@ function loadSppbForm(jenis, target, hideDisplay) {
         if (hideDisplay) $('#display').hide();
         $(target).html(data).show();
     });
+}
+
+function formatPpiDate(date) {
+    var year = date.getFullYear();
+    var month = String(date.getMonth() + 1).padStart(2, '0');
+    var day = String(date.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
+}
+
+function ubahBulanPpi(bulan) {
+    var url = new URL(window.location.href);
+    url.searchParams.set('periode_bulan', bulan);
+    window.location.href = url.toString();
+}
+
+function setPeriodeCepat() {
+    var pilihan = $('#filter-periode-cepat').val();
+    var today = new Date();
+    var mulai = new Date(today.getFullYear(), today.getMonth(), 1);
+    var selesai = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    if (pilihan === 'minggu_ini' || pilihan === 'minggu_lalu') {
+        // Siklus PPI mengikuti Jumat–Kamis.
+        var hari = today.getDay();
+        var jarakJumat = (hari - 5 + 7) % 7;
+        mulai = new Date(today);
+        mulai.setDate(today.getDate() - jarakJumat - (pilihan === 'minggu_lalu' ? 7 : 0));
+        selesai = new Date(mulai);
+        selesai.setDate(mulai.getDate() + 6);
+    } else if (pilihan === 'bulan_ini') {
+        // Bulan aktif dihitung dari tanggal 1 sampai hari ini.
+        mulai = new Date(today.getFullYear(), today.getMonth(), 1);
+    } else {
+        return loadDisplay(1);
+    }
+
+    $('#filter-tgl-awal').val(formatPpiDate(mulai));
+    $('#filter-tgl-akhir').val(formatPpiDate(selesai));
+    loadDisplay(1);
 }
 
 function loadDisplay(halaman) {

@@ -10,6 +10,21 @@
     </div>
 </article>
 
+<div class="modal fade" id="modalGudangPoItems" tabindex="-1" role="dialog" aria-labelledby="modalGudangPoItemsTitle">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="modalGudangPoItemsTitle"><i class="fa fa-list"></i> Detail Item PO</h4>
+            </div>
+            <div class="modal-body" id="gudang-po-items-body"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script type="text/javascript">
     $(document).ready(function() {
         window.loadGudangDashboard = function() {
@@ -25,15 +40,67 @@
             });
         }
 
-        window.openGudangReceiptForm = function(no_po = '', no_penerimaan = '') {
+        window.openGudangReceiptForm = function(no_po = '', no_penerimaan = '', tipe_penerimaan = '') {
             $.ajax({
                 url: '{?=url([ADMIN, "logistik_non_medis", "formgudangpenerimaan"])?}',
                 type: 'POST',
-                data: { no_po: no_po, no_penerimaan: no_penerimaan },
+                data: { no_po: no_po, no_penerimaan: no_penerimaan, tipe_penerimaan: tipe_penerimaan },
                 success: function(response) {
                     $('#gudang-penerimaan-content').html(response);
                 }
             });
+        }
+
+        window.showGudangPoItems = function(no_po) {
+            var $modal = $('#modalGudangPoItems');
+            var $body = $('#gudang-po-items-body');
+            $('#modalGudangPoItemsTitle').html('<i class="fa fa-list"></i> Detail Item PO - ' + escapeGudangHtml(no_po));
+            $body.html('<div class="text-center" style="padding: 35px;"><i class="fa fa-spinner fa-spin fa-2x"></i><p>Memuat item...</p></div>');
+            $modal.modal('show');
+
+            $.ajax({
+                url: '{?=url([ADMIN, "logistik_non_medis", "loaditemsfrompo"])?}',
+                type: 'POST',
+                dataType: 'json',
+                data: { no_po: no_po },
+                success: function(response) {
+                    if (response.status !== 'success') {
+                        $body.html('<div class="alert alert-danger">' + escapeGudangHtml(response.message || 'Item PO tidak dapat dimuat.') + '</div>');
+                        return;
+                    }
+
+                    var html = '<div class="well well-sm"><strong>Vendor:</strong> ' + escapeGudangHtml(response.nama_vendor || '-') +
+                        ' <span class="text-muted">(' + escapeGudangHtml(response.kode_vendor || '-') + ')</span></div>';
+                    html += '<div class="table-responsive"><table class="table table-bordered table-striped table-hover">';
+                    html += '<thead><tr><th width="45">No</th><th>Barang</th><th class="text-right">Qty PO</th><th class="text-right">Sudah Diterima</th><th class="text-right">Sisa</th></tr></thead><tbody>';
+
+                    if (!response.items || response.items.length === 0) {
+                        html += '<tr><td colspan="5" class="text-center text-muted">Tidak ada item pada PO ini.</td></tr>';
+                    } else {
+                        $.each(response.items, function(index, item) {
+                            html += '<tr><td>' + (index + 1) + '</td>';
+                            html += '<td><strong>' + escapeGudangHtml(item.nama_barang || item.kode_item || '-') + '</strong><br><small class="text-muted">' + escapeGudangHtml(item.kode_item || '-') + '</small></td>';
+                            html += '<td class="text-right">' + formatGudangQty(item.qty_po) + '</td>';
+                            html += '<td class="text-right">' + formatGudangQty(item.qty_diterima) + '</td>';
+                            html += '<td class="text-right"><strong>' + formatGudangQty(item.qty_sisa) + '</strong></td></tr>';
+                        });
+                    }
+                    html += '</tbody></table></div>';
+                    $body.html(html);
+                },
+                error: function() {
+                    $body.html('<div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> Gagal memuat detail item PO.</div>');
+                }
+            });
+        }
+
+        function escapeGudangHtml(value) {
+            return $('<div>').text(value == null ? '' : String(value)).html();
+        }
+
+        function formatGudangQty(value) {
+            var number = parseFloat(value || 0);
+            return Number.isInteger(number) ? number.toString() : number.toLocaleString('id-ID', { maximumFractionDigits: 2 });
         }
 
         window.loadGudangHistory = function(halaman = 1) {

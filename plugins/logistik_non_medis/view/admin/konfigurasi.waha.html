@@ -1,0 +1,164 @@
+<ul class="nav nav-tabs" role="tablist" style="margin-bottom:20px;">
+  <li class="active"><a href="#waha" role="tab" data-toggle="tab"><i class="fa fa-whatsapp"></i> Konfigurasi WAHA</a></li>
+  <li><a href="#status" role="tab" data-toggle="tab"><i class="fa fa-heartbeat"></i> Cek Status</a></li>
+    <li><a href="#tes" role="tab" data-toggle="tab"><i class="fa fa-paper-plane"></i> Tes Kirim Pesan</a></li>
+  <li><a href="#pesan" role="tab" data-toggle="tab"><i class="fa fa-envelope"></i> Template Pesan</a></li>
+</ul>
+
+<div class="tab-content">
+  <div role="tabpanel" class="tab-pane active" id="waha">
+    <div class="row">
+      <div class="col-md-8">
+        <div class="panel panel-default">
+          <div class="panel-heading"><h3 class="panel-title">Konfigurasi WhatsApp Gateway WAHA</h3></div>
+          <form method="post" action="{?=url([ADMIN,'logistik_non_medis','saveKonfigurasiWaha'])?}">
+            <div class="panel-body">
+              <div class="form-group">
+                <label><input type="checkbox" name="waha_aktif" value="1"{if: $aktif} checked{/if}> Aktifkan WAHA untuk notifikasi WhatsApp</label>
+              </div>
+              <div class="form-group">
+                <label>WAHA Base URL</label>
+                <input type="text" name="waha_base_url" class="form-control" value="{$base_url}" placeholder="http://127.0.0.1:3000">
+                <p class="help-block">Gunakan <code>http://127.0.0.1:3000</code> bila mLITE dan WAHA berada di VPS yang sama.</p>
+              </div>
+              <div class="form-group">
+                <label>WAHA API Key</label>
+                <input type="password" name="waha_api_key" class="form-control" value="" autocomplete="new-password" placeholder="{$api_key_placeholder}">
+                <p class="help-block">{if: $api_key_tersimpan}API key sudah tersimpan (berakhir: {$api_key_akhir}). Kosongkan kolom ini bila tidak ingin mengganti.{else}Isi dari variabel <code>WAHA_API_KEY</code> di <code>/opt/waha/.env</code>.{/if}</p>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <label>Nama Session</label>
+                  <input type="text" name="waha_session_name" class="form-control" value="{$session_name}" placeholder="default">
+                  <p class="help-block">Session yang sudah discan QR di dashboard WAHA.</p>
+                </div>
+                <div class="col-md-3">
+                  <label>Jeda Kirim (detik)</label>
+                  <input type="number" name="waha_delay" class="form-control" min="0" max="10" value="{$delay}">
+                  <p class="help-block">Untuk antrean kirim nanti.</p>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan Konfigurasi</button>
+              <a href="http://103.93.162.129:3000/dashboard" target="_blank" class="btn btn-default"><i class="fa fa-external-link"></i> Buka Dashboard WAHA</a>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="alert alert-info">
+          <strong>Catatan</strong><br>
+          Menu ini menyimpan endpoint dan API key WAHA. Setelah session <code>{$session_name}</code> berstatus <code>WORKING</code>, pengiriman pesan tes sudah bisa dipakai.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div role="tabpanel" class="tab-pane" id="status">
+    <div class="row">
+      <div class="col-md-8">
+        <div class="panel panel-default">
+          <div class="panel-heading"><h3 class="panel-title">Cek Koneksi WAHA</h3></div>
+          <form method="post" action="{?=url([ADMIN,'logistik_non_medis','testWahaStatus'])?}">
+            <div class="panel-body">
+              <p>Tekan tombol ini untuk mengecek apakah API WAHA bisa diakses dari server mLITE dan membaca status session <code>{$session_name}</code>.</p>
+              <button type="submit" class="btn btn-info"><i class="fa fa-heartbeat"></i> Cek Status WAHA</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div role="tabpanel" class="tab-pane" id="tes">
+    <div class="row">
+      <div class="col-md-8">
+        <div class="panel panel-default">
+          <div class="panel-heading"><h3 class="panel-title">Tes Kirim Pesan WAHA</h3></div>
+          <form method="post" action="{?=url([ADMIN,'logistik_non_medis','testWaha'])?}">
+            <div class="panel-body">
+              <div class="form-group">
+                <label>Nomor Tujuan</label>
+                <input type="text" name="nomor_tujuan" class="form-control" placeholder="Contoh: 628123456789 atau 08123456789" required>
+              </div>
+              <div class="form-group">
+                <label>Isi Pesan</label>
+                <textarea name="pesan" class="form-control" rows="4" required>Pesan tes notifikasi WAHA dari SIMRS RSNS.</textarea>
+              </div>
+              <button type="submit" class="btn btn-success"><i class="fa fa-paper-plane"></i> Kirim Pesan Tes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div role="tabpanel" class="tab-pane" id="pesan">
+    <div class="row">
+      <div class="col-md-8">
+        <div class="panel panel-default">
+          <div class="panel-heading"><h3 class="panel-title">Template Pesan Notifikasi WAHA</h3></div>
+          <form method="post" action="{?=url([ADMIN,'logistik_non_medis','saveTemplateWaha'])?}">
+            <div class="panel-body">
+              <p class="help-block">Gunakan <code>{no_sppb}</code> untuk Nomor SPPB dan <code>{username}</code> untuk nama user.</p>
+              <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover">
+                  <thead>
+                    <tr>
+                      <th width="30%">Jenis Notifikasi</th>
+                      <th width="10%" class="text-center">Aktif</th>
+                      <th>Format Pesan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loop: $templates}
+                    <tr>
+                      <td><strong>{$value.label}</strong><br><small class="text-muted">{$value.tipe}</small></td>
+                      <td class="text-center">
+                        <input type="checkbox" name="waha_template_aktif[{$value.tipe}]" value="1"{if: $value.aktif} checked{/if}>
+                      </td>
+                      <td>
+                        <textarea name="waha_template_pesan[{$value.tipe}]" class="form-control" rows="3" required>{$value.pesan}</textarea>
+                      </td>
+                    </tr>
+                    {/loop}
+                  </tbody>
+                </table>
+              </div>
+              <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan Template Pesan</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="panel panel-default">
+          <div class="panel-heading"><h3 class="panel-title">Tes Kirim Template</h3></div>
+          <form method="post" action="{?=url([ADMIN,'logistik_non_medis','testTemplateWaha'])?}">
+            <div class="panel-body">
+              <div class="form-group">
+                <label>Nomor Tujuan</label>
+                <input type="text" name="waha_template_test_target" class="form-control" placeholder="Contoh: 08123456789" required>
+              </div>
+              <div class="form-group">
+                <label>Jenis Notifikasi</label>
+                <select name="waha_template_test_type" class="form-control">
+                  {loop: $templates}
+                  <option value="{$value.tipe}">{$value.label}</option>
+                  {/loop}
+                </select>
+              </div>
+              <button type="submit" class="btn btn-success btn-block"><i class="fa fa-paper-plane"></i> Kirim Tes Pesan</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(function () {
+  if (window.location.hash === '#status') $('.nav-tabs a[href="#status"]').tab('show');
+  if (window.location.hash === '#tes') $('.nav-tabs a[href="#tes"]').tab('show');
+  if (window.location.hash === '#pesan') $('.nav-tabs a[href="#pesan"]').tab('show');
+});
+</script>

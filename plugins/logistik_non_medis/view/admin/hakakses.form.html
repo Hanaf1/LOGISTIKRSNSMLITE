@@ -24,6 +24,16 @@
             </select>
             <p class="help-block"><small>* Khusus role <strong>Unit</strong>, mereka wajib terhubung ke salah satu unit kerja di atas untuk memfilter data permintaan mereka. Bisa pilih lebih dari satu unit.</small></p>
         </div>
+
+        <hr>
+        <div class="form-group">
+            <label for="nomor_wa"><i class="fa fa-whatsapp" style="color:#25d366"></i> Nomor WhatsApp Notifikasi</label>
+            <input type="text" name="nomor_wa" id="nomor_wa" class="form-control" value="{$user.nomor_wa}" placeholder="62812xxxx atau 0812xxxx">
+            <p class="help-block"><small>Nomor kontak pejabat/user, bukan nomor unit. Pesan hanya dikirim untuk event persetujuan dan tidak memuat detail barang/pasien.</small></p>
+        </div>
+        <div class="checkbox">
+            <label><input type="hidden" name="wa_aktif" value="0"><input type="checkbox" name="wa_aktif" value="1" {if: !empty($user.wa_aktif)}checked{/if}> Aktifkan notifikasi WhatsApp untuk user ini</label>
+        </div>
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>

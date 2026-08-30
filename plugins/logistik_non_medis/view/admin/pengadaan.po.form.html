@@ -1,3 +1,18 @@
+<style>
+    /* Select asli tetap dipakai sebagai sumber data, tetapi tidak boleh ikut
+       terlihat bersama kontrol Select2. Dibuat independen dari timing JS. */
+    #po-vendor-select-wrapper select[name="kode_vendor"] {
+        display: none !important;
+        width: 100% !important;
+    }
+    #po-vendor-select-wrapper > .select2-container {
+        display: block !important;
+        width: 100% !important;
+    }
+    #selectator_kode_vendor {
+        display: none !important;
+    }
+</style>
 <form id="po-form-data" class="form-horizontal">
     <input type="hidden" name="id" value="{?= $data['id'] ?}">
     <input type="hidden" id="items_json" name="items_json" value='{?= json_encode($data['items']) ?}'>
@@ -28,8 +43,8 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label class="col-sm-4 control-label">Vendor</label>
-                <div class="col-sm-8">
-                    <select class="form-control select2" name="kode_vendor" id="kode_vendor" {if: $data['status'] != 'Draft'}disabled{/if}>
+                <div class="col-sm-8" id="po-vendor-select-wrapper">
+                    <select class="form-control vendor-select2" name="kode_vendor" id="kode_vendor" {if: $data['status'] != 'Draft'}disabled{/if}>
                         <option value="">-- Pilih Vendor --</option>
                         {loop: $vendors as $row}
                         <option value="{$row.kode_vendor}" {if: $data['kode_vendor'] == $row['kode_vendor']}selected{/if}>{$row.nama_vendor}</option>
@@ -156,7 +171,6 @@
 <script type="application/json" id="barang-map-json">{?= json_encode($barang_map) ?}</script>
 <script>
 $(document).ready(function() {
-    $('.select2').select2();
     var isEditable = "{?= ($data['status'] == 'Draft' || $data['status'] == 'Terkirim' || $data['status'] == 'Sebagian Diterima' || $data['status'] == 'Diamandemen') ? 'true' : 'false' ?}";
     var items = JSON.parse($('#items_json').val() || '[]');
     var barangMap = JSON.parse(document.getElementById('barang-map-json').textContent || '{}');
@@ -186,7 +200,7 @@ $(document).ready(function() {
                     tr.append('<td>' + item.harga_satuan + '</td>');
                 }
                 
-                tr.append('<td class="text-right">' + subtotal.toLocaleString('id-ID') + '</td>');
+                tr.append('<td class="text-right item-subtotal">' + subtotal.toLocaleString('id-ID') + '</td>');
                 
                 if(isEditable === 'true') {
                     tr.append('<td><button type="button" class="btn btn-danger btn-xs btn-remove-item" data-index="'+index+'"><i class="fa fa-trash"></i></button></td>');
@@ -214,22 +228,33 @@ $(document).ready(function() {
     // Init display
     renderItems();
 
-    $(document).on('input', '.calc-total', function() {
+    $(document).off('input.poTotal', '.calc-total').on('input.poTotal', '.calc-total', function() {
         calculateGrandTotal();
     });
 
-    $(document).on('input', '.qty-pesan, .harga-satuan', function() {
+    $(document).off('input.poItem', '.qty-pesan, .harga-satuan').on('input.poItem', '.qty-pesan, .harga-satuan', function() {
         var index = $(this).data('index');
         var tr = $(this).closest('tr');
         var qty = parseFloat(tr.find('.qty-pesan').val()) || 0;
         var hrg = parseFloat(tr.find('.harga-satuan').val()) || 0;
-        
+
         items[index].qty_pesan = qty;
         items[index].harga_satuan = hrg;
-        renderItems();
+        items[index].subtotal = qty * hrg;
+
+        // Jangan render ulang seluruh tabel saat mengetik karena akan
+        // menghilangkan fokus input setiap satu karakter.
+        tr.find('.item-subtotal').text(items[index].subtotal.toLocaleString('id-ID'));
+
+        var totalNilai = items.reduce(function(total, item) {
+            return total + ((parseFloat(item.qty_pesan) || 0) * (parseFloat(item.harga_satuan) || 0));
+        }, 0);
+        $('#total_nilai').val(totalNilai);
+        $('#items_json').val(JSON.stringify(items));
+        calculateGrandTotal();
     });
 
-    $(document).on('click', '.btn-remove-item', function() {
+    $(document).off('click.poItem', '.btn-remove-item').on('click.poItem', '.btn-remove-item', function() {
         var index = $(this).data('index');
         items.splice(index, 1);
         renderItems();

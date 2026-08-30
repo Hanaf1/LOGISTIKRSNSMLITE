@@ -62,7 +62,7 @@
 
                 <h3 class="panel-title" style="margin-top: 5px;">
                     <i class="fa fa-cubes"></i> Registrasi & Manajemen Aset Non-Medis
-                    <small class="pull-right">Total Data: <span id="total-aset-count" class="badge">0</span></small>
+                    <small class="pull-right">Total Kelompok: <span id="total-aset-count" class="badge">0</span></small>
                 </h3>
             </div>
             <div class="panel-body">
@@ -70,9 +70,9 @@
                 <!-- Filter Panel -->
                 <div class="filter-well">
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label>Unit Penugasan</label>
-                            <select id="filter_unit" class="form-control select-filter">
+                            <select id="filter_unit" class="form-control select-filter select2" style="width:100%;">
                                 <option value="">-- Semua Unit --</option>
                                 {if: !empty($units)}
                                 {loop: $units}
@@ -81,7 +81,7 @@
                                 {/if}
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label>Sumber Perolehan</label>
                             <select id="filter_sumber" class="form-control select-filter">
                                 <option value="">-- Semua Sumber --</option>
@@ -92,6 +92,24 @@
                             </select>
                         </div>
                         <div class="col-md-3">
+                            <label>Kelompok Barang</label>
+                            <select id="filter_kelompok" class="form-control select-filter select2" style="width:100%;">
+                                <option value="">-- Semua Kelompok --</option>
+                                {loop: $kelompok}
+                                <option value="{$value.kode_kategori}|{$value.kode_kelompok}">{$value.nama_kelompok}</option>
+                                {/loop}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Jenis Barang</label>
+                            <select id="filter_jenis" class="form-control select-filter select2" style="width:100%;">
+                                <option value="">-- Semua Jenis --</option>
+                                {loop: $jenis}
+                                <option value="{$value.kode_kategori}|{$value.kode_kelompok}|{$value.kode_jenis}" data-kelompok="{$value.kode_kategori}|{$value.kode_kelompok}">{$value.nama_jenis}</option>
+                                {/loop}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
                             <label>Kondisi Aset</label>
                             <select id="filter_kondisi" class="form-control select-filter">
                                 <option value="">-- Semua Kondisi --</option>
@@ -100,7 +118,9 @@
                                 <option value="Rusak Berat">Rusak Berat</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                    </div>
+                    <div class="row" style="margin-top:12px;">
+                        <div class="col-md-4">
                             <label>Pencarian Kata Kunci</label>
                             <div class="input-group">
                                 <input type="text" id="search_keyword" class="form-control" placeholder="Kode/Nama/Serial No...">
@@ -115,10 +135,10 @@
                 <!-- Action Button Row -->
                 <div class="row" style="margin-bottom: 20px;">
                     <div class="col-md-12">
-                        <button type="button" class="btn btn-primary" id="btn-tambah-aset">
+                        <a href="{?=url([ADMIN, 'logistik_non_medis', 'asetformpage'])?}" class="btn btn-primary" id="btn-tambah-aset">
                             <i class="fa fa-plus-circle"></i> Registrasikan Aset Baru
-                        </button>
-                        <a href="{?=url([ADMIN, 'logistik_non_medis', 'exportaset'])?}" class="btn btn-success"><i class="fa fa-download"></i> Export CSV</a>
+                        </a>
+                        <a href="{?=url([ADMIN, 'logistik_non_medis', 'exportaset'])?}" class="btn btn-success btn-export-aset"><i class="fa fa-file-excel-o"></i> Export List Inventaris</a>
                         <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#modal-import-aset"><i class="fa fa-upload"></i> Import</button>
                         <button type="button" class="btn btn-default" onclick="loadAset()" title="Segarkan Data">
                             <i class="fa fa-refresh"></i> Refresh
@@ -126,18 +146,20 @@
                     </div>
                 </div>
 
+                <!-- Chart and Stats Container -->
+                <div id="aset-stats-container"></div>
+
                 <!-- Data Table Container -->
                 <div class="table-responsive no-margin">
                     <table class="table table-striped no-margin dataTable" id="table-aset">
                         <thead>
                             <tr>
-                                <th style="width:40px; text-align:center;"><input type="checkbox" id="chk-all-aset"></th>
-                                <th>No. Inventaris</th>
-                                <th>Nama / Jenis Barang</th>
-                                <th>Merk / Type</th>
-                                <th>Lokasi</th>
-                                <th>Asal / Thn Beli</th>
-                                <th>Satuan / Jumlah</th>
+                                <th style="width:45px;">No.</th>
+                                <th>Barang</th>
+                                <th>Unit / Lokasi</th>
+                                <th>Tahun / Sumber</th>
+                                <th>Jumlah</th>
+                                <th>Range Inventaris</th>
                                 <th>Kondisi</th>
                                 <th>Harga</th>
                                 <th class="text-right" style="width: 160px;">Aksi</th>
@@ -167,25 +189,6 @@
         </div>
     </div>
 </article>
-
-<!-- Modal CRUD Form Aset -->
-<div class="modal fade" id="modal-form-aset" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content" id="form-aset-content">
-            <!-- Loaded via AJAX -->
-        </div>
-    </div>
-</div>
-
-<!-- Modal Detail & History Aset -->
-<div class="modal fade" id="modal-detail-aset" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content" id="detail-aset-content">
-            <!-- Loaded via AJAX -->
-        </div>
-    </div>
-</div>
-
 
 <!-- Modal Import Aset -->
 <div class="modal fade" id="modal-import-aset" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
@@ -220,6 +223,15 @@
 </div>
 <script>
     $(document).ready(function() {
+        if ($.fn.select2) {
+            $('#filter_unit, #filter_kelompok, #filter_jenis').each(function() {
+                try { if ($(this).data('selectator')) $(this).selectator('destroy'); } catch(e) {}
+                $('#selectator_' + this.id).remove();
+                $(this).siblings('.selectator_element').remove();
+                $(this).removeClass('selectator').select2({ width: '100%' });
+            });
+        }
+        filterJenisOptionsByKelompok('');
         loadAset(1);
 
         // Search trigger on enter key
@@ -238,26 +250,24 @@
 
         // Filter dropdowns change
         $('.select-filter').on('change', function() {
+            if (this.id === 'filter_kelompok') {
+                filterJenisOptionsByKelompok($(this).val());
+                $('#filter_jenis').val('').trigger('change.select2');
+            }
             loadAset(1);
         });
 
-        // Trigger Add Form Modal
-        $('#btn-tambah-aset').on('click', function(e) {
+        $('.btn-export-aset').on('click', function(e) {
             e.preventDefault();
-            $.ajax({
-                url: '{?=url([ADMIN, "logistik_non_medis", "formasetregistrasi"])?}',
-                type: 'POST',
-                beforeSend: function() {
-                    $('#form-aset-content').html('<div class="text-center" style="padding:50px;"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Menyiapkan form...</p></div>');
-                    $('#modal-form-aset').modal('show');
-                },
-                success: function(response) {
-                    $('#form-aset-content').html(response);
-                },
-                error: function() {
-                    alert('Gagal memuat form registrasi aset.');
-                    $('#modal-form-aset').modal('hide');
-                }
+            var exportUrl = $(this).attr('href');
+            var separator = exportUrl.indexOf('?') === -1 ? '?' : '&';
+            window.location.href = exportUrl + separator + $.param({
+                cari: $('#search_keyword').val() || '',
+                filter_unit: $('#filter_unit').val() || '',
+                filter_sumber: $('#filter_sumber').val() || '',
+                filter_kondisi: $('#filter_kondisi').val() || '',
+                filter_kelompok: $('#filter_kelompok').val() || '',
+                filter_jenis: $('#filter_jenis').val() || ''
             });
         });
 
@@ -268,50 +278,6 @@
             if(page) {
                 loadAset(page);
             }
-        });
-
-        // Delegated Edit Button Clicks
-        $(document).on('click', '.btn-edit-aset', function(e) {
-            e.preventDefault();
-            var id = $(this).attr('data-id');
-            $.ajax({
-                url: '{?=url([ADMIN, "logistik_non_medis", "formasetregistrasi"])?}',
-                type: 'POST',
-                data: { id: id },
-                beforeSend: function() {
-                    $('#form-aset-content').html('<div class="text-center" style="padding:50px;"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Memuat data form...</p></div>');
-                    $('#modal-form-aset').modal('show');
-                },
-                success: function(response) {
-                    $('#form-aset-content').html(response);
-                },
-                error: function() {
-                    alert('Gagal memuat data form edit.');
-                    $('#modal-form-aset').modal('hide');
-                }
-            });
-        });
-
-        // Delegated Detail Button Clicks
-        $(document).on('click', '.btn-detail-aset', function(e) {
-            e.preventDefault();
-            var id = $(this).attr('data-id');
-            $.ajax({
-                url: '{?=url([ADMIN, "logistik_non_medis", "detailasetregistrasi"])?}',
-                type: 'POST',
-                data: { id: id },
-                beforeSend: function() {
-                    $('#detail-aset-content').html('<div class="text-center" style="padding:50px;"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Mengambil detail aset...</p></div>');
-                    $('#modal-detail-aset').modal('show');
-                },
-                success: function(response) {
-                    $('#detail-aset-content').html(response);
-                },
-                error: function() {
-                    alert('Gagal memuat detail aset.');
-                    $('#modal-detail-aset').modal('hide');
-                }
-            });
         });
 
         // Delegated Label Print Button Clicks
@@ -394,12 +360,21 @@
     });
 
     // Main AJAX loading function
+    function filterJenisOptionsByKelompok(kelompok) {
+        $('#filter_jenis option').each(function() {
+            var optionKelompok = $(this).data('kelompok');
+            $(this).prop('disabled', !!(kelompok && optionKelompok && optionKelompok !== kelompok));
+        });
+    }
+
     function loadAset(page) {
         if(!page) page = 1;
         var cari = $('#search_keyword').val();
         var filter_unit = $('#filter_unit').val();
         var filter_sumber = $('#filter_sumber').val();
         var filter_kondisi = $('#filter_kondisi').val();
+        var filter_kelompok = $('#filter_kelompok').val();
+        var filter_jenis = $('#filter_jenis').val();
 
         $.ajax({
             url: '{?=url([ADMIN, "logistik_non_medis", "displayasetregistrasi"])?}',
@@ -410,7 +385,9 @@
                 cari: cari,
                 filter_unit: filter_unit,
                 filter_sumber: filter_sumber,
-                filter_kondisi: filter_kondisi
+                filter_kondisi: filter_kondisi,
+                filter_kelompok: filter_kelompok,
+                filter_jenis: filter_jenis
             },
             beforeSend: function() {
                 $('#display-aset').html('<tr><td colspan="9" class="text-center" style="padding: 40px 0;"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Memuat data...</p></td></tr>');
@@ -418,10 +395,13 @@
             },
             success: function(res) {
                 $('#display-aset').html(res.html);
+                if (res.html_stats) {
+                    $('#aset-stats-container').html(res.html_stats);
+                }
                 var totalItems = parseInt(res.jumlah) || 0;
                 var currentPage = parseInt(res.halaman) || 1;
                 var totalPages = parseInt(res.jml_halaman) || 1;
-                $('#total-aset-heading').text(totalItems);
+                $('#total-aset-count').text(totalItems);
 
                 var pag = '';
                 if (currentPage > 1) {
@@ -459,3 +439,4 @@
         });
     }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>

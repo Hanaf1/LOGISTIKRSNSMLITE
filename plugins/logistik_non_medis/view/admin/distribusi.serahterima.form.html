@@ -1,36 +1,50 @@
 <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-    <h4 class="modal-title"><i class="fa fa-handshake-o"></i> Form Serah Terima Barang - {$sppb.no_sppb}</h4>
+    <button type="button" class="close" data-dismiss="modal"
+        aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    <h4 class="modal-title"><i class="fa fa-handshake-o"></i> Form Serah Terima
+        Barang - {$sppb.no_sppb}</h4>
 </div>
 <div class="modal-body">
     <form id="formSerahTerimaExec" enctype="multipart/form-data">
         <input type="hidden" name="no_sppb" value="{$sppb.no_sppb}">
         <input type="hidden" name="no_serah_terima" value="{$no_bast}">
-        
+
         <div class="row">
             <div class="col-md-6">
                 <div class="panel panel-default">
                     <div class="panel-body">
-                        <h5 style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom:10px;"><i class="fa fa-info-circle"></i> Informasi Serah Terima</h5>
+                        <h5
+                            style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom:10px;"><i
+                                class="fa fa-info-circle"></i> Informasi Serah
+                            Terima</h5>
                         <div class="form-group">
                             <label>No. BAST</label>
-                            <input type="text" class="form-control" value="{$no_bast}" readonly disabled>
+                            <input type="text" class="form-control"
+                                value="{$no_bast}" readonly disabled>
                         </div>
                         <div class="form-group">
                             <label>Unit Penerima</label>
-                            <input type="text" class="form-control" value="{$sppb.nama_unit}" readonly disabled>
+                            <input type="text" class="form-control"
+                                value="{$sppb.nama_unit}" readonly disabled>
                         </div>
                         <div class="form-group">
-                            <label>Nama Pengambil / Penerima <span class="text-danger">*</span></label>
-                            <input type="text" name="penerima_nama" class="form-control" placeholder="Nama lengkap orang yang mengambil barang..." required>
+                            <label>Nama Pengambil / Penerima <span
+                                    class="text-danger">*</span></label>
+                            <input type="text" name="penerima_nama"
+                                class="form-control"
+                                placeholder="Nama lengkap orang yang mengambil barang..."
+                                required>
                         </div>
                         <div class="form-group">
                             <label>NIP/ID Penerima (Opsional)</label>
-                            <input type="text" name="penerima_nip" class="form-control" placeholder="Masukkan NIP/ID...">
+                            <input type="text" name="penerima_nip"
+                                class="form-control"
+                                placeholder="Masukkan NIP/ID...">
                         </div>
                         <div class="form-group">
                             <label>Keterangan</label>
-                            <textarea name="keterangan" class="form-control" rows="3"></textarea>
+                            <textarea name="keterangan" class="form-control"
+                                rows="3"></textarea>
                         </div>
                     </div>
                 </div>
@@ -38,28 +52,52 @@
             <div class="col-md-6">
                 <div class="panel panel-default">
                     <div class="panel-body">
-                        <h5 style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom:10px;"><i class="fa fa-camera"></i> Dokumentasi & Validasi</h5>
+                        <h5
+                            style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom:10px;"><i
+                                class="fa fa-camera"></i> Dokumentasi &
+                            Validasi</h5>
                         <div class="form-group">
-                            <label>Foto Kondisi Barang <span class="text-danger">*</span></label>
+                            <label>Foto Kondisi Barang <span
+                                    class="text-danger">*</span></label>
                             <div class="input-group">
-                                <span class="input-group-addon"><i class="fa fa-image"></i></span>
-                                <input type="file" name="foto_kondisi" id="foto_kondisi" class="form-control" accept="image/*" capture="camera" required onchange="previewImage(event)">
+                                <span class="input-group-addon"><i
+                                        class="fa fa-image"></i></span>
+                                <input type="file" name="foto_kondisi"
+                                    id="foto_kondisi" class="form-control"
+                                    accept="image/*" capture="camera" required
+                                    onchange="previewImage(event)">
                             </div>
-                            <p class="help-block text-muted" style="font-size: 12px;">Ambil foto barang saat diserahkan sebagai bukti.</p>
-                            <div id="imagePreviewContainer" style="display:none; margin-top: 10px; border: 1px dashed #ccc; padding: 5px; text-align: center; border-radius: 5px; background: #fff;">
-                                <img id="imagePreview" style="max-width: 100%; max-height: 150px; border-radius: 3px;" />
+                            <p class="help-block text-muted"
+                                style="font-size: 12px;">Ambil foto barang saat
+                                diserahkan sebagai bukti.</p>
+                            <div id="imagePreviewContainer"
+                                style="display:none; margin-top: 10px; border: 1px dashed #ccc; padding: 5px; text-align: center; border-radius: 5px; background: #fff;">
+                                <img id="imagePreview"
+                                    style="max-width: 100%; max-height: 150px; border-radius: 3px;" />
                             </div>
                         </div>
                         <div class="form-group" style="margin-top:20px;">
-                            <label>Tanda Terima Digital <span class="text-danger">*</span></label>
-                            <div style="border:2px dashed #337ab7; background:#fff; border-radius: 4px; position: relative; overflow: hidden;">
-                                <canvas id="signature-pad" class="signature-pad" width=350 height=180 style="width:100%; height:180px; touch-action: none;"></canvas>
-                                <div style="position: absolute; bottom: 5px; right: 5px; opacity: 0.5; pointer-events: none; font-size: 11px;">Tanda tangan di sini</div>
+                            <label>Tanda Terima Digital <span
+                                    class="text-danger">*</span></label>
+                            <div
+                                style="border:2px dashed #337ab7; background:#fff; border-radius: 4px; position: relative; overflow: hidden;">
+                                <canvas id="signature-pad" class="signature-pad"
+                                    width=350 height=180
+                                    style="width:100%; height:180px; touch-action: none;"></canvas>
+                                <div
+                                    style="position: absolute; bottom: 5px; right: 5px; opacity: 0.5; pointer-events: none; font-size: 11px;">Tanda
+                                    tangan di sini</div>
                             </div>
-                            <div class="text-right mt-1" style="margin-top:8px;">
-                                <button type="button" class="btn btn-xs btn-danger" id="clear_signature"><i class="fa fa-eraser"></i> Bersihkan</button>
+                            <div class="text-right mt-1"
+                                style="margin-top:8px;">
+                                <button type="button"
+                                    class="btn btn-xs btn-danger"
+                                    id="clear_signature"><i
+                                        class="fa fa-eraser"></i>
+                                    Bersihkan</button>
                             </div>
-                            <input type="hidden" name="tanda_terima" id="tanda_terima_data">
+                            <input type="hidden" name="tanda_terima"
+                                id="tanda_terima_data">
                         </div>
                     </div>
                 </div>
@@ -101,17 +139,23 @@
                     }
                 </style>
                 <div class="custom-breadcrumb">
-                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
+                    <a
+                        href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i
+                            class="fa fa-home"></i></a>
                     <i class="fa fa-chevron-right separator"></i>
-                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Distribusi</a>
+                    <a
+                        href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Distribusi</a>
                     <i class="fa fa-chevron-right separator"></i>
                     <span class="active">Serahterima</span>
                 </div>
 
-                <h5 class="panel-title" style="margin:0;"><i class="fa fa-list"></i> Detail Barang yang Diserahkan</h5>
+                <h5 class="panel-title" style="margin:0;"><i
+                        class="fa fa-list"></i> Detail Barang yang
+                    Diserahkan</h5>
             </div>
             <div class="table-responsive">
-                <table class="table table-condensed table-striped table-hover" style="margin-bottom:0;">
+                <table class="table table-condensed table-striped table-hover"
+                    style="margin-bottom:0;">
                     <thead>
                         <tr>
                             <th style="width:50%;">Item</th>
@@ -123,7 +167,8 @@
                         {loop: $items}
                         <tr>
                             <td><strong>{$value.nama_barang}</strong></td>
-                            <td class="text-center"><span class="label label-success">{$value.jumlah_disetujui}</span></td>
+                            <td class="text-center"><span
+                                    class="label label-success">{$value.jumlah_disetujui}</span></td>
                             <td>{$value.satuan}</td>
                         </tr>
                         {/loop}
@@ -134,8 +179,10 @@
     </form>
 </div>
 <div class="modal-footer">
-    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
-    <button type="button" class="btn btn-primary" onclick="simpanSerahTerima()">Simpan & Selesai</button>
+    <button type="button" class="btn btn-default"
+        data-dismiss="modal">Batal</button>
+    <button type="button" class="btn btn-primary"
+        onclick="simpanSerahTerima()">Simpan & Selesai</button>
 </div>
 
 <script>
@@ -144,18 +191,48 @@ var canvas = document.getElementById('signature-pad');
 
 /* Fallback agar TTD tetap dapat dipakai saat CDN SignaturePad tidak termuat. */
 function nativeSignaturePad(target) {
-    var ctx = target.getContext('2d'), drawing = false, signed = false;
+    var ctx = target.getContext('2d'), drawing = false, signed = false, strokes = [], currentStroke = null;
     function point(event) {
         var rect = target.getBoundingClientRect(), source = event.touches ? event.touches[0] : event;
         return {x: source.clientX - rect.left, y: source.clientY - rect.top};
     }
-    function start(event) { drawing = true; signed = true; var p = point(event); ctx.beginPath(); ctx.moveTo(p.x, p.y); event.preventDefault(); }
-    function draw(event) { if (!drawing) return; var p = point(event); ctx.lineTo(p.x, p.y); ctx.stroke(); event.preventDefault(); }
+    function start(event) { drawing = true; signed = true; var p = point(event); currentStroke = {points:[{x:p.x,y:p.y}]}; strokes.push(currentStroke); ctx.beginPath(); ctx.moveTo(p.x, p.y); event.preventDefault(); }
+    function draw(event) { if (!drawing) return; var p = point(event); currentStroke.points.push({x:p.x,y:p.y}); ctx.lineTo(p.x, p.y); ctx.stroke(); event.preventDefault(); }
     function end() { drawing = false; }
     target.addEventListener('pointerdown', start, {passive:false});
     target.addEventListener('pointermove', draw, {passive:false});
     target.addEventListener('pointerup', end); target.addEventListener('pointerleave', end);
-    return { clear:function(){ ctx.clearRect(0, 0, target.width, target.height); signed = false; }, isEmpty:function(){ return !signed; }, toDataURL:function(){ return target.toDataURL('image/png'); } };
+    return {
+        clear:function(){ ctx.clearRect(0, 0, target.width, target.height); signed = false; strokes = []; },
+        isEmpty:function(){ return !signed; },
+        toData:function(){ return strokes; },
+        fromData:function(data){
+            strokes = data || []; signed = strokes.length > 0;
+            strokes.forEach(function(stroke){
+                if (!stroke.points || stroke.points.length < 2) return;
+                ctx.beginPath(); ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+                stroke.points.slice(1).forEach(function(p){ ctx.lineTo(p.x,p.y); }); ctx.stroke();
+            });
+        }
+    };
+}
+
+function buildSignaturePayload() {
+    var raw = signaturePad && typeof signaturePad.toData === 'function' ? signaturePad.toData() : [];
+    var strokes = [];
+    raw.forEach(function(group){
+        var points = group.points || [], compact = [], previous = null;
+        points.forEach(function(point, index){
+            var x = Math.round(Number(point.x) * 10) / 10;
+            var y = Math.round(Number(point.y) * 10) / 10;
+            if (!isFinite(x) || !isFinite(y)) return;
+            if (!previous || index === points.length - 1 || Math.abs(x - previous[0]) + Math.abs(y - previous[1]) >= 1.5) {
+                compact.push([x, y]); previous = [x, y];
+            }
+        });
+        if (compact.length >= 2) strokes.push(compact);
+    });
+    return JSON.stringify({version:1, width:Math.round(canvas.offsetWidth || 350), height:Math.round(canvas.offsetHeight || 180), strokes:strokes});
 }
 
 function resizeCanvas() {
@@ -216,7 +293,7 @@ function simpanSerahTerima() {
         return;
     }
 
-    var sigData = signaturePad.toDataURL('image/png');
+    var sigData = buildSignaturePayload();
     $('#tanda_terima_data').val(sigData);
     
     var btn = $('.btn-primary').last();

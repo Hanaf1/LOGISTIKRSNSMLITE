@@ -119,6 +119,7 @@
                     </div>
                     ( <strong><u>{$st.penerima_nama}</u></strong> )<br>
                     Perwakilan Unit Peminta
+                    {if: !empty($st.tanda_terima_hash)}<br><small style="font-size:8px;color:#777;">Hash: {?=substr($st['tanda_terima_hash'],0,16)?}…</small>{/if}
                 </td>
             </tr>
         </table>
