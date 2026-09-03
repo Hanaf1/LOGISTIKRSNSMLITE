@@ -54,11 +54,7 @@ themes/atilamedika
 cookies.txt
 artifacts/
 waha/
-agent/__pycache__/
-agent/db_backups/
-agent/*.xlsx
-agent/*.json
-agent/*.sql
+agent/
 master_head.html
 custom_logistiknonmedis.sql
 rsns_custom_master_aset_*.sql
