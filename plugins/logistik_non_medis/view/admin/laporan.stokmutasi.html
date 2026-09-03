@@ -174,12 +174,13 @@
                                         <th class="text-center">Masuk (+)</th>
                                         <th class="text-center">Keluar (-)</th>
                                         <th class="text-center">Stok Akhir</th>
+                                        <th class="text-center">Satuan</th>
                                         <th>User</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbody-kartu-stok">
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted">Silakan pilih barang dan klik Cari untuk menampilkan data.</td>
+                                        <td colspan="9" class="text-center text-muted">Silakan pilih barang dan klik Cari untuk menampilkan data.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -605,7 +606,7 @@ $(document).ready(function() {
             return;
         }
 
-        $('#tbody-kartu-stok').html('<tr><td colspan="8" class="text-center"><i class="fa fa-spinner fa-spin"></i> Memuat data...</td></tr>');
+        $('#tbody-kartu-stok').html('<tr><td colspan="9" class="text-center"><i class="fa fa-spinner fa-spin"></i> Memuat data...</td></tr>');
         
         // Update print meta info
         $('#print-kartu-detail').text('Barang: ' + label_barang + ' | Periode: ' + tgl_awal + ' s/d ' + tgl_akhir);

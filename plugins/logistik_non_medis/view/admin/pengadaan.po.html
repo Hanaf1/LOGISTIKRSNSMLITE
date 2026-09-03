@@ -283,6 +283,13 @@
                 pesan = 'Yakin membatalkan PO ini? Data perencanaan akan dikembalikan.';
                 btnClass = 'btn-danger';
                 btnLabel = '<i class="fa fa-times"></i> Ya, Batalkan';
+
+                // PO Draft dihapus permanen saat dibatalkan, jadi konfirmasinya
+                // harus menyebutkan itu secara eksplisit.
+                if($(this).data('draft') == 1) {
+                    pesan = 'Yakin membatalkan draft PO ini? <b>Data PO akan dihapus permanen</b> dan data perencanaan dikembalikan.';
+                    btnLabel = '<i class="fa fa-trash"></i> Ya, Batalkan &amp; Hapus';
+                }
             }
 
             bootbox.confirm({
@@ -301,7 +308,10 @@
                         dataType: 'json',
                         success: function(res) {
                             if(res.status == 'success') {
-                                bootbox.alert({ title: '<i class="fa fa-check-circle text-success"></i> Berhasil', message: 'Status PO berhasil diubah.', callback: function(){ loadPO(); } });
+                                var pesanSukses = res.deleted
+                                    ? 'Draft PO dibatalkan dan dihapus.'
+                                    : 'Status PO berhasil diubah.';
+                                bootbox.alert({ title: '<i class="fa fa-check-circle text-success"></i> Berhasil', message: pesanSukses, callback: function(){ loadPO(); } });
                             } else {
                                 bootbox.alert({ title: '<i class="fa fa-times-circle text-danger"></i> Gagal', message: res.message });
                             }

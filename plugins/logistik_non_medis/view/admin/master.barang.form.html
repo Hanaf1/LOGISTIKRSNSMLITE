@@ -57,8 +57,23 @@
                     <label>Sub-Kategori</label>
                 </div>
                 <div class="form-group">
-                    <label>Satuan Konversi</label>
-                    <input type="text" name="satuan_konversi" class="form-control" id="satuan_konversi" value="{$barang.satuan_konversi}" placeholder="Contoh: 1 BOX = 12 PCS">
+                    <label>Satuan Alternatif untuk Permintaan</label>
+                    <p class="help-block" style="margin-top:0">Faktor adalah jumlah satuan dasar dalam 1 satuan alternatif. Contoh: 1 Pack = 10 Lembar, isi faktor 10.</p>
+                    <div id="uom-alternatif-rows">
+                        {loop: $barang_satuan}
+                        <div class="input-group uom-alternatif-row" style="margin-bottom:6px">
+                            <input type="text" name="satuan_alternatif[]" class="form-control" list="master-satuan-list" value="{$value.satuan}" placeholder="Satuan, mis. Pack">
+                            <span class="input-group-addon">=</span>
+                            <input type="number" name="faktor_alternatif[]" class="form-control" min="0.000001" step="0.000001" value="{$value.faktor_ke_dasar}" placeholder="Faktor">
+                            <span class="input-group-btn"><button type="button" class="btn btn-danger btn-remove-uom"><i class="fa fa-times"></i></button></span>
+                        </div>
+                        {/loop}
+                    </div>
+                    <button type="button" class="btn btn-default btn-sm" id="btn-add-uom"><i class="fa fa-plus"></i> Tambah Satuan</button>
+                    <input type="hidden" name="satuan_konversi" id="satuan_konversi" value="{$barang.satuan_konversi}">
+                    <datalist id="master-satuan-list">
+                        {loop: $satuan}<option value="{$value.nama_satuan}">{/loop}
+                    </datalist>
                 </div>
                 <!--
                 <div class="form-group">
@@ -131,3 +146,29 @@
         <button type="submit" class="btn btn-primary" id="btn-save-barang">Simpan</button>
     </div>
 </form>
+<script>
+(function() {
+    function addUomRow() {
+        $('#uom-alternatif-rows').append(
+            '<div class="input-group uom-alternatif-row" style="margin-bottom:6px">' +
+            '<input type="text" name="satuan_alternatif[]" class="form-control" list="master-satuan-list" placeholder="Satuan, mis. Pack">' +
+            '<span class="input-group-addon">=</span>' +
+            '<input type="number" name="faktor_alternatif[]" class="form-control" min="0.000001" step="0.000001" placeholder="Faktor">' +
+            '<span class="input-group-btn"><button type="button" class="btn btn-danger btn-remove-uom"><i class="fa fa-times"></i></button></span>' +
+            '</div>'
+        );
+    }
+    $('#btn-add-uom').off('click.uom').on('click.uom', addUomRow);
+    $('#uom-alternatif-rows').off('click.uom').on('click.uom', '.btn-remove-uom', function() { $(this).closest('.uom-alternatif-row').remove(); });
+    $('#form-master-barang').off('submit.uom-summary').on('submit.uom-summary', function() {
+        var base = $('#select-satuan-dasar').val() || 'satuan dasar';
+        var labels = [];
+        $('.uom-alternatif-row').each(function() {
+            var unit = $(this).find('[name="satuan_alternatif[]"]').val();
+            var factor = $(this).find('[name="faktor_alternatif[]"]').val();
+            if (unit && factor) labels.push('1 ' + unit + ' = ' + factor + ' ' + base);
+        });
+        $('#satuan_konversi').val(labels.join('; '));
+    });
+})();
+</script>

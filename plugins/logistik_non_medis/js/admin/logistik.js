@@ -650,8 +650,17 @@ $(document).ready(function () {
 
     function loadMasterKategori(page = 1, cari = '') {
         $('#master-kategori-list').html('<tr><td colspan="4" class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i><p>Memuat data...</p></td></tr>');
-        $.post(baseURL + '/logistik_non_medis/displaymasterkategori?t=' + mlite.token, { halaman: page, cari: cari }, function (data) {
-            $('#master-kategori-list').html(data);
+        $.ajax({
+            url: baseURL + '/logistik_non_medis/displaymasterkategori?t=' + mlite.token,
+            type: 'POST',
+            data: { halaman: page, cari: cari },
+            timeout: 15000,
+            success: function (data) {
+                $('#master-kategori-list').html(data);
+            },
+            error: function () {
+                $('#master-kategori-list').html('<tr><td colspan="4" class="text-center text-danger">Gagal memuat data kategori. Silakan coba lagi.</td></tr>');
+            }
         });
     }
 
@@ -697,19 +706,24 @@ $(document).ready(function () {
             url: baseURL + '/logistik_non_medis/savemasterkategori?t=' + mlite.token,
             type: 'POST',
             data: formData,
-            success: function (response) {
-                var res = (typeof response === 'object') ? response : JSON.parse(response);
-                if (res.status == 'success') {
+            dataType: 'json',
+            timeout: 15000,
+            success: function (res) {
+                if (res && res.status === 'success') {
                     $('#modal-form-kategori').modal('hide');
                     loadMasterKategori();
-                    alert('Data berhasil disimpan!');
+                    showLogistikToast('success', 'Berhasil', res.message || 'Kategori berhasil disimpan.');
                 } else {
-                    alert('Error: ' + (res.message || 'Gagal menyimpan data.'));
+                    showLogistikToast('error', 'Gagal menyimpan', (res && res.message) || 'Gagal menyimpan kategori.');
                 }
-                btn.prop('disabled', false).text('Simpan');
             },
-            error: function () {
-                alert('Gagal terhubung ke server.');
+            error: function (xhr, status) {
+                var message = status === 'timeout'
+                    ? 'Waktu permintaan habis. Silakan coba kembali.'
+                    : 'Respons server tidak valid. Silakan muat ulang halaman lalu coba kembali.';
+                showLogistikToast('error', 'Gagal menyimpan', message);
+            },
+            complete: function () {
                 btn.prop('disabled', false).text('Simpan');
             },
             cache: false,
@@ -720,14 +734,31 @@ $(document).ready(function () {
 
     $(document).off('click', '.hapus-kategori').on('click', '.hapus-kategori', function () {
         var id = $(this).data('id');
+        var $button = $(this);
         if (confirm('Yakin ingin menghapus data ini?')) {
-            $.post(baseURL + '/logistik_non_medis/hapusmasterkategori?t=' + mlite.token, { id: id }, function (response) {
-                var res = (typeof response === 'object') ? response : JSON.parse(response);
-                loadMasterKategori();
-                if (res.status === 'success') {
-                    alert('Data berhasil dihapus!');
-                } else {
-                    alert(res.message || 'Gagal menghapus data.');
+            $button.prop('disabled', true);
+            $.ajax({
+                url: baseURL + '/logistik_non_medis/hapusmasterkategori?t=' + mlite.token,
+                type: 'POST',
+                data: { id: id },
+                dataType: 'json',
+                timeout: 15000,
+                success: function (res) {
+                    if (res && res.status === 'success') {
+                        loadMasterKategori();
+                        showLogistikToast('success', 'Berhasil', res.message || 'Data kategori berhasil dihapus.');
+                    } else {
+                        showLogistikToast('error', 'Tidak dapat menghapus', (res && res.message) || 'Gagal menghapus data.');
+                    }
+                },
+                error: function (xhr, status) {
+                    var message = status === 'timeout'
+                        ? 'Waktu permintaan habis. Silakan coba kembali.'
+                        : 'Respons server tidak valid. Silakan muat ulang halaman lalu coba kembali.';
+                    showLogistikToast('error', 'Gagal menghapus', message);
+                },
+                complete: function () {
+                    $button.prop('disabled', false);
                 }
             });
         }

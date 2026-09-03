@@ -1,5 +1,5 @@
 <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal">&times;</button>
+    <button type="button" class="close" {if: !empty($inline_mode)}onclick="tutupEditorSPPB(); return false;"{else}data-dismiss="modal"{/if}>&times;</button>
     <h4 class="modal-title">Detail Permintaan Barang (SPPB)</h4>
 </div>
 <div class="modal-body">
@@ -421,6 +421,53 @@
     {/if}
 
     <h4>Daftar Barang</h4>
+    {if: !empty($can_add_tambahan) && !empty($inline_mode)}
+    <div class="panel panel-info" style="margin-bottom:15px;">
+        <div class="panel-heading"><strong><i class="fa fa-plus-circle"></i> {if: !empty($is_terminal_request)}Buat Permintaan Tambahan{else}Tambah Barang ke Permintaan Ini{/if}</strong></div>
+        <div class="panel-body">
+            {if: !empty($is_terminal_request)}
+            <div class="alert alert-info" style="margin-bottom:12px;"><i class="fa fa-info-circle"></i> SPPB lama sudah selesai dan tidak akan diubah. Saat disimpan, sistem membuat nomor SPPB tambahan baru dengan status <strong>Belum Diproses</strong>.</div>
+            {/if}
+            <div class="row">
+                <div class="col-sm-6">
+                    <label for="tambahan-kelompok">Kelompok Barang</label>
+                    <select id="tambahan-kelompok" class="form-control">
+                        <option value="">Semua kelompok barang</option>
+                    </select>
+                    <label for="tambahan-kode-item" style="margin-top:8px;">Cari Barang</label>
+                    <select id="tambahan-kode-item" class="form-control" style="width:100%;"></select>
+                </div>
+                <div class="col-sm-2">
+                    <label for="tambahan-jumlah">Jumlah</label>
+                    <input type="number" id="tambahan-jumlah" class="form-control" min="1" step="any" value="1">
+                </div>
+                <div class="col-sm-2">
+                    <label>Satuan</label>
+                    <select id="tambahan-satuan" class="form-control"><option value="">-- Pilih barang --</option></select>
+                </div>
+                <div class="col-sm-2">
+                    <label>&nbsp;</label>
+                    <button type="button" class="btn btn-primary form-control" id="btn-tambah-daftar"><i class="fa fa-plus"></i> Tambah ke Daftar</button>
+                </div>
+            </div>
+            <div class="row" style="margin-top:10px;">
+                <div class="col-sm-12">
+                    <input type="text" id="tambahan-keterangan" class="form-control" placeholder="Keterangan item (opsional)">
+                </div>
+            </div>
+            <div id="tambahan-daftar-wrap" style="display:none;margin-top:15px;">
+                <strong>Daftar tambahan yang akan disimpan</strong>
+                <div class="table-responsive">
+                    <table class="table table-condensed table-bordered" style="margin:6px 0 10px;">
+                        <thead><tr><th>Barang</th><th width="100">Jumlah</th><th width="100">Satuan</th><th>Keterangan</th><th width="50"></th></tr></thead>
+                        <tbody id="tambahan-daftar"></tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-success btn-sm" id="btn-simpan-semua-tambahan"><i class="fa fa-save"></i> Simpan Semua</button>
+            </div>
+        </div>
+    </div>
+    {/if}
     <div class="sppb-detail-table-wrap">
     <table class="table table-bordered table-striped sppb-detail-table">
         <thead>
@@ -492,7 +539,7 @@
     </div>
 </div>
 <div class="modal-footer">
-    <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
+    <button type="button" class="btn btn-default" {if: !empty($inline_mode)}onclick="tutupEditorSPPB(); return false;"{else}data-dismiss="modal"{/if}>Tutup</button>
     {if: $sppb.status == 'Diajukan' && $sppb.jenis_permintaan != 'Rutin' && $can_approve_sppb}
         <button type="button" class="btn btn-primary" onclick="approveUnit('{$sppb.no_sppb}', 'Ka. Unit')">ACC KA. UNIT</button>
         <button type="button" class="btn btn-danger" onclick="rejectUnit('{$sppb.no_sppb}')">Tolak</button>
@@ -547,6 +594,142 @@
     {/if}
     <a href="{?=url(ADMIN.'/logistik_non_medis/cetaksppb?no_sppb='.$sppb.no_sppb)?}" target="_blank" class="btn btn-info"><i class="fa fa-print"></i> Cetak</a>
 </div>
+
+{if: !empty($can_add_tambahan) && !empty($inline_mode)}
+<script>
+(function() {
+    var noSppb = '{$sppb.no_sppb}';
+    var $kelompok = $('#tambahan-kelompok');
+    var $barang = $('#tambahan-kode-item');
+    var ajaxBarangUrl = '{?=url(ADMIN."/logistik_non_medis/ajaxmasterbarang")?}';
+    var pendingItems = [];
+
+    $.getJSON(ajaxBarangUrl, {jenis_permintaan: 'Rutin', daftar_kategori: 1}, function(data) {
+        $.each(data || [], function(_, kelompok) {
+            $kelompok.append($('<option>', {value: kelompok.kode, text: kelompok.nama}));
+        });
+    });
+
+    $barang.select2({
+        width: '100%',
+        placeholder: '-- Cari kode atau nama barang --',
+        allowClear: true,
+        ajax: {
+            url: ajaxBarangUrl,
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return {
+                    q: params.term || '',
+                    jenis_permintaan: 'Rutin',
+                    kelompok_barang: $kelompok.val() || ''
+                };
+            },
+            processResults: function(data) {
+                return {results: $.map(data || [], function(item) {
+                    return {id: item.kode_item, text: item.kode_item + ' - ' + item.nama_barang, satuan: item.satuan_dasar, satuan_options: item.satuan_options || []};
+                })};
+            },
+            cache: true
+        }
+    }).on('select2:select.tambahan', function(e) {
+        var $unit = $('#tambahan-satuan').empty();
+        $.each(e.params.data.satuan_options || [], function(_, option) {
+            var factor = parseFloat(option.faktor_ke_dasar || 1);
+            var label = option.satuan + (factor !== 1 ? ' (=' + factor.toLocaleString('id-ID') + ' satuan dasar)' : '');
+            $unit.append($('<option>', {value: option.satuan, text: label}));
+        });
+        $unit.val(e.params.data.satuan || '');
+        if (!$unit.val() && $unit.find('option').length) $unit.prop('selectedIndex', 0);
+    }).on('select2:clear.tambahan', function() {
+        $('#tambahan-satuan').html('<option value="">-- Pilih barang --</option>');
+    });
+
+    $kelompok.on('change.tambahan', function() {
+        $barang.val(null).trigger('change');
+        $('#tambahan-satuan').html('<option value="">-- Pilih barang --</option>');
+    });
+    $('#btn-tambah-daftar').off('click.tambahan').on('click.tambahan', function() {
+        var kode = $('#tambahan-kode-item').val();
+        var jumlah = $('#tambahan-jumlah').val();
+        if (!kode || !jumlah || parseFloat(jumlah) <= 0) {
+            alert('Pilih barang dan isi jumlah yang valid.');
+            return;
+        }
+        if (pendingItems.some(function(item) { return item.kode_item === kode; })) {
+            alert('Barang tersebut sudah ada di daftar tambahan.');
+            return;
+        }
+        var selected = $barang.find(':selected');
+        pendingItems.push({
+            kode_item: kode,
+            nama_barang: selected.text(),
+            jumlah: jumlah,
+            satuan: $('#tambahan-satuan').val(),
+            keterangan_item: $('#tambahan-keterangan').val()
+        });
+        renderPendingItems();
+        $barang.val(null).trigger('change');
+        $('#tambahan-satuan').html('<option value="">-- Pilih barang --</option>');
+        $('#tambahan-keterangan').val('');
+        $('#tambahan-jumlah').val(1);
+    });
+
+    function renderPendingItems() {
+        var $wrap = $('#tambahan-daftar-wrap');
+        var $tbody = $('#tambahan-daftar').empty();
+        $.each(pendingItems, function(index, item) {
+            $('<tr>').append($('<td>').text(item.nama_barang))
+                .append($('<td>').text(item.jumlah))
+                .append($('<td>').text(item.satuan))
+                .append($('<td>').text(item.keterangan_item || '-'))
+                .append($('<td>').html('<button type="button" class="btn btn-danger btn-xs btn-hapus-pending" data-index="' + index + '"><i class="fa fa-trash"></i></button>'))
+                .appendTo($tbody);
+        });
+        $wrap.toggle(pendingItems.length > 0);
+    }
+
+    $('#tambahan-daftar').on('click', '.btn-hapus-pending', function() {
+        pendingItems.splice(parseInt($(this).data('index'), 10), 1);
+        renderPendingItems();
+    });
+
+    $('#btn-simpan-semua-tambahan').off('click.tambahan').on('click.tambahan', function() {
+        if (!pendingItems.length) return;
+        var $btn = $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+        var saveNext = function() {
+            if (!pendingItems.length) {
+                alert('Semua barang tambahan berhasil disimpan.');
+                $.post('{?=url(ADMIN."/logistik_non_medis/detailsppb")?}', {no_sppb: noSppb, inline: 1}, function(html) {
+                    $('#form-container').html(html).show();
+                });
+                $btn.prop('disabled', false).html('<i class="fa fa-save"></i> Simpan Semua');
+                return;
+            }
+            var item = pendingItems[0];
+            $.post('{?=url(ADMIN."/logistik_non_medis/tambahitemsppbtambahan")?}', {
+                no_sppb: noSppb, kode_item: item.kode_item, jumlah: item.jumlah, satuan: item.satuan, keterangan_item: item.keterangan_item
+            }, function(res) {
+                if (typeof res === 'string') { try { res = JSON.parse(res); } catch (e) {} }
+                if (!res || res.status !== 'success') {
+                    alert((res && (res.message || res.pesan)) || ('Gagal menyimpan ' + item.nama_barang));
+                    $btn.prop('disabled', false).html('<i class="fa fa-save"></i> Simpan Semua');
+                    return;
+                }
+                if (res.target_no_sppb) noSppb = res.target_no_sppb;
+                pendingItems.shift();
+                renderPendingItems();
+                saveNext();
+            }).fail(function() {
+                alert('Server tidak dapat menyimpan ' + item.nama_barang + '.');
+                $btn.prop('disabled', false).html('<i class="fa fa-save"></i> Simpan Semua');
+            });
+        };
+        saveNext();
+    });
+})();
+</script>
+{/if}
 
 <script>
 function setItemStatus(no_sppb, kode_item, status) {

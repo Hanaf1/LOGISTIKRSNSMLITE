@@ -1,0 +1,200 @@
+<div class="row">
+    <div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <style>
+                    .custom-breadcrumb {
+                        display: inline-flex;
+                        align-items: center;
+                        background: #f8f9fa;
+                        border: 1px solid #e1e4e8;
+                        border-radius: 6px;
+                        padding: 6px 15px;
+                        font-size: 13px;
+                        margin-bottom: 15px;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                    }
+                    .custom-breadcrumb a { color: #4a4a4a; text-decoration: none; display: inline-flex; align-items: center; font-weight: 500; }
+                    .custom-breadcrumb a:hover { color: #337ab7; }
+                    .custom-breadcrumb .separator { margin: 0 10px; color: #a0a0a0; font-size: 11px; }
+                    .custom-breadcrumb .active { color: #337ab7; font-weight: 600; }
+                </style>
+                <div class="custom-breadcrumb">
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Gudang</a>
+                    <i class="fa fa-chevron-right separator"></i>
+                    <span class="active">Resep Fotocopy</span>
+                </div>
+
+                <h3 class="panel-title" style="margin-top: 5px;"><i class="fa fa-copy"></i> Resep Fotocopy &amp; Pemakaian Kertas</h3>
+                <ul class="nav nav-tabs pull-right panel-options">
+                    <li><a data-toggle="tab" href="#tab-pemakaian"><i class="fa fa-line-chart"></i> Pemakaian Kertas</a></li>
+                    <li class="active"><a data-toggle="tab" href="#tab-resep"><i class="fa fa-list-alt"></i> Resep</a></li>
+                </ul>
+            </div>
+            <div class="panel-body">
+                <div class="tab-content">
+
+                    <!-- RESEP -->
+                    <div id="tab-resep" class="tab-pane fade in active">
+                        <div class="alert alert-info" style="margin-bottom: 15px;">
+                            <i class="fa fa-info-circle"></i>
+                            <b>Barang fotocopy tidak menyimpan stok sendiri.</b> Barang itu ada di master hanya supaya unit
+                            peminta mudah memilih. Begitu permintaannya diserahkan, yang berkurang adalah
+                            <b>kertas bahannya</b> sesuai resep di bawah, dan pengurangan itu tercatat di kartu stok kertas.
+                            <br>
+                            Contoh: resep <i>1 Fc Monitoring = 1 Lembar HVS</i>. Unit minta 100 lembar Fc Monitoring
+                            &rarr; stok HVS berkurang 100 lembar. Kalau dicetak bolak-balik, isi <b>0,5</b>.
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Barang Fotocopy <span class="text-danger">*</span></label>
+                                    <select id="resep-hasil" class="form-control" style="width:100%"></select>
+                                    <small class="text-muted">Barang yang dipilih unit peminta.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Kertas / Bahan <span class="text-danger">*</span></label>
+                                    <select id="resep-bahan" class="form-control" style="width:100%"></select>
+                                    <small class="text-muted">Barang yang stoknya benar-benar berkurang.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Dipakai per 1 <span class="text-danger">*</span></label>
+                                    <input type="number" id="resep-qty" class="form-control" value="1" min="0.000001" step="any">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button type="button" class="btn btn-primary btn-block" id="btn-simpan-resep"><i class="fa fa-plus"></i> Simpan</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="display-resep"></div>
+                    </div>
+
+                    <!-- PEMAKAIAN -->
+                    <div id="tab-pemakaian" class="tab-pane fade">
+                        <div class="row" style="margin-bottom: 15px;">
+                            <div class="col-md-3">
+                                <label>Tanggal Awal</label>
+                                <input type="date" id="pakai-awal" class="form-control" value="{?= date('Y-m-01') ?}">
+                            </div>
+                            <div class="col-md-3">
+                                <label>Tanggal Akhir</label>
+                                <input type="date" id="pakai-akhir" class="form-control" value="{?= date('Y-m-d') ?}">
+                            </div>
+                            <div class="col-md-3">
+                                <label>&nbsp;</label>
+                                <button type="button" class="btn btn-primary btn-block" onclick="loadPemakaian()"><i class="fa fa-search"></i> Tampilkan</button>
+                            </div>
+                        </div>
+                        <div id="display-pemakaian"></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function () {
+    var urlBarang = '{?=url(ADMIN."/logistik_non_medis/ajaxmasterbarang")?}';
+
+    // mLITE memasang Selectator ke semua <select>; field yang memakai Select2
+    // harus melepasnya dulu supaya tidak muncul dua widget.
+    function lepasSelectator($el) {
+        var state = $el.data('selectator');
+        try {
+            if (typeof $.fn.selectator === 'function' && state && !state.produksiGuard) {
+                $el.selectator('destroy');
+            }
+        } catch (e) {}
+        var id = $el.attr('id');
+        if (id) $('#selectator_' + id).remove();
+        $el.removeClass('selectator').removeAttr('style').show();
+        $el.data('selectator', { produksiGuard: true });
+    }
+
+    function initPickerBarang($el, placeholder) {
+        lepasSelectator($el);
+        $el.select2({
+            width: '100%',
+            placeholder: placeholder,
+            ajax: {
+                url: urlBarang,
+                dataType: 'json',
+                delay: 250,
+                data: function (params) { return { q: params.term || '', jenis_permintaan: 'Rutin' }; },
+                processResults: function (data) {
+                    return {
+                        results: $.map(data || [], function (x) {
+                            return { id: x.kode_item, text: x.kode_item + ' - ' + x.nama_barang };
+                        })
+                    };
+                },
+                cache: true
+            }
+        });
+    }
+
+    initPickerBarang($('#resep-hasil'), 'Cari barang fotocopy...');
+    initPickerBarang($('#resep-bahan'), 'Cari kertas / bahan...');
+
+    $('#btn-simpan-resep').click(function () {
+        var hasil = $('#resep-hasil').val();
+        var bahan = $('#resep-bahan').val();
+        var qty = parseFloat($('#resep-qty').val()) || 0;
+        if (!hasil || !bahan) { alert('Barang fotocopy dan bahan wajib dipilih!'); return; }
+        if (qty <= 0) { alert('Pemakaian bahan harus lebih dari 0!'); return; }
+
+        $.post('{?=url(ADMIN."/logistik_non_medis/saveresepgudangproduksi")?}', {
+            kode_item_hasil: hasil,
+            kode_item_bahan: bahan,
+            qty_bahan_per_hasil: qty
+        }, function (res) {
+            if (res.status === 'success') {
+                $('#resep-bahan').val(null).trigger('change');
+                $('#resep-qty').val(1);
+                loadResep();
+            } else {
+                alert(res.message || 'Gagal menyimpan resep.');
+            }
+        }, 'json');
+    });
+
+    window.hapusResep = function (id) {
+        if (!confirm('Hapus bahan ini dari resep?\n\nSetelah dihapus, barang fotocopy ini akan diperlakukan sebagai barang berstok biasa.')) return;
+        $.post('{?=url(ADMIN."/logistik_non_medis/hapusresepgudangproduksi")?}', { id: id }, function (res) {
+            if (res.status === 'success') loadResep();
+            else alert(res.message || 'Gagal menghapus resep.');
+        }, 'json');
+    };
+
+    function loadResep() {
+        $.post('{?=url(ADMIN."/logistik_non_medis/displayresepgudangproduksi")?}', {}, function (html) {
+            $('#display-resep').html(html);
+        });
+    }
+
+    window.loadPemakaian = function () {
+        $.post('{?=url(ADMIN."/logistik_non_medis/displaypemakaiangudangproduksi")?}', {
+            tgl_awal: $('#pakai-awal').val(),
+            tgl_akhir: $('#pakai-akhir').val()
+        }, function (html) {
+            $('#display-pemakaian').html(html);
+        });
+    };
+
+    loadResep();
+    loadPemakaian();
+});
+</script>

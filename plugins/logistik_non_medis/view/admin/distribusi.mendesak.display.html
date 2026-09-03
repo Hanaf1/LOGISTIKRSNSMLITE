@@ -23,8 +23,10 @@
         <td style="white-space:nowrap">
           {if: $value.status == 'Proses Logistik'}
           <button class="btn btn-info btn-xs btn-siap-langsung" data-no="{$value.no_sppb}"><i class="fa fa-check"></i> Sudah Siap</button>
+          <button class="btn btn-danger btn-xs btn-hapus-mendesak" data-no="{$value.no_sppb}" title="Hapus"><i class="fa fa-trash"></i></button>
           {elseif: $value.status == 'Siap Diserahkan'}
           <button class="btn btn-primary btn-xs btn-serah-mendesak" data-no="{$value.no_sppb}"><i class="fa fa-hand-paper-o"></i> Pengambilan</button>
+          <button class="btn btn-danger btn-xs btn-hapus-mendesak" data-no="{$value.no_sppb}" title="Hapus"><i class="fa fa-trash"></i></button>
           {elseif: $value.status == 'Selesai'}
           <a class="btn btn-success btn-xs" target="_blank" href="{?=url(ADMIN.'/logistik_non_medis/cetakdistribusimendesak?no_sppb='.$value.no_sppb)?}"><i class="fa fa-print"></i> Bukti Ambil</a>
           {/if}
@@ -50,4 +52,5 @@
 <script>
 $(document).off('click.mendesak','.btn-serah-mendesak').on('click.mendesak','.btn-serah-mendesak',function(){var no=$(this).data('no');$.post('{?=url(ADMIN."/logistik_non_medis/distribusimendesakformserah")?}',{no_sppb:no},function(h){$('#formMendesakSerah').html(h);$('#modalMendesakSerah').modal('show');setTimeout(window.initMendesakTtd,150);});});
 $(document).off('click.siaplangsung','.btn-siap-langsung').on('click.siaplangsung','.btn-siap-langsung',function(){var no=$(this).data('no'),btn=$(this).prop('disabled',true);$.post('{?=url(ADMIN."/logistik_non_medis/distribusimendesaksiapkan")?}',{no_sppb:no},function(r){if(typeof r==='string')try{r=JSON.parse(r);}catch(e){}if(r.status==='success')location.reload();else{alert(r.message||'Gagal mengubah status.');btn.prop('disabled',false);}},'json');});
+$(document).off('click.hapusmendesak','.btn-hapus-mendesak').on('click.hapusmendesak','.btn-hapus-mendesak',function(){var no=$(this).data('no');if(!confirm('Hapus permintaan langsung '+no+'? Tindakan ini tidak dapat dibatalkan.'))return;var btn=$(this).prop('disabled',true);$.post('{?=url(ADMIN."/logistik_non_medis/hapusdistribusimendesak")?}',{no_sppb:no},function(r){if(typeof r==='string')try{r=JSON.parse(r);}catch(e){}if(r.status==='success')location.reload();else{alert(r.message||'Gagal menghapus data.');btn.prop('disabled',false);}},'json');});
 </script>

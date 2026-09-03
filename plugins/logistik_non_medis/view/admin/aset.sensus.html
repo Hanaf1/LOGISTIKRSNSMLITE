@@ -376,7 +376,13 @@
                         <label>Nama / Judul Sensus</label>
                         <input type="text" class="form-control" name="nama_sensus" placeholder="Contoh: Sensus IGD 30 Agustus 2026" required>
                     </div>
-                    <div class="form-group"><label>Unit / Ruangan yang Disensus</label><select class="form-control select2 select2-hidden-accessible" name="kode_unit_sensus[]" multiple="multiple" data-placeholder="Cari dan pilih unit..." style="width:100%;" tabindex="-1" aria-hidden="true" required>{loop: $units as $unit}<option value="{$unit.kode_unit}">{$unit.nama_unit}</option>{/loop}</select><style>select[multiple].select2-hidden-accessible { height: 0 !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: none !important; position: absolute !important; z-index: -1 !important; }</style><p class="help-block">Pilih satu atau lebih unit untuk periode sensus ini (bisa dicari).</p></div>
+                    <div class="form-group">
+                        <label for="sensusUnitSelect">Unit / Ruangan yang Disensus</label>
+                        <select id="sensusUnitSelect" class="form-control" name="kode_unit_sensus[]" multiple="multiple" data-placeholder="Cari dan pilih unit..." data-use-search="true" style="width:100%;" required>
+                            {loop: $units as $unit}<option value="{$unit.kode_unit}">{$unit.nama_unit}</option>{/loop}
+                        </select>
+                        <p class="help-block">Pilih satu atau lebih unit untuk periode sensus ini (bisa dicari).</p>
+                    </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">

@@ -68,7 +68,7 @@
     <div class="custom-breadcrumb">
         <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}"><i class="fa fa-home"></i></a>
         <i class="fa fa-chevron-right separator"></i>
-        <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}#distribusi">Distribusi</a>
+        <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}#laporan-audit">Laporan &amp; Audit</a>
         <i class="fa fa-chevron-right separator"></i>
         <span class="active">Laporan PPI</span>
     </div>
@@ -128,6 +128,7 @@
                     <li class="active"><a data-toggle="tab" href="#tab-minggu-ini" style="border:none; border-bottom: 3px solid transparent; color: #586069; font-weight: 600;">Data {$periode_label}</a></li>
                     <li><a data-toggle="tab" href="#tab-perbandingan" style="border:none; border-bottom: 3px solid transparent; color: #586069; font-weight: 600;">Perbandingan Periode</a></li>
                     <li><a data-toggle="tab" href="#tab-riwayat" style="border:none; border-bottom: 3px solid transparent; color: #586069; font-weight: 600;">Riwayat Lengkap</a></li>
+                    <li><a data-toggle="tab" href="#tab-konfigurasi" style="border:none; border-bottom: 3px solid transparent; color: #586069; font-weight: 600;"><i class="fa fa-cog"></i> Konfigurasi Pemantauan</a></li>
                 </ul>
 
                 <style>
@@ -300,6 +301,65 @@
                         <div id="sppb-list"></div>
 
                     </div>
+
+                    <!-- TAB 4: KONFIGURASI BARANG YANG DIPANTAU -->
+                    <div id="tab-konfigurasi" class="tab-pane fade">
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle"></i>
+                            Pilih barang master yang masuk pemantauan PPI. Laporan, grafik, perbandingan, dan riwayat PPI hanya menghitung barang dalam daftar ini.
+                        </div>
+
+                        <div class="panel panel-default">
+                            <div class="panel-heading"><strong><i class="fa fa-plus-circle"></i> Tambahkan Barang Pantauan</strong></div>
+                            <div class="panel-body">
+                                <form id="form-konfigurasi-ppi">
+                                    <div class="row">
+                                        <div class="col-md-9">
+                                            <div class="form-group" style="margin-bottom:0;">
+                                                <label for="ppi-pilih-barang">Barang Master</label>
+                                                <select id="ppi-pilih-barang" name="kode_item[]" class="form-control" multiple="multiple" data-use-search="true" data-placeholder="Cari kode atau nama barang..." required>
+                                                    {loop: $ppi_barang_tersedia}
+                                                    <option value="{$value.kode_item}">{$value.kode_item} - {$value.nama_barang} ({$value.satuan_dasar})</option>
+                                                    {/loop}
+                                                </select>
+                                                <p class="help-block">Bisa memilih beberapa barang sekaligus.</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3" style="padding-top:25px;">
+                                            <button type="submit" class="btn btn-primary btn-block" id="btn-simpan-konfigurasi-ppi"><i class="fa fa-plus"></i> Tambahkan</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="panel panel-default">
+                            <div class="panel-heading clearfix">
+                                <strong><i class="fa fa-eye"></i> Barang yang Dipantau</strong>
+                                <span class="badge pull-right">{?=count($ppi_barang)?} barang</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped" style="margin-bottom:0;">
+                                    <thead><tr><th width="160">Kode</th><th>Nama Barang</th><th>Kategori</th><th width="110">Satuan</th><th width="90" class="text-center">Aksi</th></tr></thead>
+                                    <tbody>
+                                        {if: empty($ppi_barang)}
+                                        <tr><td colspan="5" class="text-center text-muted" style="padding:25px;">Belum ada barang yang dipantau.</td></tr>
+                                        {else}
+                                        {loop: $ppi_barang}
+                                        <tr>
+                                            <td>{$value.kode_item}</td>
+                                            <td><strong>{$value.nama_barang}</strong></td>
+                                            <td>{$value.nama_kategori}</td>
+                                            <td>{$value.satuan_dasar}</td>
+                                            <td class="text-center"><button type="button" class="btn btn-danger btn-xs btn-hapus-konfigurasi-ppi" data-kode="{$value.kode_item}" title="Hapus dari pemantauan"><i class="fa fa-trash"></i> Hapus</button></td>
+                                        </tr>
+                                        {/loop}
+                                        {/if}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -423,6 +483,46 @@ var sppbListTab = sppbJenisPage ? 'active' : '';
 var sppbRutinUnitMode = sppbJenisPage === 'Rutin' && sppbCurrentRole === 'unit';
 
 $(document).ready(function() {
+    if (window.location.hash === '#tab-konfigurasi') {
+        $('a[data-toggle="tab"][href="#tab-konfigurasi"]').tab('show');
+    }
+
+    $('#form-konfigurasi-ppi').on('submit', function(e) {
+        e.preventDefault();
+        var $button = $('#btn-simpan-konfigurasi-ppi');
+        $button.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+        $.post('{?=url(ADMIN."/logistik_non_medis/savekonfigurasippi")?}', $(this).serialize(), function(res) {
+            if (res.status === 'success') {
+                window.location.hash = 'tab-konfigurasi';
+                window.location.reload();
+            } else {
+                bootbox.alert(res.message || 'Konfigurasi PPI gagal disimpan.');
+                $button.prop('disabled', false).html('<i class="fa fa-plus"></i> Tambahkan');
+            }
+        }, 'json').fail(function() {
+            bootbox.alert('Server gagal menyimpan konfigurasi PPI.');
+            $button.prop('disabled', false).html('<i class="fa fa-plus"></i> Tambahkan');
+        });
+    });
+
+    $(document).on('click', '.btn-hapus-konfigurasi-ppi', function() {
+        var kode = $(this).data('kode');
+        var nama = $(this).closest('tr').find('td').eq(1).text().trim();
+        bootbox.confirm('Hapus "' + nama + '" dari pemantauan PPI?', function(ok) {
+            if (!ok) return;
+            $.post('{?=url(ADMIN."/logistik_non_medis/hapuskonfigurasippi")?}', {kode_item: kode}, function(res) {
+                if (res.status === 'success') {
+                    window.location.hash = 'tab-konfigurasi';
+                    window.location.reload();
+                } else {
+                    bootbox.alert(res.message || 'Barang gagal dihapus dari pemantauan.');
+                }
+            }, 'json').fail(function() {
+                bootbox.alert('Server gagal menghapus konfigurasi PPI.');
+            });
+        });
+    });
+
     if (sppbRutinUnitMode && $('#sppb-active-form').length && $('#sppb-active-form').is(':visible')) {
         loadSppbForm('Rutin', '#sppb-active-form');
         $('#sppb-list').hide();
@@ -773,14 +873,22 @@ function rejectUnit(no_sppb) {
 
 function verifikasiLogistik(no_sppb) {
     if(confirm('Proses permintaan rutin ini ke tahap logistik?')) {
-        $.post('{?=url(ADMIN."/logistik_non_medis/verifikasisppb")?}', {no_sppb: no_sppb}, function(data) {
-            var res = JSON.parse(data);
-            if(res.status == 'success') {
+        $.post('{?=url(ADMIN."/logistik_non_medis/verifikasisppb")?}', {no_sppb: no_sppb})
+        .done(function(data) {
+            var res;
+            try { res = typeof data === 'string' ? JSON.parse(data) : data; }
+            catch (e) { res = {status: 'error', message: 'Respons server tidak valid.'}; }
+            if(res && res.status == 'success') {
                 loadDisplay();
                 if($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
             } else {
-                alert(res.message);
+                if (typeof showSppbToast === 'function') showSppbToast('error', 'Permintaan gagal diproses', (res && res.message) || 'Permintaan tidak dapat diproses.', 6000);
+                else bootbox.alert((res && res.message) || 'Permintaan tidak dapat diproses.');
             }
+        }).fail(function(xhr) {
+            var message = (xhr.responseJSON && xhr.responseJSON.message) || 'Server tidak dapat memproses permintaan.';
+            if (typeof showSppbToast === 'function') showSppbToast('error', 'Permintaan gagal diproses', message, 6000);
+            else bootbox.alert(message);
         });
     }
 }

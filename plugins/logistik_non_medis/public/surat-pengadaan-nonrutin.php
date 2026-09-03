@@ -6,7 +6,7 @@ function e_nonrutin($value) { return htmlspecialchars((string)($value ?? ''), EN
 $no = trim((string)($_GET['no_sppb'] ?? ''));
 $mode_order = ($_GET['jenis'] ?? '') === 'order';
 $pdo = new PDO('mysql:host='.DBHOST.';port='.DBPORT.';dbname='.DBNAME.';charset=utf8', DBUSER, DBPASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
-$stmt = $pdo->prepare("SELECT s.*, COALESCE(u.nama_unit,s.kode_unit) nama_unit, COALESCE(NULLIF(s.nama_barang_manual,''),b.nama_barang,s.kode_item) nama_barang FROM rsns_custom_logistik_non_medis_sppb s LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=s.kode_unit LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item WHERE s.no_sppb=? AND s.jenis_permintaan='Non Rutin' ORDER BY s.id");
+$stmt = $pdo->prepare("SELECT s.*, COALESCE(u.nama_unit,s.kode_unit) nama_unit, COALESCE(NULLIF(s.nama_barang_manual,''),b.nama_barang,s.kode_item) nama_barang FROM rsns_custom_logistik_non_medis_v_sppb_normalized s LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=s.kode_unit LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item WHERE s.no_sppb=? AND s.jenis_permintaan='Non Rutin' ORDER BY s.id");
 $stmt->execute([$no]); $items = $stmt->fetchAll();
 if (!$items) { http_response_code(404); exit('Permintaan Non-Rutin tidak ditemukan.'); }
 $head = $items[0];

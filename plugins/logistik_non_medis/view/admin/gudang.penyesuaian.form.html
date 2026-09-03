@@ -1,0 +1,35 @@
+<form id="form-gudang-penyesuaian"><div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title"><i class="fa fa-sliders"></i> {?=($mode=='add'?'Tambah':'Edit')?} Penyesuaian Data</h4></div><div class="modal-body">
+<input type="hidden" name="kode_item" value="{$barang.kode_item}"><input type="hidden" name="kode_item_lama" value="{if: $mode=='edit'}{$barang.kode_item}{/if}"><input type="hidden" id="penyesuaian-satuan-lama" value="{$barang.satuan_dasar}">
+<div class="row"><div class="col-md-6"><div class="form-group"><label>Kode Item</label><input class="form-control" value="{$barang.kode_item}" readonly></div></div><div class="col-md-6"><div class="form-group"><label>Total Stok Awal/Sekarang <span class="text-danger">*</span></label><input type="number" step="0.01" min="0" name="stok_awal" class="form-control" value="{$barang.stok_akhir}" required></div></div></div>
+<div class="form-group"><label>Nama Barang <span class="text-danger">*</span></label><input name="nama_barang" class="form-control" value="{$barang.nama_barang}" required></div>
+<div class="row"><div class="col-md-6"><div class="form-group"><label>Kategori</label><select name="kode_kategori" class="form-control"><option value="">-- Tanpa Kategori --</option>{loop: $kategori}<option value="{$value.kode_kategori}" {if: $value.kode_kategori==$barang.kode_kategori}selected{/if}>{$value.nama_kategori}</option>{/loop}</select></div></div><div class="col-md-3"><div class="form-group"><label>Satuan <span class="text-danger">*</span></label><select name="satuan_dasar" class="form-control" required><option value="">-- Pilih Satuan --</option>{loop: $satuan}<option value="{$value.nama_satuan}" {if: strtolower(trim($barang.satuan_dasar))==strtolower(trim($value.nama_satuan)) || strtolower(trim($barang.satuan_dasar))==strtolower(trim($value.kode_satuan))}selected{/if}>{$value.nama_satuan} ({$value.kode_satuan})</option>{/loop}</select></div></div><div class="col-md-3"><div class="form-group"><label>Harga Referensi</label><input type="number" step="0.01" min="0" name="harga_referensi" class="form-control" value="{$barang.harga_referensi}"></div></div></div>
+<div class="alert alert-warning" id="peringatan-ganti-satuan" style="display:none"><i class="fa fa-warning"></i> Satuan dasar diubah. Pastikan <b>Total Stok Awal/Sekarang</b> sudah ditulis dalam satuan baru. Nilai tersebut akan menjadi saldo akhir.</div>
+<div class="panel panel-default" style="margin-bottom:0">
+ <div class="panel-heading"><strong><i class="fa fa-exchange"></i> Satuan Konversi / Alias</strong></div>
+ <div class="panel-body">
+  <p class="help-block" style="margin-top:0">Stok tetap disimpan dalam satuan dasar. Contoh: satuan dasar <b>Lembar</b>, lalu isi <b>Pack = 10</b>.</p>
+  <div id="penyesuaian-uom-rows">
+   {loop: $barang_satuan}
+   <div class="row penyesuaian-uom-row" style="margin-bottom:7px">
+    <div class="col-xs-5"><input name="satuan_alternatif[]" list="penyesuaian-master-satuan" class="form-control" value="{$value.satuan}" placeholder="Pilih satuan alias"></div>
+    <div class="col-xs-1 text-center" style="padding-top:8px">=</div>
+    <div class="col-xs-4"><input type="number" name="faktor_alternatif[]" min="0.000001" step="0.000001" class="form-control" value="{$value.faktor_ke_dasar}" placeholder="Jumlah satuan dasar"></div>
+    <div class="col-xs-2"><button type="button" class="btn btn-danger btn-remove-penyesuaian-uom"><i class="fa fa-times"></i></button></div>
+   </div>
+   {/loop}
+  </div>
+  <button type="button" class="btn btn-default btn-sm" id="btn-add-penyesuaian-uom"><i class="fa fa-plus"></i> Tambah Satuan Konversi</button>
+  <datalist id="penyesuaian-master-satuan">{loop: $satuan}<option value="{$value.nama_satuan}">{/loop}</datalist>
+ </div>
+</div>
+</div><div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Batal</button><button class="btn btn-primary"><i class="fa fa-save"></i> Simpan Penyesuaian</button></div></form>
+<script>
+(function(){
+ function addRow(){
+  $('#penyesuaian-uom-rows').append('<div class="row penyesuaian-uom-row" style="margin-bottom:7px"><div class="col-xs-5"><input name="satuan_alternatif[]" list="penyesuaian-master-satuan" class="form-control" placeholder="Pilih satuan alias"></div><div class="col-xs-1 text-center" style="padding-top:8px">=</div><div class="col-xs-4"><input type="number" name="faktor_alternatif[]" min="0.000001" step="0.000001" class="form-control" placeholder="Jumlah satuan dasar"></div><div class="col-xs-2"><button type="button" class="btn btn-danger btn-remove-penyesuaian-uom"><i class="fa fa-times"></i></button></div></div>');
+ }
+ $('#btn-add-penyesuaian-uom').off('click.penyesuaianUom').on('click.penyesuaianUom',addRow);
+ $('#penyesuaian-uom-rows').off('click.penyesuaianUom').on('click.penyesuaianUom','.btn-remove-penyesuaian-uom',function(){$(this).closest('.penyesuaian-uom-row').remove();});
+ $('[name="satuan_dasar"]').off('change.penyesuaianUom').on('change.penyesuaianUom',function(){var oldUnit=String($('#penyesuaian-satuan-lama').val()||'').toLowerCase();var newUnit=String($(this).val()||'').toLowerCase();$('#peringatan-ganti-satuan').toggle(!!oldUnit&&!!newUnit&&oldUnit!==newUnit);});
+})();
+</script>

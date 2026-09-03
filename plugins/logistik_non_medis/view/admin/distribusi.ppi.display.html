@@ -181,7 +181,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
                 <button type="button" class="btn btn-warning" id="btn-submit-proses-logistik" onclick="submitProsesLogistik()">
-                    <i class="fa fa-check"></i> Proses ke Pengadaan
+                    <i class="fa fa-check"></i> Simpan Review
                 </button>
             </div>
         </div>
@@ -216,8 +216,8 @@ function openProsesLogistikModal(no_sppb) {
     $('#modal-proses-logistik').modal('show');
     $.post('{?=url(ADMIN."/logistik_non_medis/detailsppb")?}', {no_sppb: no_sppb}, function(html) {
         // Extract items table from detail modal
-        var itemsHtml = '<p class="text-info"><i class="fa fa-info-circle"></i> Atur jumlah yang disetujui (Qty ACC) dan centang item yang disetujui, lalu klik <strong>Proses ke Pengadaan</strong>.</p>';
-        itemsHtml += '<table class="table table-bordered table-condensed"><thead><tr><th>Nama Barang</th><th class="text-center" width="80">Qty Minta</th><th class="text-center" width="100">Qty ACC</th><th class="text-center" width="80">Disetujui</th></tr></thead><tbody id="logistik-items-tbody"></tbody></table>';
+        var itemsHtml = '<p class="text-info"><i class="fa fa-info-circle"></i> Atur jumlah yang disetujui. Jika barang ditolak, isi alasan seperti <strong>stok kosong</strong>.</p>';
+        itemsHtml += '<table class="table table-bordered table-condensed"><thead><tr><th>Nama Barang</th><th class="text-center" width="80">Qty Minta</th><th class="text-center" width="100">Qty ACC</th><th class="text-center" width="80">Disetujui</th><th>Alasan Penolakan</th></tr></thead><tbody id="logistik-items-tbody"></tbody></table>';
         $('#proses-logistik-body').html(itemsHtml);
         // Load items via separate AJAX
         $.post('{?=url(ADMIN."/logistik_non_medis/getitemssppb")?}', {no_sppb: no_sppb}, function(res) {
@@ -226,6 +226,7 @@ function openProsesLogistikModal(no_sppb) {
                 if (data.status === 'success') {
                     var rows = '';
                     $.each(data.items, function(i, item) {
+                        if (item.status !== 'Proses Logistik') return true;
                         var statusBadge = '';
                         var isChecked = 'checked';
                         var qtyValue = item.jumlah;
@@ -250,6 +251,8 @@ function openProsesLogistikModal(no_sppb) {
 
                         var accValue = isChecked ? 'y' : 'n';
                         var readonlyState = isChecked ? '' : 'readonly';
+                        var reasonState = isChecked ? 'disabled' : '';
+                        var reasonValue = item.alasan_penolakan || '';
                         
                         var btnHtml = '<div style="white-space:nowrap;">' +
                             '<input type="hidden" class="logistik-acc" data-kode="' + sppbEscapeHtml(item.kode_item) + '" value="' + accValue + '">' +
@@ -262,9 +265,10 @@ function openProsesLogistikModal(no_sppb) {
                             '<td class="text-center">' + item.jumlah + ' ' + sppbEscapeHtml(item.satuan) + '</td>' +
                             '<td><input type="number" class="form-control input-sm logistik-qty" data-kode="' + sppbEscapeHtml(item.kode_item) + '" value="' + qtyValue + '" min="0" max="' + item.jumlah + '" ' + readonlyState + ' style="width:80px;margin:auto;"></td>' +
                             '<td class="text-center">' + btnHtml + '</td>' +
+                            '<td><input type="text" class="form-control input-sm logistik-alasan" data-kode="' + sppbEscapeHtml(item.kode_item) + '" value="' + sppbEscapeHtml(reasonValue) + '" placeholder="Contoh: stok kosong" ' + reasonState + '></td>' +
                             '</tr>';
                     });
-                    $('#logistik-items-tbody').html(rows);
+                    $('#logistik-items-tbody').html(rows || '<tr><td colspan="5" class="text-muted text-center">Tidak ada item aktif pada tahap Proses Logistik.</td></tr>');
                     
                     $('.btn-acc-check').click(function() {
                         var tr = $(this).closest('tr');
@@ -273,6 +277,7 @@ function openProsesLogistikModal(no_sppb) {
                         $(this).removeClass('btn-default').addClass('btn-success');
                         tr.find('.btn-acc-cross').removeClass('btn-danger').addClass('btn-default');
                         tr.find('.logistik-qty').val(maxQty).prop('readonly', false);
+                        tr.find('.logistik-alasan').val('').prop('disabled', true);
                     });
                     
                     $('.btn-acc-cross').click(function() {
@@ -281,6 +286,7 @@ function openProsesLogistikModal(no_sppb) {
                         $(this).removeClass('btn-default').addClass('btn-danger');
                         tr.find('.btn-acc-check').removeClass('btn-success').addClass('btn-default');
                         tr.find('.logistik-qty').val(0).prop('readonly', true);
+                        tr.find('.logistik-alasan').prop('disabled', false).focus();
                     });
                 } else {
                     $('#logistik-items-tbody').html('<tr><td colspan="4" class="text-danger">Gagal memuat item.</td></tr>');
@@ -300,7 +306,8 @@ function submitProsesLogistik() {
         var kode = $(this).attr('data-kode');
         var qty = $(this).val();
         var acc = $('.logistik-acc[data-kode="' + kode + '"]').val();
-        items[kode] = {qty_acc: qty, acc: acc};
+        var alasan = $('.logistik-alasan[data-kode="' + kode + '"]').val() || '';
+        items[kode] = {qty_acc: qty, acc: acc, alasan_penolakan: alasan};
     });
     $('#btn-submit-proses-logistik').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Memproses...');
     $.post('{?=url(ADMIN."/logistik_non_medis/proseslogistiksppb")?}', {no_sppb: no_sppb, items: items}, function(res) {
@@ -309,15 +316,15 @@ function submitProsesLogistik() {
             if (data.status === 'success') {
                 $('#modal-proses-logistik').modal('hide');
                 loadDisplay();
-                if (typeof showSppbStatusResult === 'function') showSppbStatusResult(data, 'Berhasil diproses ke Pengadaan!');
-                else showNotif('success', data.message || 'Berhasil diproses ke Pengadaan!');
+                if (typeof showSppbStatusResult === 'function') showSppbStatusResult(data, 'Review logistik berhasil disimpan.');
+                else showNotif('success', data.message || 'Review logistik berhasil disimpan.');
             } else {
                 showNotif('error', data.message || 'Gagal memproses.');
             }
         } catch(e) {
             showNotif('error', 'Kesalahan server.');
         }
-        $('#btn-submit-proses-logistik').prop('disabled', false).html('<i class="fa fa-check"></i> Proses ke Pengadaan');
+        $('#btn-submit-proses-logistik').prop('disabled', false).html('<i class="fa fa-check"></i> Simpan Review');
     });
 }
 

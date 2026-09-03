@@ -51,6 +51,13 @@
                         {/loop}
                     </select>
                 </div>
+                {if: $data['status'] == 'Draft'}
+                <div class="col-sm-8 col-sm-offset-4" style="margin-top: 6px;">
+                    <button type="button" class="btn btn-link btn-xs" id="btn-vendor-baru" style="padding: 0;">
+                        <i class="fa fa-plus-circle"></i> Vendor belum terdaftar? Tambah vendor baru
+                    </button>
+                </div>
+                {/if}
             </div>
             <div class="form-group">
                 <label class="col-sm-4 control-label">Status</label>
@@ -67,8 +74,38 @@
     {if: $data['status'] == 'Draft' || $data['status'] == 'Terkirim' || $data['status'] == 'Sebagian Diterima' || $data['status'] == 'Diamandemen'}
     <div class="row" style="margin-bottom: 15px;">
         <div class="col-md-12">
-            <button type="button" class="btn btn-info btn-sm" id="btn-load-pr"><i class="fa fa-download"></i> Load dari PR Disetujui</button>
+            <button type="button" class="btn btn-success btn-sm" id="btn-tambah-manual"><i class="fa fa-plus"></i> Order Langsung (Tanpa Rencana)</button>
+            <button type="button" class="btn btn-info btn-sm" id="btn-load-pr"><i class="fa fa-download"></i> Load dari Rencana Disetujui</button>
         </div>
+    </div>
+
+    <div class="well well-sm" id="panel-order-langsung" style="display: none; margin-bottom: 15px;">
+        <div class="row">
+            <div class="col-md-3">
+                <label style="font-weight: normal; font-size: 12px;">Kelompok Barang</label>
+                <select class="form-control input-sm" id="manual-kelompok">
+                    <option value="">Semua kelompok barang</option>
+                    {loop: $kategori_list as $k}
+                    <option value="{$k.kode_kategori}">{$k.nama_kategori}</option>
+                    {/loop}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label style="font-weight: normal; font-size: 12px;">Cari Barang <small class="text-muted">(bisa pilih beberapa sekaligus)</small></label>
+                <select class="form-control" id="manual-kode-item" multiple></select>
+            </div>
+            <div class="col-md-2">
+                <label style="font-weight: normal; font-size: 12px;">Qty Pesan</label>
+                <input type="number" class="form-control input-sm" id="manual-qty" value="1" min="1">
+            </div>
+            <div class="col-md-2">
+                <label style="font-weight: normal; font-size: 12px;">&nbsp;</label>
+                <button type="button" class="btn btn-success btn-sm btn-block" id="btn-tambahkan-manual"><i class="fa fa-plus"></i> Tambah ke Rincian</button>
+            </div>
+        </div>
+        <p class="help-block" style="margin: 8px 0 0;">
+            Harga satuan terisi otomatis dari harga referensi master barang. Qty dan harga tetap bisa diubah pada tabel rincian di bawah.
+        </p>
     </div>
     {/if}
 
@@ -163,6 +200,80 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
         <button type="button" class="btn btn-primary" id="btn-tambahkan-perencanaan">Tambahkan ke PO</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Vendor Baru -->
+<div class="modal fade" id="modal-vendor-baru" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title"><i class="fa fa-truck"></i> Tambah Vendor Baru</h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group">
+              <label>Nama Vendor <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="vb-nama-vendor" placeholder="Nama perusahaan / toko">
+          </div>
+          <div class="form-group">
+              <label>Alamat</label>
+              <textarea class="form-control" id="vb-alamat" rows="2"></textarea>
+          </div>
+          <div class="row">
+              <div class="col-sm-6">
+                  <div class="form-group">
+                      <label>No. Telp</label>
+                      <input type="text" class="form-control" id="vb-no-telp">
+                  </div>
+              </div>
+              <div class="col-sm-6">
+                  <div class="form-group">
+                      <label>Email</label>
+                      <input type="email" class="form-control" id="vb-email">
+                  </div>
+              </div>
+          </div>
+          <div class="row">
+              <div class="col-sm-6">
+                  <div class="form-group">
+                      <label>NPWP</label>
+                      <input type="text" class="form-control" id="vb-npwp">
+                  </div>
+              </div>
+              <div class="col-sm-6">
+                  <div class="form-group">
+                      <label>Status PKP</label>
+                      <select class="form-control" id="vb-status-pkp">
+                          <option value="Non PKP">Non PKP</option>
+                          <option value="PKP">PKP</option>
+                      </select>
+                  </div>
+              </div>
+          </div>
+          <div class="row">
+              <div class="col-sm-6">
+                  <div class="form-group">
+                      <label>Nama PIC</label>
+                      <input type="text" class="form-control" id="vb-pic-nama">
+                  </div>
+              </div>
+              <div class="col-sm-6">
+                  <div class="form-group">
+                      <label>Kontak PIC</label>
+                      <input type="text" class="form-control" id="vb-pic-kontak">
+                  </div>
+              </div>
+          </div>
+          <p class="help-block" style="margin-bottom: 0;">
+              Kode vendor dibuat otomatis. Data lengkap (rekening, SIUP, dokumen) dapat dilengkapi di menu Master Vendor.
+          </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-primary" id="btn-simpan-vendor-baru"><i class="fa fa-save"></i> Simpan &amp; Pilih</button>
       </div>
     </div>
   </div>
@@ -321,6 +432,187 @@ $(document).ready(function() {
         });
         $('#modal-load-pr').modal('hide');
         renderItems();
+    });
+
+    var manualSelectInited = false;
+
+    // mLITE (themes/admin/js/scripts.js) memasang Selectator ke SEMUA <select>.
+    // Field yang memakai Select2 harus melepas Selectator lebih dulu, jika tidak
+    // akan tampil dua widget untuk satu field yang sama.
+    function lepasSelectator($el) {
+        var state = $el.data('selectator');
+        try {
+            if (typeof $.fn.selectator === 'function' && state && !state.poSelect2Guard) {
+                $el.selectator('destroy');
+            }
+        } catch (e) {}
+        var id = $el.attr('id');
+        if (id) {
+            $('#selectator_' + id).remove();
+        }
+        $el.removeClass('selectator').removeAttr('style').show();
+        // Sentinel agar initializer Selectator melewati elemen ini.
+        $el.data('selectator', { poSelect2Guard: true });
+    }
+
+    function initManualSelect() {
+        if (manualSelectInited || typeof $.fn.select2 !== 'function') return;
+        manualSelectInited = true;
+
+        lepasSelectator($('#manual-kelompok'));
+        lepasSelectator($('#manual-kode-item'));
+
+        $('#manual-kelompok').select2({ width: '100%' });
+
+        $('#manual-kode-item').select2({
+            width: '100%',
+            multiple: true,
+            placeholder: 'Ketik kode atau nama barang...',
+            ajax: {
+                url: '{?=url(ADMIN."/logistik_non_medis/ajaxmasterbarang")?}',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term || '',
+                        jenis_permintaan: 'Rutin',
+                        kelompok_barang: $('#manual-kelompok').val() || ''
+                    };
+                },
+                processResults: function(data) {
+                    return {
+                        results: $.map(data, function(item) {
+                            return {
+                                id: item.kode_item,
+                                text: item.kode_item + ' - ' + item.nama_barang,
+                                nama_barang: item.nama_barang,
+                                harga_referensi: item.harga_referensi
+                            };
+                        })
+                    };
+                },
+                cache: true
+            }
+        });
+
+        $('#manual-kelompok').on('change', function() {
+            $('#manual-kode-item').val(null).trigger('change');
+        });
+    }
+
+    $('#btn-tambah-manual').click(function() {
+        initManualSelect();
+        $('#panel-order-langsung').slideToggle(150);
+    });
+
+    $('#btn-vendor-baru').click(function() {
+        $('#modal-vendor-baru').find('input, textarea').val('');
+        $('#vb-status-pkp').val('Non PKP');
+        $('#modal-vendor-baru').modal('show');
+        setTimeout(function() { $('#vb-nama-vendor').focus(); }, 300);
+    });
+
+    $('#btn-simpan-vendor-baru').click(function() {
+        var nama = $.trim($('#vb-nama-vendor').val());
+        if (nama === '') {
+            alert('Nama vendor wajib diisi!');
+            $('#vb-nama-vendor').focus();
+            return;
+        }
+
+        var tombol = $(this);
+        tombol.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+
+        $.ajax({
+            url: '{?=url([ADMIN, "logistik_non_medis", "simpanvendorpengadaanpo"])?}',
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                nama_vendor: nama,
+                alamat: $('#vb-alamat').val(),
+                no_telp: $('#vb-no-telp').val(),
+                email: $('#vb-email').val(),
+                npwp: $('#vb-npwp').val(),
+                status_pkp: $('#vb-status-pkp').val(),
+                pic_nama: $('#vb-pic-nama').val(),
+                pic_kontak: $('#vb-pic-kontak').val()
+            },
+            success: function(res) {
+                if (res.status !== 'success') {
+                    alert(res.message || 'Gagal menyimpan vendor.');
+                    return;
+                }
+
+                var select = $('#kode_vendor');
+                select.append($('<option>', { value: res.kode_vendor, text: res.nama_vendor }));
+                select.val(res.kode_vendor);
+
+                // Vendor PO memakai Select2, sedangkan select lain masih memakai
+                // Selectator bawaan mLITE. Segarkan widget yang sedang aktif saja.
+                if (select.data('select2')) {
+                    select.trigger('change.select2');
+                } else {
+                    try {
+                        if (select.data('selectator') && typeof $.fn.selectator === 'function') {
+                            select.selectator('refresh');
+                        }
+                    } catch (e) {}
+                    select.trigger('change');
+                }
+
+                $('#modal-vendor-baru').modal('hide');
+                alert('Vendor "' + res.nama_vendor + '" berhasil ditambahkan (' + res.kode_vendor + ') dan langsung dipilih.');
+            },
+            error: function(xhr) {
+                console.error('Simpan vendor baru gagal:', xhr.responseText);
+                alert('Gagal menyimpan vendor. Cek konsol browser untuk detail.');
+            },
+            complete: function() {
+                tombol.prop('disabled', false).html('<i class="fa fa-save"></i> Simpan &amp; Pilih');
+            }
+        });
+    });
+
+    $('#btn-tambahkan-manual').click(function() {
+        var terpilih = $('#manual-kode-item').select2('data') || [];
+        if (terpilih.length === 0) {
+            alert('Pilih barang terlebih dahulu!');
+            return;
+        }
+        var qty = parseFloat($('#manual-qty').val()) || 0;
+        if (qty <= 0) {
+            alert('Qty pesan harus lebih dari 0!');
+            return;
+        }
+
+        var duplikat = [];
+        terpilih.forEach(function(d) {
+            if (!d.id) return;
+            var sudahAda = items.some(function(i) { return String(i.kode_item) === String(d.id); });
+            if (sudahAda) {
+                duplikat.push(d.nama_barang || d.text);
+                return;
+            }
+            items.push({
+                id_pr: '',
+                no_pr: 'Order Langsung (Tanpa Rencana)',
+                kode_item: d.id,
+                nama_barang: d.nama_barang || d.text,
+                qty_pesan: qty,
+                qty_diterima: 0,
+                harga_satuan: parseFloat(d.harga_referensi) || 0,
+                subtotal: 0
+            });
+        });
+
+        // Panel tetap terbuka supaya bisa lanjut menambah barang berikutnya.
+        $('#manual-kode-item').val(null).trigger('change');
+        $('#manual-qty').val(1);
+        renderItems();
+
+        if (duplikat.length) {
+            alert('Barang berikut sudah ada di rincian dan dilewati: ' + duplikat.join(', '));
+        }
     });
 
     $('#btn-save-po').click(function() {

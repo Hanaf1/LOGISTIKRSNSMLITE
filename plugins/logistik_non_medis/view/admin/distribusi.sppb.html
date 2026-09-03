@@ -138,13 +138,13 @@
         <i class="fa fa-chevron-right separator"></i>
         <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}#distribusi">Distribusi</a>
         <i class="fa fa-chevron-right separator"></i>
-        <span class="active">{if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Pengadaan Non Rutin{else}Pengadaan Rutin{/if}{else}Permintaan Barang (SPPB){/if}</span>
+        <span class="active">{if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Pengadaan Non Rutin{else}Permintaan Rutin (BHP Mingguan){/if}{else}Permintaan Barang (SPPB){/if}</span>
     </div>
 
         <div class="col-md-12">
             <div class="panel panel-default">
                 <div class="panel-heading clearfix">
-                    <h3 class="panel-title pull-left" style="line-height: 34px;"><i class="fa fa-shopping-cart"></i> {if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Pengadaan Non Rutin{else}Pengadaan Rutin{/if}{else}Permintaan Barang (SPPB){/if}</h3>
+                    <h3 class="panel-title pull-left" style="line-height: 34px;"><i class="fa fa-shopping-cart"></i> {if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Pengadaan Non Rutin{else}Permintaan Rutin (BHP Mingguan){/if}{else}Permintaan Barang (SPPB){/if}</h3>
                     {if: !empty($can_create_sppb) || (!empty($can_manage_distribusi_controls) && (empty($jenis_page) || $jenis_page == 'Rutin'))}
                     <div class="btn-group pull-right">
                         {if: empty($jenis_page) || $jenis_page == 'Rutin'}
@@ -169,6 +169,46 @@
                     {/if}
                 </div>
                 <div class="panel-body">
+                    {if: !empty($can_manage_distribusi_controls)}
+                    <div class="clearfix" style="margin-bottom:8px;">
+                        <strong><i class="fa fa-calendar"></i> Ringkasan Jumat–Jumat</strong>
+                        <span class="text-muted">({$weekly_period_start} sampai sebelum {$weekly_period_end})</span>
+                    </div>
+                    <div class="row" style="margin-bottom:15px;">
+                        <div class="col-md-3 col-sm-6">
+                            <div class="panel panel-warning" style="margin-bottom:0;box-shadow:0 2px 5px rgba(0,0,0,.1);border:none;">
+                                <div class="panel-body text-center" style="padding:10px;">
+                                    <h5 style="margin:0;font-size:14px;font-weight:bold;color:#8a6d3b;">Belum Diproses</h5>
+                                    <h2 id="weekly-summary-belum" style="margin:5px 0 0;color:#8a6d3b;font-weight:bold;">{$weekly_count_belum}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="panel panel-success" style="margin-bottom:0;box-shadow:0 2px 5px rgba(0,0,0,.1);border:none;">
+                                <div class="panel-body text-center" style="padding:10px;">
+                                    <h5 style="margin:0;font-size:14px;font-weight:bold;color:#3c763d;">Siap Diambil</h5>
+                                    <h2 id="weekly-summary-siap" style="margin:5px 0 0;color:#3c763d;font-weight:bold;">{$weekly_count_siap}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="panel panel-info" style="margin-bottom:0;box-shadow:0 2px 5px rgba(0,0,0,.1);border:none;">
+                                <div class="panel-body text-center" style="padding:10px;">
+                                    <h5 style="margin:0;font-size:14px;font-weight:bold;color:#31708f;">Selesai</h5>
+                                    <h2 id="weekly-summary-selesai" style="margin:5px 0 0;color:#31708f;font-weight:bold;">{$weekly_count_selesai}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="panel" style="margin-bottom:0;box-shadow:0 2px 5px rgba(0,0,0,.1);border:none;background:#f5effb;">
+                                <div class="panel-body text-center" style="padding:10px;">
+                                    <h5 style="margin:0;font-size:14px;font-weight:bold;color:#6f42a1;">Permintaan Tambahan Aktif</h5>
+                                    <h2 id="weekly-summary-tambahan" style="margin:5px 0 0;color:#6f42a1;font-weight:bold;">{$weekly_count_tambahan}</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {/if}
                     {if: !empty($jenis_page)}
                     <ul class="nav nav-tabs sppb-main-tabs" id="sppbMainTabs">
                         <li class="active">
@@ -207,32 +247,6 @@
                     <div style="margin-top:15px;"></div>
                     {/if}
                     {if: !empty($can_manage_distribusi_controls)}
-                    <div class="row" style="margin-bottom: 15px;">
-                        <div class="col-md-4 col-sm-4">
-                            <div class="panel panel-warning" style="margin-bottom:0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: none;">
-                                <div class="panel-body text-center" style="padding: 10px;">
-                                    <h5 style="margin:0; font-size:14px; font-weight: bold; color: #8a6d3b;">Belum Diproses</h5>
-                                    <h2 style="margin:5px 0 0 0; color: #8a6d3b; font-weight: bold;" id="summary-belum-diproses">0</h2>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 col-sm-4">
-                            <div class="panel panel-success" style="margin-bottom:0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: none;">
-                                <div class="panel-body text-center" style="padding: 10px;">
-                                    <h5 style="margin:0; font-size:14px; font-weight: bold; color: #3c763d;">Siap Diambil</h5>
-                                    <h2 style="margin:5px 0 0 0; color: #3c763d; font-weight: bold;" id="summary-siap-diambil">0</h2>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 col-sm-4">
-                            <div class="panel panel-info" style="margin-bottom:0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: none;">
-                                <div class="panel-body text-center" style="padding: 10px;">
-                                    <h5 style="margin:0; font-size:14px; font-weight: bold; color: #31708f;">Selesai</h5>
-                                    <h2 style="margin:5px 0 0 0; color: #31708f; font-weight: bold;" id="summary-selesai">0</h2>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <div class="well well-sm">
                         <div class="row">
                             <div class="col-md-3">
@@ -306,24 +320,24 @@
                         {if: !empty($current_week_sppb)}
                             {if: $current_week_sppb.status == 'Selesai' || $current_week_sppb.status == 'Diterima'}
                             <div class="sppb-active-card">
-                                <h4><i class="fa fa-check-circle text-success"></i> Pengadaan rutin minggu ini sudah selesai</h4>
+                                <h4><i class="fa fa-check-circle text-success"></i> Permintaan rutin BHP minggu ini sudah selesai</h4>
                                 <div class="sppb-status-line">
                                     No. SPPB: <strong>{$current_week_sppb.no_sppb}</strong> | Tanggal: {$current_week_sppb.tgl_sppb_display} | Status: <span class="label label-success">{$current_week_sppb.status}</span>
                                 </div>
                                 <div style="margin-top:12px;">
-                                    <button class="btn btn-primary" onclick="aturBarangTambahan('{$current_week_sppb.no_sppb}')"><i class="fa fa-pencil"></i> Atur Barang Tambahan</button>
-                                    <button class="btn btn-info" onclick="aturBarangTambahan('{$current_week_sppb.no_sppb}')"><i class="fa fa-list"></i> Lihat Detail SPPB</button>
+                                    <button class="btn btn-primary" onclick="aturBarangTambahan('{$current_week_sppb.no_sppb}')"><i class="fa fa-plus"></i> Buat Permintaan Tambahan</button>
+                                    <button class="btn btn-info" onclick="detailSPPB('{$current_week_sppb.no_sppb}')"><i class="fa fa-list"></i> Lihat Detail SPPB</button>
                                 </div>
                             </div>
                             <div id="sppb-active-form" style="display:none;"></div>
                             {else}
                             <div class="sppb-active-card">
-                                <h4><i class="fa fa-clock-o text-info"></i> Pengadaan rutin minggu ini sudah diajukan</h4>
+                                <h4><i class="fa fa-clock-o text-info"></i> Permintaan rutin BHP minggu ini sudah diajukan</h4>
                                 <div class="sppb-status-line">
                                     No. SPPB: <strong>{$current_week_sppb.no_sppb}</strong> | Tanggal: {$current_week_sppb.tgl_sppb_display} | Status: <span class="label label-info">{$current_week_sppb.status}</span>
                                 </div>
                                 <div style="margin-top:12px;">
-                                    <button class="btn btn-primary" onclick="aturBarangTambahan('{$current_week_sppb.no_sppb}')"><i class="fa fa-pencil"></i> Atur Barang Tambahan</button>
+                                    <button class="btn btn-primary" onclick="aturBarangTambahan('{$current_week_sppb.no_sppb}')"><i class="fa fa-plus"></i> Tambah Barang ke Permintaan Ini</button>
                                     <button class="btn btn-info" onclick="detailSPPB('{$current_week_sppb.no_sppb}')"><i class="fa fa-eye"></i> Lihat Status</button>
                                 </div>
                             </div>
@@ -943,15 +957,21 @@ function rejectUnit(no_sppb) {
 
 function verifikasiLogistik(no_sppb) {
     if(confirm('Proses permintaan rutin ini ke tahap logistik?')) {
-        $.post('{?=url(ADMIN."/logistik_non_medis/verifikasisppb")?}', {no_sppb: no_sppb}, function(data) {
-            var res = JSON.parse(data);
-            if(res.status == 'success') {
+        $.post('{?=url(ADMIN."/logistik_non_medis/verifikasisppb")?}', {no_sppb: no_sppb})
+        .done(function(data) {
+            var res;
+            try { res = typeof data === 'string' ? JSON.parse(data) : data; }
+            catch (e) { res = {status: 'error', message: 'Respons server tidak valid.'}; }
+            if(res && res.status == 'success') {
                 showSppbStatusResult(res, 'Permintaan berhasil diteruskan ke tahap berikutnya.');
                 loadDisplay();
                 if($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
             } else {
-                alert(res.message);
+                showSppbToast('error', 'Permintaan gagal diproses', (res && res.message) || 'Permintaan tidak dapat diproses.', 6000);
             }
+        }).fail(function(xhr) {
+            var message = (xhr.responseJSON && xhr.responseJSON.message) || 'Server tidak dapat memproses permintaan.';
+            showSppbToast('error', 'Permintaan gagal diproses', message, 6000);
         });
     }
 }

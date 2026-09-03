@@ -12,6 +12,7 @@
                     <th>Masuk</th>
                     <th>Keluar</th>
                     <th>Stok Akhir</th>
+                    <th>Satuan</th>
                     <th>User</th>
                 </tr>
             </thead>
@@ -37,11 +38,12 @@
                     <td class="text-right">{$value.qty_masuk}</td>
                     <td class="text-right">{$value.qty_keluar}</td>
                     <td class="text-right"><b>{$value.stok_akhir}</b></td>
+                    <td>{if: !empty($value.satuan)}{$value.satuan}{else}-{/if}</td>
                     <td>{$value.user_input}</td>
                 </tr>
                 {/loop}
                 {else}
-                <tr><td colspan="9" class="text-center">Data tidak ditemukan</td></tr>
+                <tr><td colspan="10" class="text-center">Data tidak ditemukan</td></tr>
                 {/if}
             </tbody>
         </table>

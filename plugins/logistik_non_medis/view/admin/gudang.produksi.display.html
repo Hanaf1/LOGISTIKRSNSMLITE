@@ -1,0 +1,46 @@
+{if: !empty($total)}
+<div class="row" style="margin-bottom: 15px;">
+    {loop: $total as $kode => $t}
+    <div class="col-md-3">
+        <div class="panel panel-default" style="margin-bottom:10px;">
+            <div class="panel-body" style="padding:10px;">
+                <small class="text-muted">{$t.nama_bahan}</small>
+                <h4 style="margin:4px 0 0;"><b>{?= number_format($t['qty'], 0, ',', '.') ?}</b> <small>{$t.satuan}</small></h4>
+            </div>
+        </div>
+    </div>
+    {/loop}
+</div>
+{/if}
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped table-hover">
+        <thead>
+            <tr>
+                <th width="150">Waktu</th>
+                <th width="170">No. Referensi</th>
+                <th>Kertas / Bahan</th>
+                <th width="140" class="text-right">Terpakai</th>
+                <th width="100">Satuan</th>
+            </tr>
+        </thead>
+        <tbody>
+            {if: !empty($rows)}
+            {loop: $rows as $row}
+            <tr>
+                <td>{$row.tgl_transaksi}</td>
+                <td><b>{$row.no_referensi}</b></td>
+                <td>{$row.nama_bahan}<br><small class="text-muted">{$row.kode_item}</small></td>
+                <td class="text-right"><b>{?= number_format((float)$row['qty_keluar'], 0, ',', '.') ?}</b></td>
+                <td>{$row.satuan}</td>
+            </tr>
+            {/loop}
+            {else}
+            <tr><td colspan="5" class="text-center text-muted">
+                Belum ada pemakaian kertas pada periode ini.
+                Pemakaian tercatat otomatis saat permintaan barang fotocopy diserahkan ke unit.
+            </td></tr>
+            {/if}
+        </tbody>
+    </table>
+</div>

@@ -43,7 +43,7 @@ class Site extends SiteModule
                        COALESCE(MAX(u.nama_unit), MAX(s.kode_unit), '-') nama_unit,
                        COUNT(*) jumlah_item, MAX(s.status) status
                 FROM rsns_custom_logistik_non_medis_notifier_event e
-                JOIN rsns_custom_logistik_non_medis_sppb s ON s.no_sppb = e.no_sppb
+                JOIN rsns_custom_logistik_non_medis_v_sppb_normalized s ON s.no_sppb = e.no_sppb
                 LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = s.kode_unit
                 WHERE e.id > ?
                   AND s.jenis_permintaan = 'Non Rutin'
@@ -105,7 +105,7 @@ class Site extends SiteModule
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         $this->db()->pdo()->exec("INSERT IGNORE INTO rsns_custom_logistik_non_medis_notifier_event (no_sppb,kode_unit,tgl_dibuat)
             SELECT s.no_sppb, MAX(s.kode_unit), NOW()
-            FROM rsns_custom_logistik_non_medis_sppb s
+            FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             WHERE s.jenis_permintaan='Non Rutin' AND s.status='Konsul Pengajuan ke Kabid Umum'
             GROUP BY s.no_sppb");
     }

@@ -61,7 +61,17 @@
               <td><strong>{$value.nama_barang}</strong><br><small class="text-muted">{$value.kode_item}</small><input type="hidden" name="kode_item[]" value="{$value.kode_item}"><input type="hidden" name="nama_barang[]" value="{$value.nama_barang}"></td>
               {if: $penerimaan.tipe_penerimaan == 'PO'}<td><input type="number" name="qty_po[]" class="form-control" value="{$value.qty_po}" readonly></td>{else}<input type="hidden" name="qty_po[]" value="0">{/if}
               <td><input type="number" name="qty_terima[]" class="form-control input-qty" value="{$value.qty_terima}" min="0.01" step="any" required {if: $penerimaan.status == 'Selesai'}readonly{/if}></td>
-              <td>{$value.satuan_dasar}<input type="hidden" name="satuan[]" value="{$value.satuan_dasar}"></td>
+              <td>
+                {if: $penerimaan.status == 'Selesai'}
+                {$value.satuan_terpilih}<input type="hidden" name="satuan[]" value="{$value.satuan_terpilih}">
+                {else}
+                <select name="satuan[]" class="form-control input-sm">
+                  {loop: $value.satuan_options as $uom}
+                  <option value="{$uom.satuan}" {if: $value.satuan_terpilih == $uom['satuan']}selected{/if}>{$uom.satuan}{if: $uom['faktor_ke_dasar'] != 1} (1 = {$uom.faktor_ke_dasar} {$value.satuan_dasar}){/if}</option>
+                  {/loop}
+                </select>
+                {/if}
+              </td>
               {if: $penerimaan.status != 'Selesai'}<td><button type="button" class="btn btn-danger btn-xs btn-remove-item"><i class="fa fa-times"></i></button></td>{/if}
               <input type="hidden" name="qty_tolak[]" value="0"><input type="hidden" name="harga[]" value="{$value.harga}"><input type="hidden" name="keterangan_item[]" value=""><input type="hidden" name="batch_no[]" value="-"><input type="hidden" name="tgl_expired[]" value="">
             </tr>
@@ -105,19 +115,32 @@ $(document).ready(function(){
   var tipe='{$penerimaan.tipe_penerimaan}',initialPo='{$penerimaan.no_po}';
   function esc(v){return $('<div>').text(v==null?'':String(v)).html();}
   function hasItem(kode){return $('#gudang-item-list tr.item-row[data-kode="'+String(kode).replace(/"/g,'')+'"]').length>0;}
+  // Barang boleh diterima dalam satuan pembelian (mis. Rim). Konversi ke satuan
+  // dasar dilakukan di server, jadi di sini cukup mengirim nama satuannya.
+  function selectSatuan(satuanDasar,opsi,terpilih){
+    var list=(opsi&&opsi.length)?opsi:[{satuan:satuanDasar||'',faktor_ke_dasar:1}];
+    var html='<select name="satuan[]" class="form-control input-sm">';
+    list.forEach(function(o){
+      var f=parseFloat(o.faktor_ke_dasar||1);
+      var label=esc(o.satuan)+(f!==1?' (1 = '+f+' '+esc(satuanDasar||'')+')':'');
+      var sel=(terpilih&&String(terpilih)===String(o.satuan))?' selected':'';
+      html+='<option value="'+esc(o.satuan)+'"'+sel+'>'+label+'</option>';
+    });
+    return html+'</select>';
+  }
   function addRow(item,isPo){
     if(!item||!item.kode_item||hasItem(item.kode_item))return;
     $('#gudang-empty-row').remove();
     var qty=isPo?(parseFloat(item.qty_sisa||item.qty_terima||0)) : 1;
     var html='<tr class="item-row" data-kode="'+esc(item.kode_item)+'"><td><strong>'+esc(item.nama_barang||item.kode_item)+'</strong><br><small class="text-muted">'+esc(item.kode_item)+'</small><input type="hidden" name="kode_item[]" value="'+esc(item.kode_item)+'"><input type="hidden" name="nama_barang[]" value="'+esc(item.nama_barang||item.kode_item)+'"></td>';
     if(isPo)html+='<td><input type="number" name="qty_po[]" class="form-control" value="'+esc(item.qty_sisa||0)+'" readonly></td>';else html+='<input type="hidden" name="qty_po[]" value="0">';
-    html+='<td><input type="number" name="qty_terima[]" class="form-control input-qty" value="'+esc(qty)+'" min="0.01" '+(isPo?'max="'+esc(item.qty_sisa||0)+'" ':'')+'step="any" required></td><td>'+esc(item.satuan_dasar||'-')+'<input type="hidden" name="satuan[]" value="'+esc(item.satuan_dasar||'')+'"></td><td><button type="button" class="btn btn-danger btn-xs btn-remove-item"><i class="fa fa-times"></i></button></td><input type="hidden" name="qty_tolak[]" value="0"><input type="hidden" name="harga[]" value="'+esc(item.harga||item.harga_referensi||0)+'"><input type="hidden" name="keterangan_item[]" value=""><input type="hidden" name="batch_no[]" value="-"><input type="hidden" name="tgl_expired[]" value=""></tr>';
+    html+='<td><input type="number" name="qty_terima[]" class="form-control input-qty" value="'+esc(qty)+'" min="0.01" '+(isPo?'max="'+esc(item.qty_sisa||0)+'" ':'')+'step="any" required></td><td>'+selectSatuan(item.satuan_dasar,item.satuan_options,item.satuan_dasar)+'</td><td><button type="button" class="btn btn-danger btn-xs btn-remove-item"><i class="fa fa-times"></i></button></td><input type="hidden" name="qty_tolak[]" value="0"><input type="hidden" name="harga[]" value="'+esc(item.harga||item.harga_referensi||0)+'"><input type="hidden" name="keterangan_item[]" value=""><input type="hidden" name="batch_no[]" value="-"><input type="hidden" name="tgl_expired[]" value=""></tr>';
     $('#gudang-item-list').append(html);
   }
   function loadItemsFromPO(){if(!initialPo)return;$.ajax({url:'{?=url([ADMIN,"logistik_non_medis","loaditemsfrompo"])?}',type:'POST',dataType:'json',data:{no_po:initialPo},success:function(res){if(res.status!=='success'){bootbox.alert(res.message||'Gagal memuat PO.');return;}$('#gudang-item-list').empty();$.each(res.items||[],function(i,item){if(parseFloat(item.qty_sisa||0)>0)addRow(item,true);});if(!$('#gudang-item-list tr.item-row').length)$('#gudang-item-list').html('<tr id="gudang-empty-row"><td colspan="5" class="text-center text-muted">Semua barang pada PO sudah diterima.</td></tr>');}});}
   if(tipe==='PO'&&initialPo&&!$('#gudang-item-list tr.item-row').length)loadItemsFromPO();
   $('#btn-load-items').on('click',loadItemsFromPO);
-  if(tipe==='MANUAL'&&$('#manual-item-picker').length){var $picker=$('#manual-item-picker');try{if($picker.data('selectator'))$picker.selectator('destroy');}catch(e){}$picker.siblings('.selectator_element').remove();$picker.select2({width:'100%',placeholder:'Ketik kode atau nama barang...',minimumInputLength:0,ajax:{url:'{?=url(ADMIN."/logistik_non_medis/ajaxmasterbarang")?}',dataType:'json',delay:250,data:function(p){return{q:p.term||'',jenis_permintaan:'Rutin'};},processResults:function(data){return{results:$.map(data||[],function(x){return{id:x.kode_item,text:x.kode_item+' - '+x.nama_barang,kode_item:x.kode_item,nama_barang:x.nama_barang,satuan_dasar:x.satuan_dasar,harga_referensi:x.harga_referensi};})};}}});$('#btn-add-manual-item').on('click',function(){var data=$picker.select2('data');if(!data||!data.length){bootbox.alert('Pilih barang terlebih dahulu.');return;}addRow(data[0],false);$picker.val(null).trigger('change');});}
+  if(tipe==='MANUAL'&&$('#manual-item-picker').length){var $picker=$('#manual-item-picker');try{if($picker.data('selectator'))$picker.selectator('destroy');}catch(e){}$picker.siblings('.selectator_element').remove();$picker.select2({width:'100%',placeholder:'Ketik kode atau nama barang...',minimumInputLength:0,ajax:{url:'{?=url(ADMIN."/logistik_non_medis/ajaxmasterbarang")?}',dataType:'json',delay:250,data:function(p){return{q:p.term||'',jenis_permintaan:'Rutin'};},processResults:function(data){return{results:$.map(data||[],function(x){return{id:x.kode_item,text:x.kode_item+' - '+x.nama_barang,kode_item:x.kode_item,nama_barang:x.nama_barang,satuan_dasar:x.satuan_dasar,satuan_options:x.satuan_options||[],harga_referensi:x.harga_referensi};})};}}});$('#btn-add-manual-item').on('click',function(){var data=$picker.select2('data');if(!data||!data.length){bootbox.alert('Pilih barang terlebih dahulu.');return;}addRow(data[0],false);$picker.val(null).trigger('change');});}
   $(document).on('click','.btn-remove-item',function(){$(this).closest('tr').remove();if(!$('#gudang-item-list tr.item-row').length)$('#gudang-item-list').html('<tr id="gudang-empty-row"><td colspan="5" class="text-center text-muted">Belum ada barang.</td></tr>');});
   $('#form-penerimaan-gudang').on('submit',function(e){e.preventDefault();if(!$('#gudang-item-list tr.item-row').length){bootbox.alert('Minimal satu barang harus dicatat.');return;}var form=this;function save(){var btn=$(form).find('button[type=submit]').prop('disabled',true);$.ajax({url:'{?=url([ADMIN,"logistik_non_medis","savepenerimaan"])?}',type:'POST',data:new FormData(form),contentType:false,processData:false,dataType:'json'}).done(function(res){if(res.status==='success'){bootbox.alert({title:'Berhasil',message:res.message||'Penerimaan berhasil disimpan.',callback:function(){loadGudangDashboard();}});}else bootbox.alert(res.message||'Gagal menyimpan penerimaan.');}).fail(function(xhr){bootbox.alert('Gagal menghubungi server. '+(xhr.responseText||''));}).always(function(){btn.prop('disabled',false);});}if($('#gudang-status').val()==='Selesai'){bootbox.confirm({title:'Verifikasi Penerimaan',message:'Pastikan barang dan jumlah fisik sudah benar. Setelah selesai, stok akan langsung masuk dan data tidak dapat diubah.',callback:function(ok){if(ok)save();}});}else save();});
 });

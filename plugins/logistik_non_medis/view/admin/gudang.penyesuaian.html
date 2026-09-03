@@ -1,0 +1,48 @@
+<style>
+.breadcrumb-penyesuaian { display:inline-flex; align-items:center; background:#f8f9fa; border:1px solid #e1e4e8; border-radius:6px; padding:6px 15px; font-size:13px; margin-bottom:15px; box-shadow:0 1px 2px rgba(0,0,0,.05); }
+.breadcrumb-penyesuaian a { color:#4a4a4a; text-decoration:none; font-weight:500; }
+.breadcrumb-penyesuaian a:hover { color:#337ab7; }
+.breadcrumb-penyesuaian .separator { margin:0 10px; color:#a0a0a0; font-size:11px; }
+.breadcrumb-penyesuaian .active { color:#337ab7; font-weight:600; }
+</style>
+<div class="row"><div class="col-md-12">
+<div class="breadcrumb-penyesuaian">
+ <a href="{?=url([ADMIN,'logistik_non_medis','manage'])?}" title="Dashboard Logistik"><i class="fa fa-home"></i></a>
+ <i class="fa fa-chevron-right separator"></i>
+ <a href="{?=url([ADMIN,'logistik_non_medis','manage'])?}#manajemen-gudang">Gudang</a>
+ <i class="fa fa-chevron-right separator"></i>
+ <span class="active">Penyesuaian Data</span>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading clearfix">
+  <h3 class="panel-title pull-left"><i class="fa fa-sliders"></i> Penyesuaian Data Barang &amp; Stok Awal</h3>
+  <div class="pull-right"><button class="btn btn-primary btn-sm" id="btn-tambah-penyesuaian"><i class="fa fa-plus"></i> Tambah Barang</button> <button class="btn btn-success btn-sm" id="btn-export-penyesuaian"><i class="fa fa-file-excel-o"></i> Export Excel</button></div>
+</div>
+<div class="panel-body">
+ <div class="alert alert-info"><i class="fa fa-info-circle"></i> Total yang disimpan menjadi saldo awal penyesuaian. Perubahan dicatat sebagai transaksi <b>Opname</b> dengan batch <b>PENYESUAIAN-AWAL</b>.</div>
+ <form id="form-filter-penyesuaian" class="well well-sm"><div class="row">
+  <div class="col-md-5"><div class="input-group"><input id="cari-penyesuaian" class="form-control" placeholder="Cari kode atau nama barang..."><span class="input-group-btn"><button class="btn btn-default"><i class="fa fa-search"></i> Cari</button></span></div></div>
+  <div class="col-md-4"><select id="kategori-penyesuaian" class="form-control"><option value="">-- Semua Kategori --</option>{loop: $kategori}<option value="{$value.kode_kategori}">{$value.nama_kategori}</option>{/loop}</select></div>
+  <div class="col-md-3"><button type="button" class="btn btn-default" id="reset-penyesuaian"><i class="fa fa-refresh"></i> Reset</button> <span class="help-block" style="display:inline-block;margin:7px 0 0 8px"><span id="total-penyesuaian">0</span> data</span></div>
+ </div></form>
+ <div id="display-penyesuaian"><div class="text-center"><i class="fa fa-spinner fa-spin fa-2x"></i></div></div>
+</div></div></div></div>
+<div class="modal fade" id="modal-penyesuaian"><div class="modal-dialog modal-lg"><div class="modal-content" id="modal-penyesuaian-content"></div></div></div>
+<script>
+$(function(){
+ var displayUrl='{?=url([ADMIN,"logistik_non_medis","displaygudangpenyesuaian"])?}', formUrl='{?=url([ADMIN,"logistik_non_medis","formgudangpenyesuaian"])?}', saveUrl='{?=url([ADMIN,"logistik_non_medis","savegudangpenyesuaian"])?}', deleteUrl='{?=url([ADMIN,"logistik_non_medis","hapusgudangpenyesuaian"])?}', exportUrl='{?=url([ADMIN,"logistik_non_medis","exportgudangpenyesuaian"])?}', timer;
+ function load(page){$.post(displayUrl,{halaman:page||1,cari:$('#cari-penyesuaian').val(),kategori:$('#kategori-penyesuaian').val()},function(x){$('#display-penyesuaian').html(x);$('#total-penyesuaian').text($('#real-total-penyesuaian').val()||0);});}
+ load(1);
+ $('#form-filter-penyesuaian').submit(function(e){e.preventDefault();load(1);});
+ $('#cari-penyesuaian').keyup(function(){clearTimeout(timer);timer=setTimeout(function(){load(1)},300);});
+ $('#kategori-penyesuaian').change(function(){load(1);});
+ $('#reset-penyesuaian').click(function(){$('#cari-penyesuaian').val('');$('#kategori-penyesuaian').val('');load(1);});
+ $('#btn-tambah-penyesuaian').click(function(){$.post(formUrl,{},function(x){$('#modal-penyesuaian-content').html(x);$('#modal-penyesuaian').modal('show');});});
+ $('#btn-export-penyesuaian').click(function(){var sep=exportUrl.indexOf('?')>=0?'&':'?';window.location=exportUrl+sep+'cari='+encodeURIComponent($('#cari-penyesuaian').val())+'&kategori='+encodeURIComponent($('#kategori-penyesuaian').val());});
+ $(document).on('click','.pagination-penyesuaian a',function(e){e.preventDefault();load($(this).data('page'));});
+ $(document).on('click','.btn-edit-penyesuaian',function(){var k=$(this).data('id');$.post(formUrl,{kode_item:k},function(x){$('#modal-penyesuaian-content').html(x);$('#modal-penyesuaian').modal('show');});});
+ $(document).on('click','.btn-delete-penyesuaian',function(){if(!confirm('Hapus barang dan seluruh batch stoknya?'))return;$.post(deleteUrl,{kode_item:$(this).data('id')},function(x){var r=JSON.parse(x);alert(r.message);if(r.status==='success')load(1);});});
+ function stopPenyesuaianBusy(){$('#logistik-busy-overlay').removeClass('is-visible keep-visible-until-navigation').attr('aria-hidden','true');$('body').removeClass('logistik-is-busy');}
+ $(document).on('submit','#form-gudang-penyesuaian',function(e){e.preventDefault();$.post(saveUrl,$(this).serialize(),function(x){var r=typeof x==='string'?JSON.parse(x):x;if(r.status==='success'){$('#modal-penyesuaian').modal('hide');load(1);}else{var message=r.message||'Data gagal disimpan.';stopPenyesuaianBusy();setTimeout(function(){alert(message);},0);}}).fail(function(){stopPenyesuaianBusy();setTimeout(function(){alert('Server tidak dapat menyimpan penyesuaian.');},0);});});
+});
+</script>

@@ -40,6 +40,7 @@
                         {if: $row.status == 'Draft'}
                         <button type="button" class="btn btn-primary btn-xs edit-po" data-id="{$row.id}" title="Edit"><i class="fa fa-pencil"></i></button>
                         <button type="button" class="btn btn-success btn-xs update-status-po" data-id="{$row.id}" data-status="Terkirim" title="Tandai Sudah Diorder"><i class="fa fa-check"></i> Sudah Order</button>
+                        <button type="button" class="btn btn-danger btn-xs update-status-po" data-id="{$row.id}" data-status="Dibatalkan" data-draft="1" title="Batalkan Draft PO (data dihapus)"><i class="fa fa-times"></i> Batal</button>
                         {if: $admin_mode == 1}
                         <button type="button" class="btn btn-danger btn-xs delete-po" data-id="{$row.id}" title="Hapus"><i class="fa fa-trash"></i></button>
                         {/if}

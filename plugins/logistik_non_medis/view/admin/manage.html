@@ -96,25 +96,6 @@
     flex-direction: column;
     justify-content: center;
 }
-.tab-content ul.modules li.module .module-card-neutral {
-    background: #fafafa !important;
-    color: #4f6173 !important;
-}
-.tab-content ul.modules li.module .module-card-neutral .panel-thumb,
-.tab-content ul.modules li.module .module-card-neutral h4,
-.tab-content ul.modules li.module .module-card-neutral .desc {
-    color: #4f6173 !important;
-}
-.tab-content ul.modules li.module .module-card-soft {
-    background: #fffdf7 !important;
-    color: #4f6173 !important;
-}
-.tab-content ul.modules li.module .module-card-soft .panel-thumb,
-.tab-content ul.modules li.module .module-card-soft h4,
-.tab-content ul.modules li.module .module-card-soft .desc {
-    color: #4f6173 !important;
-}
-
 .dash-card .dash-value {
     font-size: 26px;
     font-weight: 700;
@@ -285,7 +266,7 @@
                 {if: $perm_masterinventaris}
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','masterinventaris'])?}" class="panel-body text-center module-card-neutral">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','masterinventaris'])?}" class="panel-body text-center">
                             <div class="panel-thumb"><i class="fa fa-list-ol"></i><div class="desc">Unit dan kode barang khusus format Excel</div></div>
                             <h4><b>Master Inventaris</b></h4>
                         </a>
@@ -381,7 +362,7 @@
                 {if: $hakakses_access}
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','hakakses'])?}" class="panel-body text-center module-card-neutral">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','hakakses'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-shield"></i>
                                 <div class="desc">Pengaturan Role &amp; Izin Menu</div>
@@ -395,7 +376,7 @@
                 {if: $perm_konfigurasiwaha}
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','konfigurasiwaha'])?}" class="panel-body text-center module-card-neutral">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','konfigurasiwaha'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-whatsapp"></i>
                                 <div class="desc">Endpoint, API key, session, dan tes kirim WAHA</div>
@@ -423,7 +404,7 @@
                 {if: $perm_pengadaanperencanaan}
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','pengadaanperencanaan'])?}" class="panel-body text-center module-card-neutral">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','pengadaanperencanaan'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-calendar-check-o"></i>
                                 <div class="desc">Input Rencana Belanja Bulanan Unit</div>
@@ -437,7 +418,7 @@
                 {if: $perm_distribusinonrutin}
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','permintaannonrutin'])?}" class="panel-body text-center module-card-soft">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','permintaannonrutin'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-bolt"></i>
                                 <div class="desc">Permintaan Barang Non-Rutin — Butuh Persetujuan Manajemen</div>
@@ -485,20 +466,6 @@
                                 <div class="desc">Manajemen Kontrak</div>
                             </div>
                             <h4><b>Manajemen Kontrak</b></h4>
-                        </a>
-                    </div>
-                </li>
-                {/if}
-
-                {if: $perm_realisasibelanja}
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','realisasibelanja'])?}" class="panel-body text-center module-card-neutral">
-                            <div class="panel-thumb">
-                                <i class="fa fa-bar-chart"></i>
-                                <div class="desc">Rencana &amp; Realisasi Anggaran Pembelian</div>
-                            </div>
-                            <h4><b>Rencana &amp; Realisasi Anggaran</b></h4>
                         </a>
                     </div>
                 </li>
@@ -646,12 +613,12 @@
                 {if: $perm_distribusinonrutin}
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusinonrutin'])?}" class="panel-body text-center module-card-soft">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusinonrutin'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-exclamation-triangle"></i>
                                 <div class="desc">Permintaan yang membutuhkan persetujuan</div>
                             </div>
-                            <h4><b>Permintaan<br>Non Rutin</b></h4>
+                            <h4><b>Permintaan Non Rutin</b></h4>
                         </a>
                     </div>
                 </li>
@@ -674,23 +641,9 @@
                 {if: $perm_distribusimendesak}
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusimendesak'])?}" class="panel-body text-center module-card-soft">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusimendesak'])?}" class="panel-body text-center">
                             <div class="panel-thumb"><i class="fa fa-hand-paper-o"></i><div class="desc">Kebutuhan di luar jadwal rutin, disiapkan atau langsung diambil</div></div>
-                            <h4><b>Permintaan<br>Langsung</b></h4>
-                        </a>
-                    </div>
-                </li>
-                {/if}
-
-                {if: $perm_distribusisppb && ($role == 'admin' || $role == 'logistik')}
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusippi'])?}" class="panel-body text-center module-card-soft">
-                            <div class="panel-thumb">
-                                <i class="fa fa-recycle text-success"></i>
-                                <div class="desc">Rekapitulasi Plastik & Tisue</div>
-                            </div>
-                            <h4><b>Barang PPI</b></h4>
+                            <h4><b>Permintaan Langsung</b></h4>
                         </a>
                     </div>
                 </li>
@@ -821,6 +774,20 @@
             <h4 style="display:none;"><i class="fa fa-line-chart"></i> Laporan &amp; Audit</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
+
+                {if: $perm_distribusisppb && ($role == 'admin' || $role == 'logistik')}
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','distribusippi'])?}" class="panel-body text-center">
+                            <div class="panel-thumb">
+                                <i class="fa fa-recycle"></i>
+                                <div class="desc">Rekapitulasi Plastik &amp; Tisue</div>
+                            </div>
+                            <h4><b>Barang PPI</b></h4>
+                        </a>
+                    </div>
+                </li>
+                {/if}
                 
                 {if: $perm_laporaninventaris}
                 <li class="module">
@@ -867,7 +834,7 @@
                 {if: $perm_rekapnonrutin}
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','rekapnonrutin'])?}" class="panel-body text-center module-card-soft">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','rekapnonrutin'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-file-text-o"></i>
                                 <div class="desc">Detail barang Non Rutin dan unit peminta siap cetak</div>

@@ -184,6 +184,41 @@
 }
 </style>
 
+<div class="modal fade" id="modal-export-stok" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title"><i class="fa fa-file-excel-o"></i> Export Stok</h4>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Data yang diekspor</label>
+                    <div class="radio"><label><input type="radio" name="export-stok-mode" value="filter" checked> Sesuai filter saat ini</label></div>
+                    <div class="radio"><label><input type="radio" name="export-stok-mode" value="all"> Semua item (abaikan filter)</label></div>
+                </div>
+                <div class="form-group" id="export-stok-limit-wrap">
+                    <label for="export-stok-limit">Jumlah item</label>
+                    <select id="export-stok-limit" class="form-control">
+                        <option value="0">Semua hasil filter</option>
+                        <option value="20">20 item</option>
+                        <option value="50">50 item</option>
+                        <option value="100">100 item</option>
+                        <option value="250">250 item</option>
+                        <option value="500">500 item</option>
+                        <option value="1000">1.000 item</option>
+                    </select>
+                    <p class="help-block">Jika memilih semua item, seluruh data akan diekspor tanpa dibatasi halaman.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-success" id="btn-proses-export-stok"><i class="fa fa-download"></i> Export</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 $(document).ready(function() {
     var $kategoriFilter = $('#kategori-filter-stok');
@@ -232,34 +267,23 @@ $(document).ready(function() {
         });
     });
 
-    $('#btn-export-stok').click(function() {
-        var table = document.querySelector('#display-stok table');
-        if (!table) {
-            alert('Tidak ada data untuk di-export');
-            return;
-        }
-        var html = table.outerHTML;
-
-        var form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '{?=url([ADMIN, "logistik_non_medis", "ExportExcelHtml"])?}';
-        form.target = '_blank';
-
-        var inputFilename = document.createElement('input');
-        inputFilename.type = 'hidden';
-        inputFilename.name = 'filename';
-        inputFilename.value = 'Laporan_Stok_Logistik';
-        form.appendChild(inputFilename);
-
-        var inputHtml = document.createElement('input');
-        inputHtml.type = 'hidden';
-        inputHtml.name = 'html';
-        inputHtml.value = html;
-        form.appendChild(inputHtml);
-
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
+    $('#btn-export-stok').click(function() { $('#modal-export-stok').modal('show'); });
+    $('input[name="export-stok-mode"]').on('change', function() {
+        $('#export-stok-limit-wrap').toggle($(this).val() === 'filter');
+    });
+    $('#btn-proses-export-stok').click(function() {
+        var btn = $(this), mode = $('input[name="export-stok-mode"]:checked').val();
+        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyiapkan...');
+        var form = $('<form>', {method: 'POST', action: '{?=url([ADMIN, "logistik_non_medis", "exportgudangstok"])?}', target: '_blank'});
+        form.append($('<input>', {type: 'hidden', name: 'cari', value: $('#cari-stok').val()}));
+        form.append($('<input>', {type: 'hidden', name: 'kategori', value: $('#kategori-filter-stok').val()}));
+        form.append($('<input>', {type: 'hidden', name: 'mode', value: mode}));
+        form.append($('<input>', {type: 'hidden', name: 'jumlah', value: mode === 'filter' ? $('#export-stok-limit').val() : 0}));
+        $('body').append(form);
+        form[0].submit();
+        form.remove();
+        $('#modal-export-stok').modal('hide');
+        window.setTimeout(function() { btn.prop('disabled', false).html('<i class="fa fa-download"></i> Export'); }, 800);
     });
 
     function loadStok(halaman, callback) {

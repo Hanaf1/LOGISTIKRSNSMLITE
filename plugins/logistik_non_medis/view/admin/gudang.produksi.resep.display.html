@@ -1,0 +1,40 @@
+{if: !empty($grup)}
+<div class="table-responsive">
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr class="bg-info">
+                <th>Barang Hasil</th>
+                <th>Bahan</th>
+                <th width="180" class="text-right">Dipakai per 1 Hasil</th>
+                <th width="70" class="text-center">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {loop: $grup as $kode_hasil => $data}
+            {loop: $data.bahan as $i => $b}
+            <tr>
+                {if: $i == 0}
+                <td rowspan="{count: $data.bahan}" style="vertical-align: middle;">
+                    <strong>{$data.nama_hasil}</strong><br>
+                    <small class="text-muted">{$kode_hasil}{if: !empty($data.satuan_hasil)} &middot; per {$data.satuan_hasil}{/if}</small>
+                </td>
+                {/if}
+                <td>
+                    {if: !empty($b.nama_bahan)}{$b.nama_bahan}{else}{$b.kode_item_bahan}{/if}
+                    <small class="text-muted">({$b.kode_item_bahan})</small>
+                </td>
+                <td class="text-right"><b>{$b.qty_bahan_per_hasil}</b> {$b.satuan_bahan}</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-danger btn-xs" onclick="hapusResep({$b.id})" title="Hapus dari resep"><i class="fa fa-trash"></i></button>
+                </td>
+            </tr>
+            {/loop}
+            {/loop}
+        </tbody>
+    </table>
+</div>
+{else}
+<div class="alert alert-default text-center text-muted" style="background:#f9f9f9; border:1px dashed #ccc;">
+    Belum ada resep. Tambahkan resep pertama lewat form di atas.
+</div>
+{/if}

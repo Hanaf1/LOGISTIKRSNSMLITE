@@ -1,7 +1,8 @@
 {if: !empty($kategori)}
     {loop: $kategori}
     <tr>
-                <td>{$value.nama_kategori}</td>
+        <td>{$value.kode_kategori}</td>
+        <td>{$value.nama_kategori}</td>
         <td>{$value.deskripsi}</td>
         <td class="text-right">
             <div class="btn-group">
@@ -17,7 +18,7 @@
     {/loop}
 {else}
     <tr>
-        <td colspan="3" class="text-center">Data kategori tidak ditemukan.</td>
+        <td colspan="4" class="text-center">Data kategori tidak ditemukan.</td>
     </tr>
 {/if}
 

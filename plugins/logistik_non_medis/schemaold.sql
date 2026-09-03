@@ -707,23 +707,18 @@ CREATE TABLE `rsns_custom_logistik_non_medis_settings` (
 -- -----------------------------------------------------------------------------
 -- 33. Table structure for `rsns_custom_logistik_non_medis_sppb`
 -- -----------------------------------------------------------------------------
+DROP VIEW IF EXISTS `rsns_custom_logistik_non_medis_v_sppb_normalized`;
 DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_sppb`;
 CREATE TABLE `rsns_custom_logistik_non_medis_sppb` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `no_sppb` varchar(50) NOT NULL,
   `tgl_sppb` date NOT NULL,
   `kode_unit` varchar(50) NOT NULL,
-  `jenis_permintaan` varchar(50) NOT NULL DEFAULT 'Rutin',
-  `sumber_pemenuhan` varchar(30) DEFAULT NULL,
-  `referensi_pemenuhan` text DEFAULT NULL,
-  `catatan_pemenuhan` text DEFAULT NULL,
-  `user_tindak_lanjut` varchar(100) DEFAULT NULL,
-  `tgl_tindak_lanjut` datetime DEFAULT NULL,
   `kode_item` varchar(50) NOT NULL,
   `jumlah` double NOT NULL DEFAULT '0',
   `jumlah_disetujui` double NOT NULL DEFAULT '0',
   `satuan` varchar(50) DEFAULT NULL,
-  `status` enum('Draft','Diajukan','Disetujui Unit','Terverifikasi','Picking','Packing','Ready','Dikirim','Diterima','Selesai','Ditolak') NOT NULL DEFAULT 'Draft',
+  `status` enum('Draft','Diajukan','Disetujui Ka. Unit','Disetujui Ka. Sie','Disetujui Kabid','Disetujui Unit','Diserahkan ke Kasie Umum','Verifikasi Kasie Umum','Diteruskan ke Logistik Umum','Rekap Logistik','Logistik Umum & Rekap','Konsultasi Dana','Konsul Pengajuan ke Kabid Umum','Diserahkan ke Keuangan','Pengajuan Dana ke Bendahara','Tidak ACC','Proses','Terverifikasi','Proses Logistik','Proses Pengadaan','Siap Ambil','Siap Diserahkan','Picking','Packing','Ready','Dikirim','Diterima','Selesai','Ditolak','Dibatalkan') NOT NULL DEFAULT 'Draft',
   `keterangan` text DEFAULT NULL,
   `alasan_penolakan` text DEFAULT NULL,
   `user_input` varchar(100) DEFAULT NULL,
@@ -732,11 +727,159 @@ CREATE TABLE `rsns_custom_logistik_non_medis_sppb` (
   `tgl_approve_unit` datetime DEFAULT NULL,
   `user_verifikasi` varchar(100) DEFAULT NULL,
   `tgl_verifikasi` datetime DEFAULT NULL,
-  PRIMARY KEY (`kode_kategori`),
+  PRIMARY KEY (`id`),
   KEY `no_sppb` (`no_sppb`),
   KEY `kode_unit` (`kode_unit`),
-  KEY `kode_item` (`kode_item`)
+  KEY `kode_item` (`kode_item`),
+  KEY `idx_sppb_tanggal_nomor` (`tgl_sppb`,`no_sppb`),
+  KEY `idx_sppb_unit_status_tglinput` (`kode_unit`,`status`,`tgl_input`,`no_sppb`),
+  KEY `idx_sppb_status_tglinput` (`status`,`tgl_input`,`no_sppb`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+INSERT IGNORE INTO `rsns_custom_logistik_non_medis_satuan` (`kode_satuan`,`nama_satuan`,`satuan_dasar`,`nilai_konversi`) VALUES
+('BUAH','Buah','Buah',1),('JERIGEN','Jerigen','Jerigen',1),('BIJI','Biji','Biji',1);
+
+-- -----------------------------------------------------------------------------
+-- Konfigurasi barang yang dipantau pada laporan PPI
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_ppi_barang`;
+CREATE TABLE `rsns_custom_logistik_non_medis_ppi_barang` (
+  `kode_item` varchar(50) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`kode_item`),
+  KEY `created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Satuan alternatif per barang. Seluruh stok tetap disimpan dalam satuan dasar
+-- master barang; faktor menyatakan jumlah satuan dasar dalam 1 satuan pilihan.
+DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_barang_satuan`;
+CREATE TABLE `rsns_custom_logistik_non_medis_barang_satuan` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `kode_item` varchar(50) NOT NULL,
+  `satuan` varchar(50) NOT NULL,
+  `faktor_ke_dasar` decimal(18,6) NOT NULL DEFAULT '1.000000',
+  `is_default_permintaan` tinyint(1) NOT NULL DEFAULT '0',
+  `status` enum('Aktif','Tidak Aktif') NOT NULL DEFAULT 'Aktif',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_barang_satuan` (`kode_item`,`satuan`),
+  KEY `idx_barang_satuan_aktif` (`kode_item`,`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Atribut dokumen SPPB tambahan (satu baris per nomor SPPB).
+DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_sppb_request_meta`;
+CREATE TABLE `rsns_custom_logistik_non_medis_sppb_request_meta` (
+  `no_sppb` varchar(50) NOT NULL,
+  `minggu_ke` tinyint(1) DEFAULT NULL,
+  `jenis_permintaan` enum('Rutin','Non Rutin') NOT NULL DEFAULT 'Rutin',
+  `jenis_keluar` varchar(30) NOT NULL DEFAULT 'Rutin',
+  `sifat_permintaan` varchar(20) NOT NULL DEFAULT 'Biasa',
+  `diajukan_oleh` varchar(150) DEFAULT NULL,
+  `penanggung_jawab_1` varchar(150) DEFAULT NULL,
+  `penanggung_jawab_2` varchar(150) DEFAULT NULL,
+  `ka_unit` varchar(150) DEFAULT NULL,
+  `latar_belakang_tujuan` text DEFAULT NULL,
+  `sasaran_kegunaan` text DEFAULT NULL,
+  `rencana_digunakan` text DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`no_sppb`),
+  KEY `idx_req_meta_jenis` (`jenis_permintaan`,`sifat_permintaan`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Tindak lanjut pemenuhan (satu baris per nomor SPPB).
+DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_sppb_fulfillment`;
+CREATE TABLE `rsns_custom_logistik_non_medis_sppb_fulfillment` (
+  `no_sppb` varchar(50) NOT NULL,
+  `sumber_pemenuhan` varchar(30) DEFAULT NULL,
+  `referensi_pemenuhan` text DEFAULT NULL,
+  `catatan_pemenuhan` text DEFAULT NULL,
+  `user_tindak_lanjut` varchar(100) DEFAULT NULL,
+  `tgl_tindak_lanjut` datetime DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`no_sppb`),
+  KEY `idx_fulfillment_sumber` (`sumber_pemenuhan`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Atribut tambahan per item SPPB.
+DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_sppb_item_meta`;
+CREATE TABLE `rsns_custom_logistik_non_medis_sppb_item_meta` (
+  `sppb_item_id` int(11) NOT NULL,
+  `item_sumber` enum('master','manual') NOT NULL DEFAULT 'master',
+  `nama_barang_manual` varchar(255) DEFAULT NULL,
+  `spesifikasi_manual` text DEFAULT NULL,
+  `estimasi_harga` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `harga_satuan_cost` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `subtotal_cost` decimal(18,2) NOT NULL DEFAULT '0.00',
+  `faktor_konversi` decimal(18,6) NOT NULL DEFAULT '1.000000',
+  `jumlah_dasar` decimal(18,6) NOT NULL DEFAULT '0.000000',
+  `jumlah_disetujui_dasar` decimal(18,6) NOT NULL DEFAULT '0.000000',
+  `satuan_dasar_snapshot` varchar(50) DEFAULT NULL,
+  `keterangan_item` text DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`sppb_item_id`),
+  KEY `idx_item_meta_sumber` (`item_sumber`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Persetujuan, costing, pengambilan, dan asal tahap penolakan.
+DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_sppb_approval`;
+CREATE TABLE `rsns_custom_logistik_non_medis_sppb_approval` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `no_sppb` varchar(50) NOT NULL,
+  `tahap` enum('KA_UNIT','KA_SIE','KA_BIDANG','COSTING','PENGAMBILAN','REJECTION') NOT NULL,
+  `username` varchar(150) DEFAULT NULL,
+  `waktu` datetime DEFAULT NULL,
+  `keterangan` text DEFAULT NULL,
+  `status_asal_penolakan` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_approval_tahap` (`no_sppb`,`tahap`),
+  KEY `idx_approval_user_waktu` (`username`,`waktu`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Foto/dokumen item dibuat satu file per baris (1NF).
+DROP TABLE IF EXISTS `rsns_custom_logistik_non_medis_sppb_item_attachment`;
+CREATE TABLE `rsns_custom_logistik_non_medis_sppb_item_attachment` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `sppb_item_id` int(11) NOT NULL,
+  `jenis` enum('FOTO_BARANG','DOKUMEN') NOT NULL DEFAULT 'FOTO_BARANG',
+  `file_path` varchar(500) NOT NULL,
+  `urutan` smallint(6) NOT NULL DEFAULT '1',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_item_attachment` (`sppb_item_id`,`jenis`,`file_path`),
+  KEY `idx_attachment_item_urutan` (`sppb_item_id`,`urutan`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+DROP VIEW IF EXISTS `rsns_custom_logistik_non_medis_v_sppb_normalized`;
+CREATE VIEW `rsns_custom_logistik_non_medis_v_sppb_normalized` AS
+SELECT
+  s.`id`,s.`no_sppb`,s.`tgl_sppb`,rm.`minggu_ke`,s.`kode_unit`,rm.`jenis_permintaan`,
+  f.`sumber_pemenuhan`,f.`referensi_pemenuhan`,f.`catatan_pemenuhan`,f.`user_tindak_lanjut`,f.`tgl_tindak_lanjut`,
+  rm.`jenis_keluar`,s.`kode_item`,im.`item_sumber`,im.`nama_barang_manual`,im.`spesifikasi_manual`,im.`estimasi_harga`,att.`foto_barang`,
+  rm.`latar_belakang_tujuan`,rm.`sasaran_kegunaan`,rm.`rencana_digunakan`,s.`jumlah`,s.`jumlah_disetujui`,
+  im.`harga_satuan_cost`,im.`subtotal_cost`,im.`faktor_konversi`,im.`jumlah_dasar`,im.`jumlah_disetujui_dasar`,im.`satuan_dasar_snapshot`,s.`satuan`,s.`status`,rm.`sifat_permintaan`,rm.`diajukan_oleh`,
+  rm.`penanggung_jawab_1`,rm.`penanggung_jawab_2`,rm.`ka_unit`,s.`keterangan`,im.`keterangan_item`,s.`alasan_penolakan`,
+  COALESCE(ar.`status_asal_penolakan`,aku.`status_asal_penolakan`,aks.`status_asal_penolakan`,akb.`status_asal_penolakan`,ac.`status_asal_penolakan`) AS `ditolak_pada_status`,
+  ac.`keterangan` AS `keterangan_verifikasi`,ac.`username` AS `user_cost`,ac.`waktu` AS `tgl_cost`,s.`user_input`,s.`tgl_input`,
+  aku.`username` AS `user_approve_ka_unit`,aku.`waktu` AS `tgl_approve_ka_unit`,aks.`username` AS `user_approve_ka_sie`,aks.`waktu` AS `tgl_approve_ka_sie`,
+  akb.`username` AS `user_approve_ka_bidang`,akb.`waktu` AS `tgl_approve_ka_bidang`,s.`user_approve_unit`,s.`tgl_approve_unit`,
+  s.`user_verifikasi`,s.`tgl_verifikasi`,ap.`username` AS `diambil_oleh`,ap.`waktu` AS `tgl_diambil`
+FROM `rsns_custom_logistik_non_medis_sppb` s
+LEFT JOIN `rsns_custom_logistik_non_medis_sppb_request_meta` rm ON rm.`no_sppb`=s.`no_sppb`
+LEFT JOIN `rsns_custom_logistik_non_medis_sppb_fulfillment` f ON f.`no_sppb`=s.`no_sppb`
+LEFT JOIN `rsns_custom_logistik_non_medis_sppb_item_meta` im ON im.`sppb_item_id`=s.`id`
+LEFT JOIN `rsns_custom_logistik_non_medis_sppb_approval` aku ON aku.`no_sppb`=s.`no_sppb` AND aku.`tahap`='KA_UNIT'
+LEFT JOIN `rsns_custom_logistik_non_medis_sppb_approval` aks ON aks.`no_sppb`=s.`no_sppb` AND aks.`tahap`='KA_SIE'
+LEFT JOIN `rsns_custom_logistik_non_medis_sppb_approval` akb ON akb.`no_sppb`=s.`no_sppb` AND akb.`tahap`='KA_BIDANG'
+LEFT JOIN `rsns_custom_logistik_non_medis_sppb_approval` ac ON ac.`no_sppb`=s.`no_sppb` AND ac.`tahap`='COSTING'
+LEFT JOIN `rsns_custom_logistik_non_medis_sppb_approval` ap ON ap.`no_sppb`=s.`no_sppb` AND ap.`tahap`='PENGAMBILAN'
+LEFT JOIN `rsns_custom_logistik_non_medis_sppb_approval` ar ON ar.`no_sppb`=s.`no_sppb` AND ar.`tahap`='REJECTION'
+LEFT JOIN (
+  SELECT `sppb_item_id`,CONCAT('[',GROUP_CONCAT(JSON_QUOTE(`file_path`) ORDER BY `urutan`,`id` SEPARATOR ','),']') AS `foto_barang`
+  FROM `rsns_custom_logistik_non_medis_sppb_item_attachment`
+  WHERE `jenis`='FOTO_BARANG'
+  GROUP BY `sppb_item_id`
+) att ON att.`sppb_item_id`=s.`id`;
 
 -- -----------------------------------------------------------------------------
 -- 34. Table structure for `rsns_custom_logistik_non_medis_stok`

@@ -284,6 +284,14 @@ $(document).ready(function() {
         if (config.mode === 'pusher' && config.pusher_key) {
             startPusher(config);
         } else {
+            // Workerman adalah layanan opsional. Pada instalasi lokal layanan ini
+            // biasanya tidak dijalankan; polling tetap menjamin notifikasi masuk.
+            // Jangan membuka socket yang pasti gagal karena dapat menghentikan
+            // eksekusi halaman saat DevTools memakai pause on exceptions.
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                $('#notifRealtimeStatus').text('Realtime: polling aktif');
+                return;
+            }
             connectWorkerman();
         }
     }

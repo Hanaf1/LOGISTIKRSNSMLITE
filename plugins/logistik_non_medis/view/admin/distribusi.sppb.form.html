@@ -403,7 +403,9 @@
                                             {$satuan_options}
                                         </select>
                                         {else}
-                                        <input type="text" name="satuan[]" class="form-control" value="{$value.satuan}" readonly>
+                                        <select name="satuan[]" class="form-control select-satuan-barang" data-current="{$value.satuan}" data-kode-item="{$value.kode_item}" required>
+                                            <option value="{$value.satuan}" selected>{$value.satuan}</option>
+                                        </select>
                                         {/if}
                                     </td>
                                     {if: $sppb.jenis_permintaan == 'Non Rutin'}
@@ -668,6 +670,17 @@ $(document).ready(function() {
     $('#item-rows tr').each(function() {
         toggleItemSource($(this));
         renderPhotoPreview($(this));
+        var $unit = $(this).find('.select-satuan-barang');
+        var kodeItem = $unit.data('kode-item');
+        var currentUnit = $unit.data('current');
+        if ($unit.length && kodeItem) {
+            var $row = $(this);
+            $.getJSON("{?=url(ADMIN.'/logistik_non_medis/ajaxmasterbarang')?}", {q: kodeItem, jenis_permintaan: 'Rutin'}, function(items) {
+                $.each(items || [], function(_, item) {
+                    if (item.kode_item === kodeItem) applySatuanBarang($row, item.satuan_options, currentUnit);
+                });
+            });
+        }
     });
 });
 
@@ -693,7 +706,7 @@ function addRow() {
         html = '<tr>' +
                '<td><input type="hidden" name="item_sumber[]" value="master"><input type="hidden" name="nama_barang_manual[]" value=""><select class="form-control input-sm filter-kategori-barang" style="margin-bottom:6px;"><option value="">Semua kelompok barang</option></select><select name="kode_item[]" class="form-control select-item" required></select></td>' +
                '<td><input type="number" step="any" min="0.01" name="jumlah[]" class="form-control" value="1" required></td>' +
-               '<td><input type="text" name="satuan[]" class="form-control" readonly></td>' +
+               '<td><select name="satuan[]" class="form-control select-satuan-barang" required><option value="">-- Pilih barang --</option></select></td>' +
                '<input type="hidden" name="estimasi_harga[]" value="0">' +
                '<td><input type="text" name="keterangan_item[]" class="form-control"></td>' +
                '<td class="text-center"><button type="button" class="btn btn-danger btn-sm btn-remove"><i class="fa fa-times"></i></button></td>' +
@@ -704,6 +717,20 @@ function addRow() {
     initSelect2Item($row.find('.select-item'));
     initFilterKategoriBarang($row.find('.filter-kategori-barang'));
     toggleItemSource($row);
+}
+
+function applySatuanBarang($row, options, selected) {
+    var $select = $row.find('.select-satuan-barang');
+    if (!$select.length) return;
+    $select.empty();
+    $.each(options || [], function(_, unit) {
+        var label = unit.satuan;
+        var factor = parseFloat(unit.faktor_ke_dasar || 1);
+        if (factor !== 1) label += ' (1 ' + unit.satuan + ' = ' + factor.toLocaleString('id-ID') + ' satuan dasar)';
+        $select.append($('<option>', {value: unit.satuan, text: label}));
+    });
+    if (selected) $select.val(selected);
+    if (!$select.val() && $select.find('option').length) $select.prop('selectedIndex', 0);
 }
 
 function toggleItemSource($row) {
@@ -881,7 +908,8 @@ function initSelect2Item($el) {
                         return {
                             text: isNonRutin ? masterText : item.nama_barang,
                             id: item.kode_item,
-                            satuan: item.satuan_dasar
+                            satuan: item.satuan_dasar,
+                            satuan_options: item.satuan_options || []
                         }
                     })
                 };
@@ -890,7 +918,12 @@ function initSelect2Item($el) {
         }
     }).on('select2:select', function (e) {
         var data = e.params.data;
-        $(this).closest('tr').find('[name="satuan[]"]').val(data.satuan).trigger('change');
+        var $row = $(this).closest('tr');
+        if (isNonRutin) {
+            $row.find('[name="satuan[]"]').val(data.satuan).trigger('change');
+        } else {
+            applySatuanBarang($row, data.satuan_options, data.satuan);
+        }
     });
 }
 

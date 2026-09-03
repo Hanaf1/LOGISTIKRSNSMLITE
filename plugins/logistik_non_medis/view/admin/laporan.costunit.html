@@ -31,13 +31,21 @@
                 </div>
               </div>
             </div>
-            <div class="col-md-3"><div class="form-group"><label>Minggu</label>
+            <div class="col-md-2"><div class="form-group"><label>Minggu</label>
               <select id="cost-minggu" class="form-control"><option value="0">Semua Minggu</option><option value="1">Minggu ke-1 (1–7)</option><option value="2">Minggu ke-2 (8–14)</option><option value="3">Minggu ke-3 (15–21)</option><option value="4">Minggu ke-4 (22–akhir bulan)</option></select>
             </div></div>
-            <div class="col-md-3"><div class="form-group"><label>Status</label>
+            <div class="col-md-2"><div class="form-group"><label>Status</label>
               <select id="cost-status" class="form-control"><option value="">Diajukan & Selesai</option><option value="Diajukan">Diajukan</option><option value="Selesai">Selesai</option></select>
             </div></div>
-            <div class="col-md-3" style="padding-top:25px">
+            <div class="col-md-3"><div class="form-group"><label>Unit</label>
+              <select id="cost-unit" class="form-control select2" style="width:100%">
+                <option value="">Semua Unit</option>
+                {loop: $units}
+                  <option value="{$value.kode_unit}">{$value.kode_unit} - {$value.nama_unit}</option>
+                {/loop}
+              </select>
+            </div></div>
+            <div class="col-md-2" style="padding-top:25px">
               <div class="btn-group btn-group-justified"><a href="#" id="btn-cost-tampil" class="btn btn-primary"><i class="fa fa-search"></i> Tampilkan</a><a href="#" id="btn-cost-export" class="btn btn-success"><i class="fa fa-file-excel-o"></i> Export</a></div>
             </div>
           </div>
@@ -64,15 +72,18 @@ $(function(){
     try{$('#cost-periode-picker').datetimepicker({format:'YYYY-MM',viewMode:'months',ignoreReadonly:true,locale:'id'});}
     catch(error){if(window.console) console.warn('Datepicker Cost Unit dinonaktifkan:',error);}
   }
+  try{$('#cost-unit').selectator('destroy');}catch(error){}
+  if($.fn.select2) $('#cost-unit').select2({width:'100%',placeholder:'Semua Unit',allowClear:true});
   function loadCost(){
     $('#display-cost-unit').html('<div class="text-center" style="padding:40px"><i class="fa fa-spinner fa-spin fa-3x"></i></div>');
-    $.ajax({url:'{?=url(ADMIN."/logistik_non_medis/displaylaporancostunit")?}',type:'POST',data:{periode:$('#cost-periode').val(),minggu:$('#cost-minggu').val(),status:$('#cost-status').val()},timeout:30000})
+    $.ajax({url:'{?=url(ADMIN."/logistik_non_medis/displaylaporancostunit")?}',type:'POST',data:{periode:$('#cost-periode').val(),minggu:$('#cost-minggu').val(),status:$('#cost-status').val(),kode_unit:$('#cost-unit').val()},timeout:30000})
       .done(function(html){$('#display-cost-unit').html(html);})
       .fail(function(xhr,status){var message=status==='timeout'?'Permintaan melewati batas 30 detik.':'Gagal memuat laporan dari server.';$('#display-cost-unit').html('<div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> '+message+' <button type="button" class="btn btn-danger btn-xs" id="btn-cost-coba-lagi">Coba Lagi</button></div>');});
   }
   $(document).on('click','#btn-cost-coba-lagi',loadCost);
   $('#btn-cost-tampil').on('click',function(e){e.preventDefault();loadCost();});
-  $('#btn-cost-export').on('click',function(e){e.preventDefault();var base='{?=url(ADMIN."/logistik_non_medis/exportlaporancostunit")?}';var sep=base.indexOf('?')>=0?'&':'?';window.location.href=base+sep+'periode='+encodeURIComponent($('#cost-periode').val())+'&minggu='+encodeURIComponent($('#cost-minggu').val())+'&status='+encodeURIComponent($('#cost-status').val());});
+  $('#cost-unit').on('change',function(){loadCost();});
+  $('#btn-cost-export').on('click',function(e){e.preventDefault();var base='{?=url(ADMIN."/logistik_non_medis/exportlaporancostunit")?}';var sep=base.indexOf('?')>=0?'&':'?';window.location.href=base+sep+'periode='+encodeURIComponent($('#cost-periode').val())+'&minggu='+encodeURIComponent($('#cost-minggu').val())+'&status='+encodeURIComponent($('#cost-status').val())+'&kode_unit='+encodeURIComponent($('#cost-unit').val()||'');});
   $(document).on('click','.btn-detail-cost',function(){var no=$(this).data('no');$('#detail-cost-unit').html('<div class="text-center" style="padding:30px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');$.post('{?=url(ADMIN."/logistik_non_medis/detaillaporancostunit")?}',{no_sppb:no},function(html){$('#detail-cost-unit').html(html);var editable=$('#cost-editable').val()==='1';$('#footer-cost-unit .btn-save-cost').toggle(editable);$('#modal-cost-unit').modal('show');});});
   $(document).on('input','.cost-harga',function(){var tr=$(this).closest('tr'),qty=parseFloat(tr.data('qty'))||0,harga=parseFloat($(this).val())||0;tr.find('.cost-subtotal').text('Rp. '+Math.round(qty*harga).toLocaleString('id-ID'));hitungModal();});
   function hitungModal(){var total=0;$('.cost-harga').each(function(){total+=(parseFloat($(this).val())||0)*(parseFloat($(this).closest('tr').data('qty'))||0);});$('#cost-grand-total').text('Rp. '+Math.round(total).toLocaleString('id-ID'));}
