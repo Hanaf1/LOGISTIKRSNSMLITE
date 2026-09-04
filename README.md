@@ -1,17 +1,44 @@
 # mLITE - Sistem Informasi Logistik Non-Medis
 
-Aplikasi manajemen logistik non-medis rumah sakit berbasis PHP dengan arsitektur mLITE Framework, dirancang agar ringan, mudah dipahami, dan mudah dikembangkan untuk kebutuhan mobile dan browser.
+Aplikasi manajemen logistik non-medis rumah sakit berbasis PHP dengan arsitektur mLITE Framework. Modul ini disesuaikan untuk mengelola alur permintaan barang, persediaan, inventaris aset, pengadaan, distribusi, dan pelaporan logistik secara terintegrasi.
 
-## Fitur Tambahan logistik_non_medis
+## Fitur Modul Logistik Non-Medis
 
-- **Manajemen Inventaris**: Pencatatan master barang (habis pakai & aset), kategori, satuan, dan gudang penyimpanan.
-- **Modul Aset & Tracking**: Registrasi aset, mutasi aset antar unit, perhitungan penyusutan (depresiasi), pencetakan QR Code aset, serta pelacakan riwayat aset.
-- **Rantai Pasok Pengadaan (Procurement)**: Alur pengadaan lengkap mulai dari Perencanaan, Permintaan Unit, Purchase Order (PO), hingga Penerimaan Barang ke Gudang.
-- **Audit Gudang & Stock Opname**: Fitur pemeriksaan stok fisik vs sistem dengan pencatatan selisih barang.
-- **Mutasi Antar Gudang**: Distribusi barang antar gudang logistik.
-- **Early Warning System (EWS)**: Peringatan dini untuk barang yang mendekati tanggal kedaluwarsa.
-- **Kuota Unit Bulanan**: Batasan kuota pengeluaran barang habis pakai per unit/departemen per periode bulan.
-- **Sensus Aset**: Pemeriksaan kondisi fisik aset secara berkala oleh petugas.
+### Permintaan rutin dan nonrutin
+
+- **Permintaan rutin** untuk kebutuhan barang yang sudah tersedia di master barang dan mengikuti alur distribusi logistik.
+- **Permintaan nonrutin** untuk barang baru atau kebutuhan khusus, dilengkapi jenis/sifat permintaan, spesifikasi, latar belakang, tujuan penggunaan, estimasi harga, dan lampiran foto.
+- **Alur persetujuan bertahap** berdasarkan unit, kepala unit, kepala seksi, kepala bidang, dan logistik/manajemen.
+- **Draft, verifikasi, pengadaan, penerimaan, pengambilan, serah terima, penolakan, dan riwayat permintaan**.
+- **Cetak dokumen SPPB dan surat pengadaan nonrutin**.
+
+### Master barang dan inventaris
+
+- **Master Data Barang**: kode barang, nama, kategori, subkategori, jenis item, satuan dasar/konversi, harga referensi, status, batas stok minimum/maksimum, safety stock, dan lokasi default.
+- **Master klasifikasi inventaris**: kategori, kelompok, jenis aset, unit, lokasi, satuan, vendor/rekanan, dan COA.
+- **Penyesuaian master data barang inventaris**: tambah, ubah, hapus, pembaruan kategori secara massal, pencarian, filter, ekspor, dan sinkronisasi data.
+- **Registrasi aset/KIB**: nomor inventaris, kode aset, spesifikasi, nilai aset, kondisi, unit/lokasi, serial number, dan pengelompokan aset.
+- **Label dan QR Code inventaris** untuk identifikasi serta akses informasi aset.
+
+### Gudang, stok, dan distribusi
+
+- **Stok gudang dan kartu stok** dengan satuan dasar, konversi, batch, tanggal kedaluwarsa, harga, dan nilai persediaan.
+- **Penyesuaian data stok** untuk koreksi stok awal/akhir dan pembaruan data master yang terhubung dengan persediaan.
+- **Stock opname** dengan pencatatan stok sistem, stok fisik, selisih, dan tindak lanjut koreksi.
+- **Penerimaan barang, retur, barang rusak, produksi, mutasi antar gudang, packing, dan serah terima unit**.
+- **Kuota pengeluaran unit**, pemantauan stok minimum, dan peringatan barang mendekati kedaluwarsa.
+
+### Cost unit dan pelaporan
+
+- **Laporan Cost Unit** untuk melihat penggunaan barang dan nilai biaya per unit.
+- **Periode laporan mingguan dan bulanan**, dengan filter tanggal, unit, barang, kategori, dan status transaksi.
+- **Laporan stok, mutasi, pengadaan, distribusi, inventaris, nilai aset, KPI, serta ekspor/cetak laporan**.
+
+### Manajemen aset dan akses
+
+- **Mutasi aset**, pemeliharaan/perbaikan, jadwal pemeliharaan, work order, penyusutan metode garis lurus, sensus fisik, dan penghapusan/disposal aset.
+- **Role-Based Access Control (RBAC)** untuk administrator, logistik, kepala unit/seksi/bidang, dan pengguna unit.
+- **Notifikasi real-time** melalui antrean Workerman untuk pembaruan status permintaan dan proses logistik.
 
 ---
 
@@ -29,7 +56,7 @@ Aplikasi manajemen logistik non-medis rumah sakit berbasis PHP dengan arsitektur
 ### 1. Kloning / Unduh Proyek
 Unduh zip proyek ini dari GitHub atau kloning menggunakan Git:
 ```bash
-git clone https://github.com/Rifangga99/mlite_rsns.git
+git clone https://github.com/Hanaf1/LOGISTIKRSNSMLITE.git
 ```
 Pindahkan folder proyek ke direktori web root Anda (misalnya `C:/xampp/htdocs/mlite-5.2.0`).
 
