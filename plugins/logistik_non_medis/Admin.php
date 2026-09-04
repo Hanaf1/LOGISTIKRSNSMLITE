@@ -1300,6 +1300,51 @@ class Admin extends AdminModule
         exit();
     }
 
+    public function postCabutHakAksesUser()
+    {
+        $username = trim((string)($_POST['username'] ?? ''));
+        if ($username === '') {
+            echo json_encode(['status' => 'error', 'message' => 'Username tidak valid!']);
+            exit();
+        }
+
+        $currentUser = $this->core->getUserInfo('username', null, true);
+        if (strcasecmp($username, (string)$currentUser) === 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Tidak dapat mencabut akses Anda sendiri. Minta admin lain untuk melakukannya.']);
+            exit();
+        }
+
+        $target = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+        if (!$target) {
+            echo json_encode(['status' => 'error', 'message' => 'User ini belum memiliki hak akses Logistik.']);
+            exit();
+        }
+
+        // Jangan sampai Admin Logistik terakhir tercabut sendiri — tidak akan
+        // ada lagi yang bisa mengatur hak akses & role kalau ini terjadi.
+        if (($target['role'] ?? '') === 'admin') {
+            $jumlahAdmin = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('role', 'admin')->count();
+            if ($jumlahAdmin <= 1) {
+                echo json_encode(['status' => 'error', 'message' => 'Tidak dapat mencabut akses Admin Logistik terakhir. Tetapkan Admin Logistik lain terlebih dahulu.']);
+                exit();
+            }
+        }
+
+        // Cabut hanya akses ke modul Logistik. Username tetap ada di tabel lain
+        // (sppb, kartu_stok, po, dll) sebagai jejak riwayat — kolomnya varchar
+        // biasa tanpa foreign key ke user_roles, jadi tidak ada data yang
+        // rusak atau hilang. Hanya kemampuan login ke modul yang dicabut.
+        $exec = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->delete();
+        if ($exec !== false) {
+            $this->_syncLogistikAccess($username, false);
+            $this->_logAction('logistik_non_medis_hakakses', 'Cabut akses Logistik: ' . $username . ' (role sebelumnya: ' . ($target['role'] ?? '-') . ')', 'D');
+            echo json_encode(['status' => 'success', 'message' => 'Akses Logistik untuk ' . $username . ' berhasil dicabut. Riwayat transaksi yang sudah ada tetap tersimpan.']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Gagal mencabut akses user!']);
+        }
+        exit();
+    }
+
     public function postSaveRolePermissions()
     {
         $this->_initUserRoles();
@@ -19158,34 +19203,74 @@ public function anyDisplayLaporanInventaris()
           'settings' => $settings,
           'years' => $years,
           'current_month' => date('m'),
-          'current_year' => date('Y')
+          'current_year' => date('Y'),
+          // aset.kode_unit menyimpan kode lama dari inventaris_master
+          // (jenis_master='UNIT'), BUKAN kode_unit di tabel unit yang baru
+          // (format UNT-xxxxxxxxxx). Dropdown filter harus bersumber dari
+          // sini supaya benar-benar match dengan data aset yang ada.
+          'units' => $this->db('rsns_custom_logistik_non_medis_inventaris_master')->where('jenis_master', 'UNIT')->where('status', 'Aktif')->asc('nama')->toArray(),
+          'kelompok_list' => $this->db('rsns_custom_logistik_non_medis_inventaris_kelompok')->where('kode_kategori', '2')->asc('nama_kelompok')->toArray()
         ]);
     }
 
-    public function anyDisplayAsetPenyusutan()
+    /**
+     * Hitung simulasi/hasil penyusutan satu periode, opsional disaring per unit
+     * dan per kelompok barang (jenis barang). Dipakai bersama oleh preview
+     * (anyDisplayAsetPenyusutan) dan export Excel (anyExportExcelAsetPenyusutan)
+     * supaya angkanya selalu konsisten di kedua tempat.
+     *
+     * CATATAN PENTING: filter di sini HANYA memengaruhi apa yang ditampilkan.
+     * postProsesPenyusutan() (posting jurnal) mengambil ulang seluruh aset
+     * yang eligible sendiri, tidak lewat fungsi ini — supaya proses posting
+     * bulanan tidak pernah terpotong oleh filter yang sedang aktif di layar.
+     */
+    private function _hitungDataPenyusutan(string $periode, string $filter_unit, string $filter_kelompok): array
     {
-        $this->_initPenyusutan();
-        $periode_bulan = $_POST['bulan'] ?? date('m');
-        $periode_tahun = $_POST['tahun'] ?? date('Y');
-        $periode = $periode_tahun . '-' . str_pad($periode_bulan, 2, '0', STR_PAD_LEFT);
-
-        // Fetch settings
         $settings_array = $this->db('mlite_settings')->where('module', 'logistik_non_medis')->toArray();
         $settings = [];
         foreach ($settings_array as $row) {
             $settings[$row['field']] = $row['value'];
         }
 
-        // Fetch assets (Exclude Tanah KIB A and Konstruksi KIB F)
-        $assets = $this->db('rsns_custom_logistik_non_medis_aset')
-                     ->where('status', 'Aktif')
-                     ->where('kib_jenis', 'IN', ['B', 'C', 'D', 'E'])
-                     ->toArray();
+        // Exclude Tanah (KIB A) dan Konstruksi Dalam Pengerjaan (KIB F) — dua
+        // golongan itu tidak disusutkan. Filter unit/kelompok bersifat opsional.
+        $where = ["a.status = 'Aktif'", "a.kib_jenis IN ('B','C','D','E')"];
+        $params = [];
+        if ($filter_unit !== '') {
+            $where[] = 'a.kode_unit = ?';
+            $params[] = $filter_unit;
+        }
+        if ($filter_kelompok !== '') {
+            $where[] = 'im.kode_kelompok = ?';
+            $params[] = $filter_kelompok;
+        }
+        $where_sql = implode(' AND ', $where);
 
-        $units_array = $this->db('rsns_custom_logistik_non_medis_unit')->toArray();
+        $stmt = $this->db()->pdo()->prepare("
+          SELECT a.*
+          FROM rsns_custom_logistik_non_medis_aset a
+          LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master im
+            ON im.jenis_master = 'BARANG'
+           AND im.kode_kategori = COALESCE(NULLIF(a.kode_kategori_aset, ''), '2')
+           AND im.kode = a.kode_item
+          WHERE {$where_sql}
+          ORDER BY a.kode_aset
+        ");
+        $stmt->execute($params);
+        $assets = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // aset.kode_unit memakai kode lama dari inventaris_master (jenis_master
+        // 'UNIT'), bukan kode_unit di tabel unit yang baru — lihat catatan di
+        // getAsetPenyusutan(). Tabel `unit` dicoba lebih dulu untuk kompatibilitas
+        // ke depan kalau suatu saat datanya dimigrasi ke kode baru.
         $units = [];
-        foreach ($units_array as $u) {
+        foreach ($this->db('rsns_custom_logistik_non_medis_unit')->toArray() as $u) {
             $units[$u['kode_unit']] = $u['nama_unit'];
+        }
+        foreach ($this->db('rsns_custom_logistik_non_medis_inventaris_master')->where('jenis_master', 'UNIT')->toArray() as $iu) {
+            if (!isset($units[$iu['kode']])) {
+                $units[$iu['kode']] = $iu['nama'];
+            }
         }
 
         $data_aset = [];
@@ -19280,10 +19365,9 @@ public function anyDisplayLaporanInventaris()
             ];
         }
 
-        echo $this->draw('aset.penyusutan.display.html', [
-          'asets' => $data_aset,
+        return [
+          'data' => $data_aset,
           'is_processed' => $is_processed,
-          'periode' => $periode,
           'totals' => [
               'harga' => $grand_total_harga,
               'residu' => $grand_total_residu,
@@ -19291,8 +19375,117 @@ public function anyDisplayLaporanInventaris()
               'akumulasi' => $grand_total_akumulasi,
               'buku' => $grand_total_buku
           ]
+        ];
+    }
+
+    public function anyDisplayAsetPenyusutan()
+    {
+        $this->_initPenyusutan();
+        $periode_bulan = $_POST['bulan'] ?? date('m');
+        $periode_tahun = $_POST['tahun'] ?? date('Y');
+        $periode = $periode_tahun . '-' . str_pad($periode_bulan, 2, '0', STR_PAD_LEFT);
+        $filter_unit = trim((string)($_POST['filter_unit'] ?? ''));
+        $filter_kelompok = trim((string)($_POST['filter_kelompok'] ?? ''));
+        $halaman = max(1, (int)($_POST['halaman'] ?? 1));
+        $perpage = 25;
+
+        $hasil = $this->_hitungDataPenyusutan($periode, $filter_unit, $filter_kelompok);
+        $data_aset = $hasil['data'];
+
+        // Paginasi dilakukan di sini (bukan di SQL) karena kalkulasi per-aset
+        // butuh angka setting/riwayat proses per baris dulu. Total ringkasan
+        // tetap dihitung dari SELURUH data yang lolos filter, bukan cuma
+        // halaman yang tampil, supaya kartu ringkasan tidak menyesatkan.
+        $jumlah_data = count($data_aset);
+        $total_halaman = max(1, (int)ceil($jumlah_data / $perpage));
+        $halaman = min($halaman, $total_halaman);
+        $offset = ($halaman - 1) * $perpage;
+        $asets_page = array_slice($data_aset, $offset, $perpage);
+
+        // Template engine ini tidak punya construct {for:} — nomor halaman
+        // harus sudah jadi array PHP sebelum masuk view, dijendela di sekitar
+        // halaman aktif (pola sama seperti anyDisplayDistribusiMendesak) supaya
+        // tidak mencetak ratusan <li> sekaligus saat total_halaman besar.
+        $pages = [];
+        $awal_hal = max(1, $halaman - 2);
+        $akhir_hal = min($total_halaman, $halaman + 2);
+        for ($i = $awal_hal; $i <= $akhir_hal; $i++) {
+            $pages[] = ['number' => $i, 'active' => $i === $halaman];
+        }
+
+        echo $this->draw('aset.penyusutan.display.html', [
+          'asets' => $asets_page,
+          'is_processed' => $hasil['is_processed'],
+          'periode' => $periode,
+          'totals' => $hasil['totals'],
+          'jumlah_data' => $jumlah_data,
+          'halaman' => $halaman,
+          'total_halaman' => $total_halaman,
+          'perpage' => $perpage,
+          'pages' => $pages,
+          'filter_unit' => $filter_unit,
+          'filter_kelompok' => $filter_kelompok
         ]);
         exit();
+    }
+
+    /**
+     * Export Excel — dipakai untuk dataset besar (mis. semua aset tanpa
+     * filter, bisa ribuan baris). Ditulis lewat _downloadSimpleXlsx() (native
+     * ZipArchive, bukan mpdf) sehingga tidak terkena masalah memori/font
+     * shaping yang dialami export PDF pada dokumen sangat besar.
+     */
+    public function anyExportExcelAsetPenyusutan()
+    {
+        $this->_initPenyusutan();
+        $periode_bulan = $_GET['bulan'] ?? date('m');
+        $periode_tahun = $_GET['tahun'] ?? date('Y');
+        $periode = $periode_tahun . '-' . str_pad($periode_bulan, 2, '0', STR_PAD_LEFT);
+        $filter_unit = trim((string)($_GET['filter_unit'] ?? ''));
+        $filter_kelompok = trim((string)($_GET['filter_kelompok'] ?? ''));
+
+        $hasil = $this->_hitungDataPenyusutan($periode, $filter_unit, $filter_kelompok);
+        $data_aset = $hasil['data'];
+
+        $nama_unit_filter = 'Semua Unit';
+        if ($filter_unit !== '') {
+            $iu = $this->db('rsns_custom_logistik_non_medis_inventaris_master')->where('jenis_master', 'UNIT')->where('kode', $filter_unit)->oneArray();
+            $nama_unit_filter = $iu['nama'] ?? $filter_unit;
+        }
+        $nama_kelompok_filter = 'Semua Jenis Barang';
+        if ($filter_kelompok !== '') {
+            $k = $this->db('rsns_custom_logistik_non_medis_inventaris_kelompok')->where('kode_kelompok', $filter_kelompok)->oneArray();
+            $nama_kelompok_filter = $k['nama_kelompok'] ?? $filter_kelompok;
+        }
+        $status_label = $hasil['is_processed'] ? 'Sudah Diposting (Final)' : 'Simulasi / Pratinjau (Belum Diposting)';
+
+        $rows = [];
+        $no = 1;
+        foreach ($data_aset as $r) {
+            $rows[] = [
+              $no++,
+              $r['kode_aset'],
+              $r['nama_aset'],
+              $r['nama_unit'],
+              'KIB ' . $r['kib_jenis'],
+              (float)$r['harga_beli'],
+              (float)$r['nilai_residu'],
+              (int)$r['masa_manfaat'],
+              (float)$r['biaya_penyusutan'],
+              (float)$r['akumulasi_penyusutan'],
+              (float)$r['nilai_buku']
+            ];
+        }
+
+        $this->_downloadSimpleXlsx(
+            'LAPORAN PENYUSUTAN ASET - Periode ' . date('F Y', strtotime($periode . '-01')),
+            'Unit: ' . $nama_unit_filter . ' | Jenis Barang: ' . $nama_kelompok_filter . ' | Status: ' . $status_label,
+            'Penyusutan Aset',
+            ['No', 'Kode Aset', 'Nama Aset', 'Unit', 'KIB', 'Harga Beli', 'Nilai Residu', 'Manfaat (Thn)', 'Penyusutan', 'Akumulasi', 'Nilai Buku'],
+            $rows,
+            [5, 18, 32, 20, 8, 16, 16, 12, 16, 16, 16],
+            'Penyusutan_Aset_' . $periode
+        );
     }
 
     public function postProsesPenyusutan()

@@ -77,8 +77,11 @@
                                                 <span class="text-muted">Belum diatur</span>
                                             {/if}
                                         </td>
-                                        <td class="text-center">
+                                        <td class="text-center" style="white-space:nowrap">
                                             <button class="btn btn-xs btn-default" onclick="editUserRole('{$value.username}')" title="Sunting Role & Unit"><i class="fa fa-pencil"></i> Edit</button>
+                                            {if: $value.username != 'admin'}
+                                            <button class="btn btn-xs btn-danger btn-cabut-akses" data-username="{$value.username}" title="Cabut Akses Logistik"><i class="fa fa-user-times"></i> Cabut</button>
+                                            {/if}
                                         </td>
                                     </tr>
                                 {/loop}
@@ -205,9 +208,23 @@ $(document).ready(function() {
         "ordering": false // nonaktifkan sorting agar urutan menu tetap sesuai aslinya
     });
 
-    $('#select-tambah-user').select2({
-        dropdownParent: $('#modal-tambah-akses')
-    });
+    // mLITE memasang widget Selectator ke SEMUA <select> secara otomatis
+    // (themes/admin/js/scripts.js). Kalau tidak dilepas dulu, Select2 akan
+    // tampil dobel bersamaan dengan widget bawaan itu.
+    (function initSelectTambahUser() {
+        var $select = $('#select-tambah-user');
+        try {
+            if (typeof $.fn.selectator === 'function' && $select.data('selectator')) {
+                $select.selectator('destroy');
+            }
+        } catch (e) {}
+        $('#selectator_select-tambah-user').remove();
+        $select.removeClass('selectator').removeAttr('style').show();
+        $select.select2({
+            width: '100%',
+            dropdownParent: $('#modal-tambah-akses')
+        });
+    })();
 
     $('#form-tambah-akses').submit(function(e) {
         e.preventDefault();
@@ -229,6 +246,28 @@ $(document).ready(function() {
         // Destroy datatable sebelum submit agar semua baris (termasuk yang di halaman lain)
         // masuk ke dalam DOM dan bisa disubmit dengan normal
         tableRoles.destroy();
+    });
+
+    $(document).on('click', '.btn-cabut-akses', function() {
+        var username = $(this).data('username');
+        var btn = $(this);
+        if (!confirm('Cabut akses Logistik untuk "' + username + '"?\n\nUser ini tidak akan bisa membuka menu Logistik lagi. Riwayat transaksi yang sudah ada (SPPB, PO, kartu stok, dll) TIDAK akan terhapus atau berubah.')) {
+            return;
+        }
+        btn.prop('disabled', true);
+        $.post('{?=url(ADMIN."/logistik_non_medis/cabuthakaksesuser")?}', { username: username }, function(res) {
+            if (typeof res === 'string') { try { res = JSON.parse(res); } catch (e) {} }
+            if (res && res.status === 'success') {
+                alert(res.message || 'Akses berhasil dicabut.');
+                location.reload();
+            } else {
+                alert((res && res.message) || 'Gagal mencabut akses.');
+                btn.prop('disabled', false);
+            }
+        }, 'json').fail(function(xhr) {
+            alert('Gagal menghubungi server. ' + (xhr.responseText || ''));
+            btn.prop('disabled', false);
+        });
     });
 });
 

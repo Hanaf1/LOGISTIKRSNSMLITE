@@ -1,6 +1,6 @@
 <!-- State Indicators for Parent JavaScript -->
 <input type="hidden" id="is-processed-indicator" value="{if: $is_processed}1{else}0{/if}">
-<input type="hidden" id="empty-assets-indicator" value="{if: empty($asets)}1{else}0{/if}">
+<input type="hidden" id="empty-assets-indicator" value="{if: $jumlah_data == 0}1{else}0{/if}">
 
 {if: $is_processed}
 <div class="alert alert-success" style="margin-top: 20px; font-weight: bold; border-left: 5px solid #27ae60;">
@@ -51,15 +51,16 @@
     </div>
 </div>
 
-{if: empty($asets)}
+{if: empty($asets) && $jumlah_data == 0}
 <div class="alert alert-danger text-center" style="margin-top: 15px; padding: 30px;">
     <i class="fa fa-exclamation-triangle fa-2x"></i><br><br>
-    Tidak ada data aset aktif KIB B, C, D, E yang terdaftar memiliki sisa masa manfaat untuk dilakukan penyusutan pada periode ini.
+    Tidak ada data aset aktif KIB B, C, D, E yang terdaftar memiliki sisa masa manfaat untuk dilakukan penyusutan pada periode ini{if: !empty($filter_unit) || !empty($filter_kelompok)} dengan filter yang dipilih{/if}.
 </div>
 {else}
 <div class="panel panel-default" style="box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-radius: 5px; overflow: hidden;">
-    <div class="panel-heading" style="background-color: #fcfcfc; border-bottom: 1px solid #eee;">
+    <div class="panel-heading" style="background-color: #fcfcfc; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
         <h4 style="font-size: 14px; font-weight: bold; margin: 0; color: #555;"><i class="fa fa-table"></i> Rincian Nilai Buku & Akumulasi per Aset</h4>
+        <small class="text-muted">Menampilkan {?=count($asets)?} dari {$jumlah_data} aset (halaman {$halaman}/{$total_halaman})</small>
     </div>
     <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
         <table class="table table-hover table-striped table-bordered align-middle no-margin" id="table-display-kalkulasi" style="font-size: 12px;">
@@ -81,7 +82,7 @@
             <tbody>
                 {loop: $asets}
                 <tr>
-                    <td class="text-center" style="vertical-align: middle;">{?=($key + 1)?}</td>
+                    <td class="text-center" style="vertical-align: middle;">{?=((($halaman - 1) * $perpage) + $key + 1)?}</td>
                     <td style="font-family: monospace; font-size: 11px; vertical-align: middle;"><strong>{$value.kode_aset}</strong></td>
                     <td style="vertical-align: middle; font-weight: 500;">{$value.nama_aset}</td>
                     <td style="vertical-align: middle;">{$value.nama_unit}</td>
@@ -97,5 +98,22 @@
             </tbody>
         </table>
     </div>
+    {if: $total_halaman > 1}
+    <div class="panel-footer" style="background-color: #fcfcfc;">
+        <ul class="pagination pagination-sm pagination-penyusutan" style="margin: 0;">
+            {if: $halaman > 1}
+            <li><a href="#" data-halaman="1">&laquo; Awal</a></li>
+            <li><a href="#" data-halaman="{?=($halaman - 1)?}">&lsaquo; Sebelumnya</a></li>
+            {/if}
+            {loop: $pages}
+            <li class="{if: $value.active}active{/if}"><a href="#" data-halaman="{$value.number}">{$value.number}</a></li>
+            {/loop}
+            {if: $halaman < $total_halaman}
+            <li><a href="#" data-halaman="{?=($halaman + 1)?}">Berikutnya &rsaquo;</a></li>
+            <li><a href="#" data-halaman="{$total_halaman}">Akhir &raquo;</a></li>
+            {/if}
+        </ul>
+    </div>
+    {/if}
 </div>
 {/if}

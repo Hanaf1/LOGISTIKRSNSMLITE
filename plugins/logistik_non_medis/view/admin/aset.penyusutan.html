@@ -93,8 +93,33 @@
                                         {/loop}
                                     </select>
                                 </div>
-                                <button type="button" id="btn-preview-depr" class="btn btn-primary" style="margin-right: 8px;"><i class="fa fa-search"></i> Hitung & Preview</button>
-                                <button type="button" id="btn-proses-depr" class="btn btn-success" disabled><i class="fa fa-check-circle"></i> Proses & Post Jurnal</button>
+                                <div class="form-group" style="margin-right: 15px;">
+                                    <label style="margin-right: 8px;">Filter Unit:</label>
+                                    <select name="filter_unit" id="depr_filter_unit" class="form-control" style="min-width: 160px;">
+                                        <option value="">-- Semua Unit --</option>
+                                        {loop: $units}
+                                        <option value="{$value.kode}">{$value.nama}</option>
+                                        {/loop}
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-right: 15px;">
+                                    <label style="margin-right: 8px;">Filter Jenis Barang:</label>
+                                    <select name="filter_kelompok" id="depr_filter_kelompok" class="form-control" style="min-width: 180px;">
+                                        <option value="">-- Semua Jenis Barang --</option>
+                                        {loop: $kelompok_list}
+                                        <option value="{$value.kode_kelompok}">{$value.nama_kelompok}</option>
+                                        {/loop}
+                                    </select>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <button type="button" id="btn-preview-depr" class="btn btn-primary" style="margin-right: 8px;"><i class="fa fa-search"></i> Hitung & Preview</button>
+                                    <button type="button" id="btn-proses-depr" class="btn btn-success" disabled style="margin-right: 8px;"><i class="fa fa-check-circle"></i> Proses & Post Jurnal</button>
+                                    <button type="button" id="btn-excel-filter-depr" class="btn btn-default"><i class="fa fa-file-excel-o text-success"></i> Export Excel (Sesuai Filter)</button>
+                                    <button type="button" id="btn-excel-semua-depr" class="btn btn-default"><i class="fa fa-file-excel-o text-success"></i> Export Excel (Semua Aset)</button>
+                                </div>
+                                <p class="help-block" style="margin-top: 8px; margin-bottom: 0;">
+                                    <i class="fa fa-info-circle"></i> Filter unit &amp; jenis barang hanya memengaruhi tampilan pratinjau dan hasil export. Tombol <b>Proses &amp; Post Jurnal</b> selalu memproses <b>seluruh</b> aset yang berhak disusutkan pada periode terpilih, apa pun filter yang sedang aktif.
+                                </p>
                             </form>
                         </div>
 
@@ -363,9 +388,8 @@
             });
         }
 
-        // Action: Hitung & Preview
-        $('#btn-preview-depr').on('click', function(e) {
-            e.preventDefault();
+        // Action: Hitung & Preview (halaman opsional, dipakai juga oleh pagination)
+        function muatPreviewPenyusutan(halaman) {
             var bulan = $('#depr_bulan').val();
             var tahun = $('#depr_tahun').val();
 
@@ -377,11 +401,14 @@
                 type: 'POST',
                 data: {
                     bulan: bulan,
-                    tahun: tahun
+                    tahun: tahun,
+                    filter_unit: $('#depr_filter_unit').val(),
+                    filter_kelompok: $('#depr_filter_kelompok').val(),
+                    halaman: halaman || 1
                 },
                 success: function(html) {
                     $('#kalkulasi-container').html(html);
-                    
+
                     // Enable/Disable execution button based on state
                     var isProcessed = $('#is-processed-indicator').val();
                     if(isProcessed === '1' || $('#empty-assets-indicator').val() === '1') {
@@ -395,6 +422,44 @@
                     $('#btn-proses-depr').prop('disabled', true);
                 }
             });
+        }
+
+        $('#btn-preview-depr').on('click', function(e) {
+            e.preventDefault();
+            muatPreviewPenyusutan(1);
+        });
+
+        // Pindah halaman pratinjau (delegated karena tombolnya dimuat via AJAX)
+        $(document).on('click', '.pagination-penyusutan a', function(e) {
+            e.preventDefault();
+            var halaman = $(this).data('halaman');
+            if (halaman) muatPreviewPenyusutan(halaman);
+        });
+
+        // Reset ke halaman 1 setiap kali filter diganti, supaya tidak nyasar
+        // ke halaman kosong dari hasil filter sebelumnya.
+        $('#depr_filter_unit, #depr_filter_kelompok').on('change', function() {
+            muatPreviewPenyusutan(1);
+        });
+
+        function unduhExcelPenyusutan(pakaiFilter) {
+            var params = $.param({
+                bulan: $('#depr_bulan').val(),
+                tahun: $('#depr_tahun').val(),
+                filter_unit: pakaiFilter ? $('#depr_filter_unit').val() : '',
+                filter_kelompok: pakaiFilter ? $('#depr_filter_kelompok').val() : ''
+            });
+            window.location.href = '{?=url(ADMIN."/logistik_non_medis/exportexcelasetpenyusutan")?}&' + params;
+        }
+
+        $('#btn-excel-filter-depr').on('click', function(e) {
+            e.preventDefault();
+            unduhExcelPenyusutan(true);
+        });
+
+        $('#btn-excel-semua-depr').on('click', function(e) {
+            e.preventDefault();
+            unduhExcelPenyusutan(false);
         });
 
         // Action: Proses & Post Jurnal
