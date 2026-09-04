@@ -15,18 +15,16 @@ Aplikasi manajemen logistik non-medis rumah sakit berbasis PHP dengan arsitektur
 ### Master barang dan inventaris
 
 - **Master Data Barang**: kode barang, nama, kategori, subkategori, jenis item, satuan dasar/konversi, harga referensi, status, batas stok minimum/maksimum, safety stock, dan lokasi default.
-- **Master klasifikasi inventaris**: kategori, kelompok, jenis aset, unit, lokasi, satuan, vendor/rekanan, dan COA.
 - **Penyesuaian master data barang inventaris**: tambah, ubah, hapus, pembaruan kategori secara massal, pencarian, filter, ekspor, dan sinkronisasi data.
 - **Registrasi aset/KIB**: nomor inventaris, kode aset, spesifikasi, nilai aset, kondisi, unit/lokasi, serial number, dan pengelompokan aset.
-- **Label dan QR Code inventaris** untuk identifikasi serta akses informasi aset.
+- **Label dan QR Code inventaris** penyesuaian nomor inventaris dan desain kartu inventaris.
 
 ### Gudang, stok, dan distribusi
 
-- **Stok gudang dan kartu stok** dengan satuan dasar, konversi, batch, tanggal kedaluwarsa, harga, dan nilai persediaan.
-- **Penyesuaian data stok** untuk koreksi stok awal/akhir dan pembaruan data master yang terhubung dengan persediaan.
+- **Stok gudang dan kartu stok** dengan satuan dasar, konversi, harga, dan nilai persediaan.
 - **Stock opname** dengan pencatatan stok sistem, stok fisik, selisih, dan tindak lanjut koreksi.
 - **Penerimaan barang, retur, barang rusak, produksi, mutasi antar gudang, packing, dan serah terima unit**.
-- **Kuota pengeluaran unit**, pemantauan stok minimum, dan peringatan barang mendekati kedaluwarsa.
+
 
 ### Cost unit dan pelaporan
 
@@ -39,6 +37,15 @@ Aplikasi manajemen logistik non-medis rumah sakit berbasis PHP dengan arsitektur
 - **Mutasi aset**, pemeliharaan/perbaikan, jadwal pemeliharaan, work order, penyusutan metode garis lurus, sensus fisik, dan penghapusan/disposal aset.
 - **Role-Based Access Control (RBAC)** untuk administrator, logistik, kepala unit/seksi/bidang, dan pengguna unit.
 - **Notifikasi real-time** melalui antrean Workerman untuk pembaruan status permintaan dan proses logistik.
+
+## Struktur dan Dump SQL Modul
+
+File SQL utama modul berada di folder `plugins/logistik_non_medis/`:
+
+- **`full.sql`** — dump lengkap untuk kebutuhan instalasi/sinkronisasi modul, termasuk struktur tabel, view, indeks, data awal, dan konfigurasi hak akses.
+- **`schemanew.sql`** — skema database terbaru modul Logistik Non-Medis, termasuk tabel master barang, master inventaris, permintaan rutin/nonrutin, gudang, stok, distribusi, aset, serta tabel pendukung hak akses.
+
+Gunakan `full.sql` apabila membutuhkan dump lengkap. Gunakan `schemanew.sql` apabila hanya ingin menerapkan atau memeriksa desain struktur database terbaru modul.
 
 ---
 
