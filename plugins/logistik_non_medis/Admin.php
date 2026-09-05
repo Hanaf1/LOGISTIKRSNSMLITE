@@ -2500,6 +2500,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
 
         echo $this->draw('master.vendor.display.html', [
           'vendor' => $rows,
+          'offset' => $_offset,
           'halaman' => $halaman,
           'jumlah_data' => $jumlah_data,
           'jml_halaman' => $jml_halaman,
@@ -7225,7 +7226,8 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
           'penerimaan' => $rows,
           'halaman' => $halaman,
           'jumlah_data' => $jumlah_data,
-          'jml_halaman' => $jml_halaman
+          'jml_halaman' => $jml_halaman,
+          'jml_halaman_arr' => $jml_halaman > 0 ? range(1, $jml_halaman) : []
         ]);
         exit();
     }
@@ -7519,7 +7521,15 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             $header['alasan_tanpa_po'] = '';
         } else {
             $header['no_po'] = '';
-            $header['kode_vendor'] = '';
+            // Sumber barang boleh berupa vendor terdaftar maupun teks bebas.
+            // Kode vendor hanya disimpan bila benar-benar ada di master vendor.
+            if ($header['kode_vendor'] !== '') {
+                $this->_initVendor();
+                $vendorRef = $this->db('rsns_custom_logistik_non_medis_vendor')
+                                  ->where('kode_vendor', $header['kode_vendor'])
+                                  ->oneArray();
+                $header['kode_vendor'] = $vendorRef ? $vendorRef['kode_vendor'] : '';
+            }
             if ($header['sumber_manual'] === '' || $header['alasan_tanpa_po'] === '') {
                 echo json_encode(['status' => 'error', 'message' => 'Sumber barang dan alasan penerimaan tanpa PO wajib diisi.']); exit();
             }
@@ -8087,6 +8097,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $this->_initPenerimaan();
         $this->_initPo();
         $this->_initLokasi();
+        $this->_initVendor();
 
         $no_po = trim((string)($_POST['no_po'] ?? ''));
         $no_penerimaan = trim((string)($_POST['no_penerimaan'] ?? ''));
@@ -8157,10 +8168,26 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $roleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
         $canFinalize = in_array(strtolower($roleData['role'] ?? 'unit'), ['admin', 'logistik', 'gudang'], true);
 
+        // Sumber barang pada penerimaan tanpa PO boleh dipilih dari master vendor
+        // atau diketik bebas (donasi, hibah, pembelian langsung, dsb).
+        $vendors = $this->db('rsns_custom_logistik_non_medis_vendor')
+                        ->where('status', 'Whitelist')
+                        ->asc('nama_vendor')
+                        ->toArray();
+        $sumberTerdaftar = false;
+        foreach ($vendors as $vendor) {
+            if ((string)$vendor['nama_vendor'] === (string)$penerimaan['sumber_manual']) {
+                $sumberTerdaftar = true;
+                break;
+            }
+        }
+
         echo $this->draw('gudang.penerimaan.form.html', [
           'penerimaan' => $penerimaan,
           'lokasi' => $lokasi,
           'pos' => $pos,
+          'vendors' => $vendors,
+          'sumber_terdaftar' => $sumberTerdaftar,
           'mode' => empty($no_penerimaan) ? 'add' : 'edit',
           'can_finalize' => $canFinalize
         ]);
@@ -11414,7 +11441,9 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
           'role' => $role,
           'can_manage_distribusi_controls' => $can_manage_distribusi_controls,
           'count_belum_diproses' => $count_belum_diproses,
-          'count_siap_diambil' => $count_siap_diambil,
+          'count_siap
+          
+          _diambil' => $count_siap_diambil,
           'count_selesai' => $count_selesai,
           'pages' => $pages
         ]);

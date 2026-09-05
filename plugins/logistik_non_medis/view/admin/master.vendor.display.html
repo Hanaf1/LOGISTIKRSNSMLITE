@@ -15,7 +15,7 @@
             {if: !empty($vendor)}
                 {loop: $vendor as $index => $row}
                 <tr>
-                    <td>{?=$_offset + $index + 1?}</td>
+                    <td>{?=$offset + $index + 1?}</td>
                     <td><code>{$row.kode_vendor}</code></td>
                     <td>
                         <strong>{$row.nama_vendor}</strong><br>

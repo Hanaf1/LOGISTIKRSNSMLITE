@@ -15,7 +15,7 @@
     </div>
     <form id="form-penerimaan-gudang" enctype="multipart/form-data">
       <input type="hidden" name="tipe_penerimaan" value="{$penerimaan.tipe_penerimaan}">
-      <input type="hidden" name="kode_vendor" value="{$penerimaan.kode_vendor}">
+      <input type="hidden" name="kode_vendor" id="gudang-kode-vendor" value="{$penerimaan.kode_vendor}">
       <input type="hidden" name="kode_lokasi" value="-">
       <div class="row">
         <div class="col-md-3"><div class="form-group"><label>No. Penerimaan</label><input type="text" name="no_penerimaan" class="form-control" value="{$penerimaan.no_penerimaan}" readonly></div></div>
@@ -26,7 +26,23 @@
 
       {if: $penerimaan.tipe_penerimaan == 'MANUAL'}
       <div class="row">
-        <div class="col-md-5"><div class="form-group"><label>Sumber Barang <span class="text-danger">*</span></label><input type="text" name="sumber_manual" class="form-control" value="{$penerimaan.sumber_manual}" placeholder="Contoh: pembelian langsung, donasi, atau nama pengirim" required {if: $penerimaan.status == 'Selesai'}readonly{/if}></div></div>
+        <div class="col-md-5"><div class="form-group"><label>Sumber Barang <span class="text-danger">*</span></label>
+          {if: $penerimaan.status == 'Selesai'}
+          <input type="text" class="form-control" value="{$penerimaan.sumber_manual}" readonly>
+          <input type="hidden" name="sumber_manual" value="{$penerimaan.sumber_manual}">
+          {else}
+          <select name="sumber_manual" id="sumber-manual-picker" class="form-control" style="width:100%">
+            <option value=""></option>
+            {if: !empty($penerimaan.sumber_manual) && !$sumber_terdaftar}
+            <option value="{$penerimaan.sumber_manual}" selected>{$penerimaan.sumber_manual}</option>
+            {/if}
+            {loop: $vendors as $v}
+            <option value="{$v.nama_vendor}" data-kode="{$v.kode_vendor}" {if: $penerimaan.sumber_manual == $v['nama_vendor']}selected{/if}>{$v.nama_vendor} ({$v.kode_vendor})</option>
+            {/loop}
+          </select>
+          <small class="text-muted">Pilih vendor terdaftar atau ketik sendiri (donasi, hibah, pembelian langsung).</small>
+          {/if}
+        </div></div>
         <div class="col-md-7"><div class="form-group"><label>Alasan Tanpa PO <span class="text-danger">*</span></label><input type="text" name="alasan_tanpa_po" class="form-control" value="{$penerimaan.alasan_tanpa_po}" placeholder="Contoh: PO belum tercatat di sistem atau barang diterima sebagai hibah" required {if: $penerimaan.status == 'Selesai'}readonly{/if}></div></div>
       </div>
       {else}
@@ -141,7 +157,18 @@ $(document).ready(function(){
   if(tipe==='PO'&&initialPo&&!$('#gudang-item-list tr.item-row').length)loadItemsFromPO();
   $('#btn-load-items').on('click',loadItemsFromPO);
   if(tipe==='MANUAL'&&$('#manual-item-picker').length){var $picker=$('#manual-item-picker');try{if($picker.data('selectator'))$picker.selectator('destroy');}catch(e){}$picker.siblings('.selectator_element').remove();$picker.select2({width:'100%',placeholder:'Ketik kode atau nama barang...',minimumInputLength:0,ajax:{url:'{?=url(ADMIN."/logistik_non_medis/ajaxmasterbarang")?}',dataType:'json',delay:250,data:function(p){return{q:p.term||'',jenis_permintaan:'Rutin'};},processResults:function(data){return{results:$.map(data||[],function(x){return{id:x.kode_item,text:x.kode_item+' - '+x.nama_barang,kode_item:x.kode_item,nama_barang:x.nama_barang,satuan_dasar:x.satuan_dasar,satuan_options:x.satuan_options||[],harga_referensi:x.harga_referensi};})};}}});$('#btn-add-manual-item').on('click',function(){var data=$picker.select2('data');if(!data||!data.length){bootbox.alert('Pilih barang terlebih dahulu.');return;}addRow(data[0],false);$picker.val(null).trigger('change');});}
+  // Sumber barang: bisa dipilih dari master vendor atau diketik bebas.
+  var $sumber=$('#sumber-manual-picker');
+  if($sumber.length){
+    try{if($sumber.data('selectator'))$sumber.selectator('destroy');}catch(e){}
+    $sumber.siblings('.selectator_element').remove();
+    $sumber.select2({width:'100%',tags:true,allowClear:true,placeholder:'Pilih vendor atau ketik sumber lain...',
+      createTag:function(params){var t=$.trim(params.term);return t===''?null:{id:t,text:t,newTag:true};}});
+    var syncVendor=function(){$('#gudang-kode-vendor').val($sumber.find('option:selected').data('kode')||'');};
+    $sumber.on('change',syncVendor);
+    syncVendor();
+  }
   $(document).on('click','.btn-remove-item',function(){$(this).closest('tr').remove();if(!$('#gudang-item-list tr.item-row').length)$('#gudang-item-list').html('<tr id="gudang-empty-row"><td colspan="5" class="text-center text-muted">Belum ada barang.</td></tr>');});
-  $('#form-penerimaan-gudang').on('submit',function(e){e.preventDefault();if(!$('#gudang-item-list tr.item-row').length){bootbox.alert('Minimal satu barang harus dicatat.');return;}var form=this;function save(){var btn=$(form).find('button[type=submit]').prop('disabled',true);$.ajax({url:'{?=url([ADMIN,"logistik_non_medis","savepenerimaan"])?}',type:'POST',data:new FormData(form),contentType:false,processData:false,dataType:'json'}).done(function(res){if(res.status==='success'){bootbox.alert({title:'Berhasil',message:res.message||'Penerimaan berhasil disimpan.',callback:function(){loadGudangDashboard();}});}else bootbox.alert(res.message||'Gagal menyimpan penerimaan.');}).fail(function(xhr){bootbox.alert('Gagal menghubungi server. '+(xhr.responseText||''));}).always(function(){btn.prop('disabled',false);});}if($('#gudang-status').val()==='Selesai'){bootbox.confirm({title:'Verifikasi Penerimaan',message:'Pastikan barang dan jumlah fisik sudah benar. Setelah selesai, stok akan langsung masuk dan data tidak dapat diubah.',callback:function(ok){if(ok)save();}});}else save();});
+  $('#form-penerimaan-gudang').on('submit',function(e){e.preventDefault();if($sumber.length&&!$.trim($sumber.val()||'')){bootbox.alert('Sumber barang wajib diisi.');return;}if(!$('#gudang-item-list tr.item-row').length){bootbox.alert('Minimal satu barang harus dicatat.');return;}var form=this;function save(){var btn=$(form).find('button[type=submit]').prop('disabled',true);$.ajax({url:'{?=url([ADMIN,"logistik_non_medis","savepenerimaan"])?}',type:'POST',data:new FormData(form),contentType:false,processData:false,dataType:'json'}).done(function(res){if(res.status==='success'){bootbox.alert({title:'Berhasil',message:res.message||'Penerimaan berhasil disimpan.',callback:function(){loadGudangDashboard();}});}else bootbox.alert(res.message||'Gagal menyimpan penerimaan.');}).fail(function(xhr){bootbox.alert('Gagal menghubungi server. '+(xhr.responseText||''));}).always(function(){btn.prop('disabled',false);});}if($('#gudang-status').val()==='Selesai'){bootbox.confirm({title:'Verifikasi Penerimaan',message:'Pastikan barang dan jumlah fisik sudah benar. Setelah selesai, stok akan langsung masuk dan data tidak dapat diubah.',callback:function(ok){if(ok)save();}});}else save();});
 });
 </script>
