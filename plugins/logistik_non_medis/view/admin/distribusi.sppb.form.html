@@ -677,7 +677,7 @@ $(document).ready(function() {
             var $row = $(this);
             $.getJSON("{?=url(ADMIN.'/logistik_non_medis/ajaxmasterbarang')?}", {q: kodeItem, jenis_permintaan: 'Rutin'}, function(items) {
                 $.each(items || [], function(_, item) {
-                    if (item.kode_item === kodeItem) applySatuanBarang($row, item.satuan_options, currentUnit);
+                    if (item.kode_item === kodeItem) applySatuanBarang($row, item.satuan_options, currentUnit, item.satuan_dasar);
                 });
             });
         }
@@ -719,14 +719,26 @@ function addRow() {
     toggleItemSource($row);
 }
 
-function applySatuanBarang($row, options, selected) {
+function applySatuanBarang($row, options, selected, satuanDasar) {
     var $select = $row.find('.select-satuan-barang');
     if (!$select.length) return;
+    // Nama satuan dasar dipakai agar keterangan konversi terbaca jelas,
+    // mis. "Pack (1 Pack = 10 Lembar)" bukan sekadar "10 satuan dasar".
+    var base = $.trim(satuanDasar || '');
+    if (!base) {
+        $.each(options || [], function(_, unit) {
+            if (!base && parseFloat(unit.faktor_ke_dasar || 1) === 1) base = unit.satuan;
+        });
+    }
     $select.empty();
     $.each(options || [], function(_, unit) {
         var label = unit.satuan;
         var factor = parseFloat(unit.faktor_ke_dasar || 1);
-        if (factor !== 1) label += ' (1 ' + unit.satuan + ' = ' + factor.toLocaleString('id-ID') + ' satuan dasar)';
+        if (factor === 1) {
+            label += ' (satuan dasar)';
+        } else {
+            label += ' (1 ' + unit.satuan + ' = ' + factor.toLocaleString('id-ID') + ' ' + (base || 'satuan dasar') + ')';
+        }
         $select.append($('<option>', {value: unit.satuan, text: label}));
     });
     if (selected) $select.val(selected);
@@ -922,7 +934,7 @@ function initSelect2Item($el) {
         if (isNonRutin) {
             $row.find('[name="satuan[]"]').val(data.satuan).trigger('change');
         } else {
-            applySatuanBarang($row, data.satuan_options, data.satuan);
+            applySatuanBarang($row, data.satuan_options, data.satuan, data.satuan);
         }
     });
 }

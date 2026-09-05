@@ -58,14 +58,25 @@
                 </div>
                 <div class="form-group">
                     <label>Satuan Alternatif untuk Permintaan</label>
-                    <p class="help-block" style="margin-top:0">Faktor adalah jumlah satuan dasar dalam 1 satuan alternatif. Contoh: 1 Pack = 10 Lembar, isi faktor 10.</p>
+                    <div class="alert alert-info" style="padding:8px 10px;margin:0 0 8px">
+                        <div><i class="fa fa-cube"></i> Satuan dasar barang ini: <strong class="uom-base-name">belum dipilih</strong></div>
+                        <div style="margin-top:4px">Stok dan Harga Referensi (HPS) dihitung <strong>per <span class="uom-base-name">satuan dasar</span></strong>, jadi satuan dasar harus satuan <strong>terkecil</strong>.</div>
+                    </div>
+                    <p class="help-block" style="margin-top:0">
+                        Satuan alternatif adalah satuan <strong>lebih besar</strong> yang boleh dipakai unit saat meminta barang.
+                        Isi faktor = <strong>berapa <span class="uom-base-name">satuan dasar</span> di dalam 1 satuan alternatif</strong>.<br>
+                        Contoh: satuan dasar <em>Lembar</em>, satuan alternatif <em>Pack</em> faktor <strong>10</strong> &rarr; 1 Pack = 10 Lembar.
+                    </p>
                     <div id="uom-alternatif-rows">
                         {loop: $barang_satuan}
-                        <div class="input-group uom-alternatif-row" style="margin-bottom:6px">
-                            <input type="text" name="satuan_alternatif[]" class="form-control" list="master-satuan-list" value="{$value.satuan}" placeholder="Satuan, mis. Pack">
-                            <span class="input-group-addon">=</span>
-                            <input type="number" name="faktor_alternatif[]" class="form-control" min="0.000001" step="0.000001" value="{$value.faktor_ke_dasar}" placeholder="Faktor">
-                            <span class="input-group-btn"><button type="button" class="btn btn-danger btn-remove-uom"><i class="fa fa-times"></i></button></span>
+                        <div class="uom-alternatif-item" style="margin-bottom:6px">
+                            <div class="input-group uom-alternatif-row">
+                                <input type="text" name="satuan_alternatif[]" class="form-control" list="master-satuan-list" value="{$value.satuan}" placeholder="Satuan, mis. Pack">
+                                <span class="input-group-addon">=</span>
+                                <input type="number" name="faktor_alternatif[]" class="form-control" min="0.000001" step="0.000001" value="{$value.faktor_ke_dasar}" placeholder="Faktor">
+                                <span class="input-group-btn"><button type="button" class="btn btn-danger btn-remove-uom"><i class="fa fa-times"></i></button></span>
+                            </div>
+                            <small class="uom-preview text-muted"></small>
                         </div>
                         {/loop}
                     </div>
@@ -148,25 +159,58 @@
 </form>
 <script>
 (function() {
+    function baseUnit() { return $.trim($('#select-satuan-dasar').val() || ''); }
+    // 10.000000 -> 10 ; 0.500000 -> 0,5
+    function rapikanAngka(nilai) {
+        var angka = parseFloat(nilai);
+        if (!isFinite(angka)) return '';
+        return angka.toLocaleString('id-ID', {maximumFractionDigits: 6});
+    }
+    function refreshUomInfo() {
+        var base = baseUnit();
+        $('.uom-base-name').text(base || 'satuan dasar');
+        $('.uom-alternatif-item').each(function() {
+            var unit = $.trim($(this).find('[name="satuan_alternatif[]"]').val() || '');
+            var factor = parseFloat($(this).find('[name="faktor_alternatif[]"]').val());
+            var $preview = $(this).find('.uom-preview').removeClass('text-muted text-danger');
+            if (!unit && !$(this).find('[name="faktor_alternatif[]"]').val()) { $preview.text(''); return; }
+            if (!base) {
+                $preview.addClass('text-danger').text('Pilih Satuan Dasar dulu.');
+            } else if (unit && unit.toLowerCase() === base.toLowerCase()) {
+                $preview.addClass('text-danger').text('Satuan alternatif tidak boleh sama dengan satuan dasar (' + base + ').');
+            } else if (!unit || !isFinite(factor) || factor <= 0) {
+                $preview.addClass('text-danger').text('Nama satuan dan faktor harus diisi, faktor lebih besar dari 0.');
+            } else if (factor < 1) {
+                $preview.addClass('text-danger').text('Dibaca: 1 ' + unit + ' = ' + rapikanAngka(factor) + ' ' + base + '. Satuan alternatif lebih kecil dari satuan dasar — biasanya satuan dasar yang perlu diganti.');
+            } else {
+                $preview.addClass('text-muted').text('Dibaca: 1 ' + unit + ' = ' + rapikanAngka(factor) + ' ' + base + ' (satuan dasar).');
+            }
+        });
+    }
     function addUomRow() {
         $('#uom-alternatif-rows').append(
-            '<div class="input-group uom-alternatif-row" style="margin-bottom:6px">' +
+            '<div class="uom-alternatif-item" style="margin-bottom:6px">' +
+            '<div class="input-group uom-alternatif-row">' +
             '<input type="text" name="satuan_alternatif[]" class="form-control" list="master-satuan-list" placeholder="Satuan, mis. Pack">' +
             '<span class="input-group-addon">=</span>' +
             '<input type="number" name="faktor_alternatif[]" class="form-control" min="0.000001" step="0.000001" placeholder="Faktor">' +
             '<span class="input-group-btn"><button type="button" class="btn btn-danger btn-remove-uom"><i class="fa fa-times"></i></button></span>' +
-            '</div>'
+            '</div><small class="uom-preview text-muted"></small></div>'
         );
+        refreshUomInfo();
     }
     $('#btn-add-uom').off('click.uom').on('click.uom', addUomRow);
-    $('#uom-alternatif-rows').off('click.uom').on('click.uom', '.btn-remove-uom', function() { $(this).closest('.uom-alternatif-row').remove(); });
+    $('#uom-alternatif-rows').off('click.uom').on('click.uom', '.btn-remove-uom', function() { $(this).closest('.uom-alternatif-item').remove(); });
+    $('#uom-alternatif-rows').off('input.uom change.uom').on('input.uom change.uom', 'input', refreshUomInfo);
+    $('#select-satuan-dasar').off('change.uom').on('change.uom', refreshUomInfo);
+    refreshUomInfo();
     $('#form-master-barang').off('submit.uom-summary').on('submit.uom-summary', function() {
-        var base = $('#select-satuan-dasar').val() || 'satuan dasar';
+        var base = baseUnit() || 'satuan dasar';
         var labels = [];
         $('.uom-alternatif-row').each(function() {
             var unit = $(this).find('[name="satuan_alternatif[]"]').val();
             var factor = $(this).find('[name="faktor_alternatif[]"]').val();
-            if (unit && factor) labels.push('1 ' + unit + ' = ' + factor + ' ' + base);
+            if (unit && factor) labels.push('1 ' + unit + ' = ' + rapikanAngka(factor) + ' ' + base);
         });
         $('#satuan_konversi').val(labels.join('; '));
     });

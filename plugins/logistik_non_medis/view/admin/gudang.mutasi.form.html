@@ -103,10 +103,16 @@ function isiSatuanBaris($row, opsi, satuanTerpilih) {
     var $sel = $row.find('.satuan-item');
     if (!$sel.length) return;
     $sel.empty();
+    var base = '';
+    (opsi || []).forEach(function (o) {
+        if (!base && parseFloat(o.faktor_ke_dasar) === 1) base = o.satuan;
+    });
     (opsi || []).forEach(function (o) {
         var label = o.satuan;
         if (parseFloat(o.faktor_ke_dasar) !== 1) {
-            label += ' (1 = ' + parseFloat(o.faktor_ke_dasar) + ' satuan dasar)';
+            label += ' (1 ' + o.satuan + ' = ' + parseFloat(o.faktor_ke_dasar) + ' ' + (base || 'satuan dasar') + ')';
+        } else {
+            label += ' (satuan dasar)';
         }
         $sel.append($('<option>', { value: o.satuan, text: label }));
     });

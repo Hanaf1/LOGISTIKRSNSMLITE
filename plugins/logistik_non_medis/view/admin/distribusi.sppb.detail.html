@@ -634,9 +634,12 @@
         }
     }).on('select2:select.tambahan', function(e) {
         var $unit = $('#tambahan-satuan').empty();
+        var base = $.trim(e.params.data.satuan || '');
         $.each(e.params.data.satuan_options || [], function(_, option) {
             var factor = parseFloat(option.faktor_ke_dasar || 1);
-            var label = option.satuan + (factor !== 1 ? ' (=' + factor.toLocaleString('id-ID') + ' satuan dasar)' : '');
+            var label = factor === 1
+              ? option.satuan + ' (satuan dasar)'
+              : option.satuan + ' (1 ' + option.satuan + ' = ' + factor.toLocaleString('id-ID') + ' ' + (base || 'satuan dasar') + ')';
             $unit.append($('<option>', {value: option.satuan, text: label}));
         });
         $unit.val(e.params.data.satuan || '');
