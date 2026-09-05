@@ -46,7 +46,7 @@
               </select>
             </div></div>
             <div class="col-md-2" style="padding-top:25px">
-              <div class="btn-group btn-group-justified"><a href="#" id="btn-cost-tampil" class="btn btn-primary"><i class="fa fa-search"></i> Tampilkan</a><a href="#" id="btn-cost-export" class="btn btn-success"><i class="fa fa-file-excel-o"></i> Export</a></div>
+              <div class="btn-group btn-group-justified"><a href="#" id="btn-cost-tampil" class="btn btn-primary"><i class="fa fa-search"></i> Tampilkan</a><a href="#" id="btn-cost-export" class="btn btn-success" title="Unduh Excel: rincian per item, rekap per unit, dan rekap per SPPB — mengikuti filter di atas"><i class="fa fa-file-excel-o"></i> Export Excel</a></div>
             </div>
           </div>
         </div>
@@ -85,7 +85,14 @@ $(function(){
   $('#cost-unit').on('change',function(){loadCost();});
   $('#btn-cost-export').on('click',function(e){e.preventDefault();var base='{?=url(ADMIN."/logistik_non_medis/exportlaporancostunit")?}';var sep=base.indexOf('?')>=0?'&':'?';window.location.href=base+sep+'periode='+encodeURIComponent($('#cost-periode').val())+'&minggu='+encodeURIComponent($('#cost-minggu').val())+'&status='+encodeURIComponent($('#cost-status').val())+'&kode_unit='+encodeURIComponent($('#cost-unit').val()||'');});
   $(document).on('click','.btn-detail-cost',function(){var no=$(this).data('no');$('#detail-cost-unit').html('<div class="text-center" style="padding:30px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');$.post('{?=url(ADMIN."/logistik_non_medis/detaillaporancostunit")?}',{no_sppb:no},function(html){$('#detail-cost-unit').html(html);var editable=$('#cost-editable').val()==='1';$('#footer-cost-unit .btn-save-cost').toggle(editable);$('#modal-cost-unit').modal('show');});});
-  $(document).on('input','.cost-harga',function(){var tr=$(this).closest('tr'),qty=parseFloat(tr.data('qty'))||0,harga=parseFloat($(this).val())||0;tr.find('.cost-subtotal').text('Rp. '+Math.round(qty*harga).toLocaleString('id-ID'));hitungModal();});
+  // Catatan: jangan memakai nama variabel JS berawalan "$" di template ini.
+  // Parser template mengubah pola $var.sesuatu dan bisa merusak string di dalamnya.
+  function hitungBaris(el){var tr=$(el).closest('tr'),qty=parseFloat(tr.data('qty'))||0,harga=parseFloat($(el).val())||0;tr.find('.cost-subtotal').text('Rp. '+Math.round(qty*harga).toLocaleString('id-ID'));}
+  $(document).on('input','.cost-harga',function(){hitungBaris(this);hitungModal();});
+  // Ambil HPS terbaru dari Master Barang untuk satu baris.
+  $(document).on('click','.btn-harga-master',function(){var input=$(this).closest('tr').find('.cost-harga');input.val(parseFloat(input.data('master'))||0);hitungBaris(input);hitungModal();});
+  // ...atau untuk semua baris sekaligus.
+  $(document).on('click','#btn-semua-harga-master',function(){$('.cost-harga').each(function(){var input=$(this);input.val(parseFloat(input.data('master'))||0);hitungBaris(input);});hitungModal();});
   function hitungModal(){var total=0;$('.cost-harga').each(function(){total+=(parseFloat($(this).val())||0)*(parseFloat($(this).closest('tr').data('qty'))||0);});$('#cost-grand-total').text('Rp. '+Math.round(total).toLocaleString('id-ID'));}
   $('.btn-save-cost').on('click',function(){var action=$(this).data('action');if(action==='selesai'&&!confirm('Finalisasi Cost Unit ini? Setelah selesai harga menjadi arsip dan status SPPB berubah menjadi Selesai.'))return;var btn=$(this).prop('disabled',true);var data=$('#form-cost-unit').serialize()+'&action='+encodeURIComponent(action);$.ajax({url:'{?=url(ADMIN."/logistik_non_medis/savelaporancostunit")?}',type:'POST',data:data,dataType:'json'}).done(function(res){alert(res.message);if(res.status==='success'){$('#modal-cost-unit').modal('hide');loadCost();}}).fail(function(xhr){alert((xhr.responseJSON&&xhr.responseJSON.message)||'Gagal menyimpan Cost Unit.');}).always(function(){btn.prop('disabled',false);});});
   loadCost();

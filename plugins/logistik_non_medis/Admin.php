@@ -23351,8 +23351,15 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                          LEAST(4, FLOOR((DAY(MAX(s.tgl_sppb)) - 1) / 7) + 1)
                      ) minggu_ke,
                      s.kode_unit, COALESCE(u.nama_unit, s.kode_unit) nama_unit,
-                     COUNT(*) jumlah_item, COALESCE(SUM(COALESCE(NULLIF(s.jumlah_dasar,0),s.jumlah*COALESCE(NULLIF(s.faktor_konversi,0),1)) * COALESCE(b.harga_referensi,0)),0) total_cost,
-                     SUM(CASE WHEN COALESCE(b.harga_referensi,0) <= 0 THEN 1 ELSE 0 END) belum_harga,
+                     COUNT(*) jumlah_item,
+                     COALESCE(SUM(
+                       CASE WHEN s.subtotal_cost > 0 THEN s.subtotal_cost
+                            ELSE COALESCE(NULLIF(s.jumlah_dasar,0),s.jumlah*COALESCE(NULLIF(s.faktor_konversi,0),1))
+                                 * COALESCE(NULLIF(s.harga_satuan_cost,0), b.harga_referensi, 0)
+                       END
+                     ),0) total_cost,
+                     SUM(CASE WHEN COALESCE(NULLIF(s.harga_satuan_cost,0), b.harga_referensi, 0) <= 0 AND s.subtotal_cost <= 0 THEN 1 ELSE 0 END) belum_harga,
+                     SUM(CASE WHEN s.harga_satuan_cost > 0 OR s.subtotal_cost > 0 THEN 1 ELSE 0 END) harga_terkunci,
                      MAX(s.status) status
 FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
               LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=s.kode_unit
@@ -23372,33 +23379,133 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             $belum += (int)$row['belum_harga'];
         }
         unset($row);
-        echo $this->draw('laporan.costunit.display.html', ['rows' => $rows,'total_cost' => $total,'total_unit' => count(array_unique(array_column($rows, 'kode_unit'))),'total_sppb' => count($rows),'total_item' => $items,'belum_harga' => $belum,'audit' => []]);
+
+        // Riwayat perubahan harga cost unit terakhir, supaya perbedaan nilai
+        // dengan HPS master bisa ditelusuri siapa yang mengubah dan kapan.
+        $this->_initCostUnitAudit();
+        $auditStmt = $this->db()->pdo()->query("SELECT a.*, COALESCE(u.nama_unit,a.kode_unit) nama_unit,
+            COALESCE(b.nama_barang,a.kode_item) nama_barang
+          FROM rsns_custom_logistik_non_medis_cost_unit_audit a
+          LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=a.kode_unit
+          LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=a.kode_item
+          ORDER BY a.id DESC LIMIT 15");
+        $audit = $auditStmt ? $auditStmt->fetchAll(\PDO::FETCH_ASSOC) : [];
+        foreach ($audit as &$baris) {
+            $baris['tgl_proses_format'] = date('d/m/Y H:i', strtotime($baris['tgl_proses']));
+        }
+        unset($baris);
+
+        echo $this->draw('laporan.costunit.display.html', ['rows' => $rows,'total_cost' => $total,'total_unit' => count(array_unique(array_column($rows, 'kode_unit'))),'total_sppb' => count($rows),'total_item' => $items,'belum_harga' => $belum,'audit' => $audit]);
         exit();
+    }
+
+    /**
+     * Harga dan subtotal yang dipakai laporan Cost Unit untuk satu baris item.
+     *
+     * Urutan prioritas: nilai yang sudah dikunci saat cost unit disimpan
+     * (subtotal_cost / harga_satuan_cost), baru HPS terbaru di Master Barang.
+     * Dengan begitu perubahan HPS tidak mengubah nilai permintaan lama yang
+     * sudah diproses, sementara permintaan yang belum dihargai tetap ikut
+     * harga terbaru. Baris memerlukan kolom dari v_sppb_normalized plus
+     * `harga_master` (harga_referensi Master Barang).
+     */
+    private function _hargaCostUnit(array $row): array
+    {
+        $qty = $this->_qtyDasarSppb($row, false);
+        $hargaKunci = (float)($row['harga_satuan_cost'] ?? 0);
+        $subtotalKunci = (float)($row['subtotal_cost'] ?? 0);
+        $hargaMaster = (float)($row['harga_master'] ?? $row['harga_referensi'] ?? 0);
+
+        if ($subtotalKunci > 0) {
+            return [
+              'harga' => $hargaKunci > 0 ? $hargaKunci : ($qty > 0 ? $subtotalKunci / $qty : 0.0),
+              'subtotal' => $subtotalKunci,
+              'terkunci' => true
+            ];
+        }
+        if ($hargaKunci > 0) {
+            return ['harga' => $hargaKunci, 'subtotal' => $qty * $hargaKunci, 'terkunci' => true];
+        }
+        return ['harga' => $hargaMaster, 'subtotal' => $qty * $hargaMaster, 'terkunci' => false];
     }
 
     public function anyDetailLaporanCostUnit()
     {
         $no = trim((string)($_POST['no_sppb'] ?? ''));
-        $stmt = $this->db()->pdo()->prepare("SELECT s.*, COALESCE(NULLIF(s.nama_barang_manual,''),b.nama_barang,s.kode_item) nama_barang, COALESCE(b.harga_referensi,0) harga_hps FROM rsns_custom_logistik_non_medis_v_sppb_normalized s LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item WHERE s.no_sppb=? ORDER BY s.id");
+        $stmt = $this->db()->pdo()->prepare("SELECT s.*, COALESCE(NULLIF(s.nama_barang_manual,''),b.nama_barang,s.kode_item) nama_barang, COALESCE(b.harga_referensi,0) harga_master FROM rsns_custom_logistik_non_medis_v_sppb_normalized s LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item WHERE s.no_sppb=? ORDER BY s.id");
         $stmt->execute([$no]);
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         $editable = in_array($this->core->getUserInfo('role', null, true), ['admin','logistik'], true) && !empty($rows) && $rows[0]['status'] === 'Diajukan';
         $html = '<input type="hidden" name="no_sppb" value="' . htmlspecialchars($no, ENT_QUOTES, 'UTF-8') . '">';
         $html .= '<input type="hidden" id="cost-editable" value="' . ($editable ? '1' : '0') . '">';
-        $html .= '<table class="table table-bordered"><thead><tr><th>Barang</th><th>Qty</th><th>Satuan</th><th>Harga</th><th>Subtotal</th></tr></thead><tbody>';
+        if ($editable) {
+            $html .= '<div class="clearfix" style="margin-bottom:8px"><button type="button" class="btn btn-default btn-sm pull-right" id="btn-semua-harga-master"><i class="fa fa-refresh"></i> Gunakan Semua Harga Master</button>'
+              . '<span class="text-muted"><i class="fa fa-pencil"></i> Harga boleh diubah manual, atau ambil dari Master Barang.</span></div>';
+        }
+        $html .= '<table class="table table-bordered"><thead><tr><th>Barang</th><th>Qty</th><th>Satuan</th><th style="width:230px">Harga per Satuan Dasar</th><th>Subtotal</th></tr></thead><tbody>';
+        $grandTotal = 0.0;
+        $adaKunci = false;
         foreach ($rows as $row) {
             $qty = $this->_qtyDasarSppb($row, false);
-            $harga = (float)$row['harga_hps'];
+            $biaya = $this->_hargaCostUnit($row);
+            $harga = $biaya['harga'];
+            $subtotal = $biaya['subtotal'];
+            $grandTotal += $subtotal;
+            if ($biaya['terkunci']) $adaKunci = true;
             $name = htmlspecialchars($row['nama_barang'], ENT_QUOTES, 'UTF-8');
             $qtyLabel = number_format((float)$row['jumlah'], 0, ',', '.') . ' ' . htmlspecialchars($row['satuan'] ?? '-', ENT_QUOTES, 'UTF-8');
             if (abs($qty - (float)$row['jumlah']) > 0.000001) $qtyLabel .= '<br><small>' . number_format($qty, 0, ',', '.') . ' ' . htmlspecialchars($row['satuan_dasar_snapshot'] ?? 'satuan dasar', ENT_QUOTES, 'UTF-8') . '</small>';
-            $html .= '<tr data-qty="' . $qty . '"><td>' . $name . '</td><td>' . $qtyLabel . '</td><td>' . htmlspecialchars($row['satuan_dasar_snapshot'] ?? $row['satuan'] ?? '-', ENT_QUOTES, 'UTF-8') . '</td><td>' . ($editable ? '<input class="form-control cost-harga" type="number" min="0" step="0.01" name="harga[' . htmlspecialchars($row['kode_item'], ENT_QUOTES, 'UTF-8') . ']" value="' . $harga . '" readonly title="Harga per satuan dasar dari HPS Master Barang">' : 'Rp. ' . number_format($harga, 0, ',', '.')) . '</td><td class="cost-subtotal">Rp. ' . number_format($qty * $harga, 0, ',', '.') . '</td></tr>';
+            // Harga yang sudah dikunci ditandai supaya jelas kenapa nilainya bisa
+            // berbeda dengan HPS terbaru di Master Barang.
+            $tanda = $biaya['terkunci']
+              ? '<br><small class="text-muted"><i class="fa fa-lock"></i> harga terkunci saat cost unit disimpan'
+                . ((float)$row['harga_master'] > 0 && abs((float)$row['harga_master'] - $harga) > 0.004
+                    ? ' (HPS master kini Rp. ' . number_format((float)$row['harga_master'], 0, ',', '.') . ')' : '')
+                . '</small>'
+              : '<br><small class="text-muted">HPS master terkini</small>';
+            $hargaMaster = (float)$row['harga_master'];
+            if ($editable) {
+                $kolomHarga = '<div class="input-group">'
+                  . '<span class="input-group-addon">Rp</span>'
+                  . '<input class="form-control cost-harga" type="number" min="0" step="0.01" name="harga[' . (int)$row['id'] . ']" value="' . $harga . '" data-master="' . $hargaMaster . '" title="Harga per satuan dasar yang dipakai laporan">'
+                  . '<span class="input-group-btn"><button type="button" class="btn btn-default btn-harga-master" title="Ambil HPS terbaru dari Master Barang: Rp. ' . number_format($hargaMaster, 0, ',', '.') . '"><i class="fa fa-refresh"></i></button></span>'
+                  . '</div>';
+            } else {
+                $kolomHarga = 'Rp. ' . number_format($harga, 0, ',', '.');
+            }
+            $html .= '<tr data-qty="' . $qty . '"><td>' . $name . '</td><td>' . $qtyLabel . '</td><td>' . htmlspecialchars($row['satuan_dasar_snapshot'] ?? $row['satuan'] ?? '-', ENT_QUOTES, 'UTF-8') . '</td><td>' . $kolomHarga . $tanda . '</td><td class="cost-subtotal">Rp. ' . number_format($subtotal, 0, ',', '.') . '</td></tr>';
         }
-        $html .= '</tbody><tfoot><tr><th colspan="4" class="text-right">Total HPS</th><th id="cost-grand-total">Rp. ' . number_format(array_sum(array_map(function ($r) {
-            return $this->_qtyDasarSppb($r, false) * (float)$r['harga_hps'];
-        }, $rows)), 0, ',', '.') . '</th></tr></tfoot></table>';
+        $html .= '</tbody><tfoot><tr><th colspan="4" class="text-right">Total Cost</th><th id="cost-grand-total">Rp. ' . number_format($grandTotal, 0, ',', '.') . '</th></tr></tfoot></table>';
+        $html .= '<div class="alert alert-info" style="margin-bottom:0"><i class="fa fa-info-circle"></i> '
+          . ($adaKunci
+            ? 'Sebagian harga sudah dikunci pada saat cost unit disimpan, jadi perubahan HPS di Master Barang tidak mengubah nilai permintaan lama. Ubah angkanya langsung atau tekan tombol <i class="fa fa-refresh"></i> untuk memakai HPS terbaru, lalu <strong>Simpan Harga</strong> (hanya bisa selama status masih Diajukan).'
+            : 'Harga masih mengikuti HPS terbaru di Master Barang. Nilai akan terkunci pada angka yang tersimpan begitu Anda menekan <strong>Simpan Harga</strong> atau <strong>Simpan &amp; Tandai Selesai</strong>.')
+          . '</div>';
         echo $html;
         exit();
+    }
+
+    private function _initCostUnitAudit()
+    {
+        $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_cost_unit_audit` (
+          `id` int NOT NULL AUTO_INCREMENT,
+          `no_sppb` varchar(50) NOT NULL,
+          `sppb_item_id` int NOT NULL,
+          `kode_unit` varchar(50) NOT NULL,
+          `kode_item` varchar(50) NOT NULL,
+          `qty` double NOT NULL DEFAULT 0,
+          `harga_lama` double NOT NULL DEFAULT 0,
+          `harga_baru` double NOT NULL DEFAULT 0,
+          `subtotal` double NOT NULL DEFAULT 0,
+          `aksi` enum('Simpan','Selesaikan') NOT NULL DEFAULT 'Simpan',
+          `keterangan` text,
+          `user_proses` varchar(100) DEFAULT NULL,
+          `tgl_proses` datetime NOT NULL,
+          PRIMARY KEY (`id`),
+          KEY `no_sppb` (`no_sppb`),
+          KEY `kode_unit` (`kode_unit`),
+          KEY `tgl_proses` (`tgl_proses`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=latin1");
     }
 
     public function postSaveLaporanCostUnit()
@@ -23412,25 +23519,67 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             echo json_encode(['status' => 'error','message' => 'Cost Unit hanya dapat diproses Admin/Logistik pada status Diajukan.']);
             exit();
         }
+        $this->_initCostUnitAudit();
         $pdo = $this->db()->pdo();
+
+        // Ambil kondisi terkini tiap baris item: harga yang sedang berlaku
+        // (kunci lama atau HPS master) sebagai pembanding untuk audit.
+        $stmt = $pdo->prepare("SELECT s.*, COALESCE(b.harga_referensi,0) harga_master
+          FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
+          LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item
+          WHERE s.no_sppb=? ORDER BY s.id");
+        $stmt->execute([$no]);
+        $items = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        if (!$items) {
+            echo json_encode(['status' => 'error','message' => 'Rincian permintaan tidak ditemukan.']);
+            exit();
+        }
+
+        $username = $this->core->getUserInfo('username', null, true);
         $pdo->beginTransaction();
         try {
-            $q = $pdo->prepare('INSERT INTO rsns_custom_logistik_non_medis_sppb_item_meta (sppb_item_id,harga_satuan_cost,subtotal_cost)
-              SELECT s.id,COALESCE(b.harga_referensi,0),COALESCE(NULLIF(im.jumlah_dasar,0),s.jumlah*COALESCE(NULLIF(im.faktor_konversi,0),1))*COALESCE(b.harga_referensi,0)
-              FROM rsns_custom_logistik_non_medis_sppb s
-              LEFT JOIN rsns_custom_logistik_non_medis_sppb_item_meta im ON im.sppb_item_id=s.id
-              LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item
-              WHERE s.no_sppb=?
+            $simpan = $pdo->prepare('INSERT INTO rsns_custom_logistik_non_medis_sppb_item_meta (sppb_item_id,harga_satuan_cost,subtotal_cost)
+              VALUES (?,?,?)
               ON DUPLICATE KEY UPDATE harga_satuan_cost=VALUES(harga_satuan_cost),subtotal_cost=VALUES(subtotal_cost)');
-            $q->execute([$no]);
+            $catat = $pdo->prepare('INSERT INTO rsns_custom_logistik_non_medis_cost_unit_audit
+              (no_sppb,sppb_item_id,kode_unit,kode_item,qty,harga_lama,harga_baru,subtotal,aksi,keterangan,user_proses,tgl_proses)
+              VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');
+
+            $jumlahUbah = 0;
+            foreach ($items as $item) {
+                $id = (int)$item['id'];
+                $qty = $this->_qtyDasarSppb($item, false);
+                $lama = $this->_hargaCostUnit($item);
+                // Harga yang diketik petugas dipakai apa adanya; kalau baris tidak
+                // ikut terkirim, harga yang berlaku sekarang yang dikunci.
+                $baru = array_key_exists($id, $harga) && $harga[$id] !== ''
+                  ? max(0.0, (float)str_replace(',', '.', (string)$harga[$id]))
+                  : $lama['harga'];
+
+                $simpan->execute([$id, $baru, $qty * $baru]);
+
+                if (abs($baru - $lama['harga']) > 0.004) {
+                    $jumlahUbah++;
+                    $catat->execute([
+                      $no, $id, $item['kode_unit'], $item['kode_item'], $qty,
+                      $lama['harga'], $baru, $qty * $baru,
+                      $action === 'selesai' ? 'Selesaikan' : 'Simpan',
+                      abs($baru - (float)$item['harga_master']) <= 0.004
+                        ? 'Mengikuti HPS Master Barang'
+                        : 'Harga diisi manual',
+                      $username, date('Y-m-d H:i:s')
+                    ]);
+                }
+            }
+
             if ($action === 'selesai') {
                 $this->_updateSppbNormalized(['no_sppb' => $no], [
                   'status' => 'Selesai',
                   'tgl_cost' => date('Y-m-d H:i:s'),
-                  'user_cost' => $this->core->getUserInfo('username', null, true)
+                  'user_cost' => $username
                 ]);
             } $pdo->commit();
-            echo json_encode(['status' => 'success','message' => 'Cost Unit berhasil disimpan menggunakan HPS Master Barang.']);
+            echo json_encode(['status' => 'success','message' => 'Cost Unit berhasil disimpan. ' . ($jumlahUbah > 0 ? $jumlahUbah . ' harga berubah dan dicatat di audit.' : 'Tidak ada harga yang berubah.')]);
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -23438,26 +23587,391 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         } exit();
     }
 
+    /**
+     * Penulis XLSX minimal (tanpa pustaka luar) untuk kebutuhan export laporan.
+     * Gaya sel yang tersedia lihat konstanta XLSX_* di bawah.
+     */
+    const XLSX_NORMAL = 0;
+    const XLSX_TEBAL = 1;
+    const XLSX_JUDUL = 2;
+    const XLSX_HEADER = 3;
+    const XLSX_TEKS = 4;
+    const XLSX_ANGKA = 5;
+    const XLSX_RUPIAH = 6;
+    const XLSX_TOTAL_TEKS = 7;
+    const XLSX_TOTAL_RUPIAH = 8;
+    const XLSX_TOTAL_ANGKA = 9;
+    const XLSX_BULAT = 10;
+    const XLSX_TOTAL_BULAT = 11;
+
+    private function _xlsxKolom(int $index): string
+    {
+        $huruf = '';
+        while ($index > 0) {
+            $sisa = ($index - 1) % 26;
+            $huruf = chr(65 + $sisa) . $huruf;
+            $index = (int)(($index - $sisa - 1) / 26);
+        }
+        return $huruf;
+    }
+
+    private function _xlsxStyles(): string
+    {
+        $font = '<font><sz val="10"/><name val="Calibri"/></font>';
+        $fontTebal = '<font><b/><sz val="10"/><name val="Calibri"/></font>';
+        $fontJudul = '<font><b/><sz val="14"/><name val="Calibri"/></font>';
+        $fontHeader = '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>';
+        $garis = '<border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border>';
+        return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          . '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+          . '<numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0.00"/><numFmt numFmtId="165" formatCode="&quot;Rp&quot;\ #,##0"/></numFmts>'
+          . '<fonts count="4">' . $font . $fontTebal . $fontJudul . $fontHeader . '</fonts>'
+          . '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+          . '<fill><patternFill patternType="solid"><fgColor rgb="FF31708F"/><bgColor indexed="64"/></patternFill></fill>'
+          . '<fill><patternFill patternType="solid"><fgColor rgb="FFEFEFEF"/><bgColor indexed="64"/></patternFill></fill></fills>'
+          . '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>' . $garis . '</borders>'
+          . '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+          . '<cellXfs count="12">'
+          . '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+          . '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+          . '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+          . '<xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
+          . '<xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
+          . '<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>'
+          . '<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>'
+          . '<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>'
+          . '<xf numFmtId="165" fontId="1" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>'
+          . '<xf numFmtId="164" fontId="1" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/>'
+          . '<xf numFmtId="3" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>'
+          . '<xf numFmtId="3" fontId="1" fillId="3" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>'
+          . '</cellXfs></styleSheet>';
+    }
+
+    private function _xlsxSheet(array $sheet): string
+    {
+        $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+        $bekuBaris = (int)($sheet['freeze'] ?? 0);
+        if ($bekuBaris > 0) {
+            $xml .= '<sheetViews><sheetView workbookViewId="0"><pane ySplit="' . $bekuBaris . '" topLeftCell="A' . ($bekuBaris + 1) . '" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>';
+        }
+        if (!empty($sheet['cols'])) {
+            $xml .= '<cols>';
+            foreach (array_values($sheet['cols']) as $i => $lebar) {
+                $xml .= '<col min="' . ($i + 1) . '" max="' . ($i + 1) . '" width="' . (float)$lebar . '" customWidth="1"/>';
+            }
+            $xml .= '</cols>';
+        }
+        $xml .= '<sheetData>';
+        foreach (array_values($sheet['rows']) as $r => $baris) {
+            $nomorBaris = $r + 1;
+            $xml .= '<row r="' . $nomorBaris . '">';
+            foreach (array_values($baris) as $c => $sel) {
+                if ($sel === null || $sel === '') continue;
+                $gaya = self::XLSX_NORMAL;
+                $nilai = $sel;
+                $angka = false;
+                if (is_array($sel)) {
+                    $nilai = $sel['v'] ?? '';
+                    $gaya = (int)($sel['s'] ?? self::XLSX_NORMAL);
+                    $angka = ($sel['t'] ?? 's') === 'n';
+                    if ($nilai === '' || $nilai === null) {
+                        // sel kosong tetap ditulis supaya garis tabel tidak putus
+                        $xml .= '<c r="' . $this->_xlsxKolom($c + 1) . $nomorBaris . '" s="' . $gaya . '"/>';
+                        continue;
+                    }
+                }
+                $ref = $this->_xlsxKolom($c + 1) . $nomorBaris;
+                if ($angka) {
+                    $xml .= '<c r="' . $ref . '" s="' . $gaya . '"><v>' . (0 + $nilai) . '</v></c>';
+                } else {
+                    $teks = htmlspecialchars((string)$nilai, ENT_QUOTES | ENT_XML1, 'UTF-8');
+                    $xml .= '<c r="' . $ref . '" s="' . $gaya . '" t="inlineStr"><is><t xml:space="preserve">' . $teks . '</t></is></c>';
+                }
+            }
+            $xml .= '</row>';
+        }
+        $xml .= '</sheetData>';
+        if (!empty($sheet['autofilter'])) {
+            $xml .= '<autoFilter ref="' . $sheet['autofilter'] . '"/>';
+        }
+        return $xml . '</worksheet>';
+    }
+
+    private function _kirimXlsx(string $namaFile, array $sheets): void
+    {
+        $zipPath = tempnam(sys_get_temp_dir(), 'mlite_xlsx_');
+        $zip = new \ZipArchive();
+        if (!$zipPath || $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            http_response_code(500);
+            echo 'File XLSX tidak dapat dibuat.';
+            exit();
+        }
+
+        $jumlah = count($sheets);
+        $types = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+          . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+          . '<Default Extension="xml" ContentType="application/xml"/>'
+          . '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+          . '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>';
+        $daftarSheet = '';
+        $relSheet = '';
+        for ($i = 1; $i <= $jumlah; $i++) {
+            $types .= '<Override PartName="/xl/worksheets/sheet' . $i . '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+            $nama = htmlspecialchars(mb_substr((string)($sheets[$i - 1]['name'] ?? ('Sheet' . $i)), 0, 31), ENT_QUOTES | ENT_XML1, 'UTF-8');
+            $daftarSheet .= '<sheet name="' . $nama . '" sheetId="' . $i . '" r:id="rId' . $i . '"/>';
+            $relSheet .= '<Relationship Id="rId' . $i . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' . $i . '.xml"/>';
+            $zip->addFromString('xl/worksheets/sheet' . $i . '.xml', $this->_xlsxSheet($sheets[$i - 1]));
+        }
+        $types .= '</Types>';
+
+        $zip->addFromString('[Content_Types].xml', $types);
+        $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+          . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+          . '</Relationships>');
+        $zip->addFromString('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          . '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+          . '<sheets>' . $daftarSheet . '</sheets></workbook>');
+        $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+          . $relSheet
+          . '<Relationship Id="rId' . ($jumlah + 1) . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+          . '</Relationships>');
+        $zip->addFromString('xl/styles.xml', $this->_xlsxStyles());
+        $zip->close();
+
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $namaFile . '"');
+        header('Content-Length: ' . filesize($zipPath));
+        header('Cache-Control: max-age=0');
+        readfile($zipPath);
+        unlink($zipPath);
+    }
+
     public function getExportLaporanCostUnit()
     {
         $periode = preg_match('/^\\d{4}-\\d{2}$/', (string)($_GET['periode'] ?? '')) ? $_GET['periode'] : date('Y-m');
+        $minggu = (int)($_GET['minggu'] ?? 0);
+        $status = trim((string)($_GET['status'] ?? ''));
         $kode_unit = trim((string)($_GET['kode_unit'] ?? ''));
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="cost-unit-' . $periode . '.csv"');
-        echo "No SPPB,Tanggal,Unit,Status,Total Cost\n";
-        $where = "s.jenis_permintaan='Rutin' AND DATE_FORMAT(s.tgl_sppb,'%Y-%m')=?";
-        $params = [$periode];
+
+        // Filter disamakan dengan tampilan laporan agar isi file selalu sama
+        // dengan yang sedang dilihat petugas di layar.
+        $start = $periode . '-01';
+        $end = date('Y-m-t', strtotime($start));
+        $where = "s.jenis_permintaan = 'Rutin' AND s.tgl_sppb BETWEEN ? AND ?";
+        $params = [$start, $end];
+        if ($minggu >= 1 && $minggu <= 4) {
+            $from = $minggu === 1 ? 1 : (($minggu - 1) * 7) + 1;
+            $to = $minggu === 4 ? 31 : ($minggu * 7);
+            $where .= ' AND DAY(s.tgl_sppb) BETWEEN ? AND ?';
+            $params[] = $from;
+            $params[] = $to;
+        }
+        if (in_array($status, ['Diajukan', 'Selesai'], true)) {
+            $where .= ' AND s.status = ?';
+            $params[] = $status;
+        }
         if ($kode_unit !== '') {
-            $where .= ' AND s.kode_unit=?';
+            $where .= ' AND s.kode_unit = ?';
             $params[] = $kode_unit;
         }
-        $stmt = $this->db()->pdo()->prepare("SELECT s.no_sppb,MAX(s.tgl_sppb),COALESCE(u.nama_unit,s.kode_unit),MAX(s.status),SUM(COALESCE(NULLIF(s.jumlah_dasar,0),s.jumlah*COALESCE(NULLIF(s.faktor_konversi,0),1))*COALESCE(b.harga_referensi,0)) FROM rsns_custom_logistik_non_medis_v_sppb_normalized s LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=s.kode_unit LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item WHERE $where GROUP BY s.no_sppb,s.kode_unit,u.nama_unit ORDER BY MAX(s.tgl_sppb)");
+
+        $sql = "SELECT s.no_sppb, s.tgl_sppb,
+                       COALESCE(NULLIF(s.minggu_ke,0), LEAST(4, FLOOR((DAY(s.tgl_sppb)-1)/7)+1)) minggu_ke,
+                       s.kode_unit, COALESCE(u.nama_unit, s.kode_unit) nama_unit,
+                       s.kode_item, COALESCE(NULLIF(s.nama_barang_manual,''), b.nama_barang, s.kode_item) nama_barang,
+                       s.jumlah, s.jumlah_dasar, s.jumlah_disetujui, s.jumlah_disetujui_dasar,
+                       s.satuan, s.faktor_konversi,
+                       COALESCE(NULLIF(s.satuan_dasar_snapshot,''), b.satuan_dasar, s.satuan) satuan_dasar,
+                       COALESCE(b.harga_referensi,0) harga_master, s.harga_satuan_cost, s.subtotal_cost,
+                       s.status, s.keterangan_item
+                FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
+                LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = s.kode_unit
+                LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = s.kode_item
+                WHERE $where
+                ORDER BY nama_unit, s.tgl_sppb, s.no_sppb, s.id";
+        $stmt = $this->db()->pdo()->prepare($sql);
         $stmt->execute($params);
-        foreach ($stmt as $r) {
-            echo '"' . implode('","', array_map(function ($v) {
-                return str_replace('"', '""', $v);
-            }, $r)) . "\"\n";
-        }exit();
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $namaBulan = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        $labelPeriode = $namaBulan[(int)date('n', strtotime($start))] . ' ' . date('Y', strtotime($start));
+        $labelMinggu = $minggu >= 1 && $minggu <= 4 ? 'Minggu ke-' . $minggu : 'Semua Minggu';
+        $labelStatus = in_array($status, ['Diajukan', 'Selesai'], true) ? $status : 'Semua Status';
+        $labelUnit = 'Semua Unit';
+        if ($kode_unit !== '') {
+            $unitRow = $this->db('rsns_custom_logistik_non_medis_unit')->where('kode_unit', $kode_unit)->oneArray();
+            $labelUnit = ($unitRow['nama_unit'] ?? $kode_unit) . ' (' . $kode_unit . ')';
+        }
+        $namaFile = 'cost-unit-' . $periode
+          . ($minggu >= 1 && $minggu <= 4 ? '-minggu' . $minggu : '')
+          . ($kode_unit !== '' ? '-' . preg_replace('/[^A-Za-z0-9_-]/', '', $kode_unit) : '')
+          . '.xlsx';
+
+        $teks = function ($nilai) { return ['v' => $nilai, 's' => self::XLSX_TEKS]; };
+        $num = function ($nilai) { return ['v' => (float)$nilai, 's' => self::XLSX_ANGKA, 't' => 'n']; };
+        $rp = function ($nilai) { return ['v' => (float)$nilai, 's' => self::XLSX_RUPIAH, 't' => 'n']; };
+
+        // Lembar 1: rincian per item, dibiarkan rata (tanpa baris subtotal di
+        // tengah data) supaya AutoFilter Excel bisa dipakai langsung.
+        $judulKolom = [
+          'No', 'Tgl Permintaan', 'Minggu', 'No SPPB', 'Kode Unit', 'Unit',
+          'Kode Item', 'Nama Barang', 'Jumlah Diminta', 'Satuan Diminta',
+          'Faktor Konversi', 'Total Permintaan (Satuan Dasar)', 'Satuan Dasar',
+          'Harga per Satuan Dasar', 'Total Harga Item'
+        ];
+        $barisRincian = [
+          [['v' => 'LAPORAN COST UNIT — PERMINTAAN RUTIN', 's' => self::XLSX_JUDUL]],
+          [['v' => 'Periode', 's' => self::XLSX_TEBAL], $labelPeriode, ['v' => 'Minggu', 's' => self::XLSX_TEBAL], $labelMinggu],
+          [['v' => 'Status', 's' => self::XLSX_TEBAL], $labelStatus, ['v' => 'Unit', 's' => self::XLSX_TEBAL], $labelUnit],
+          [['v' => 'Dicetak', 's' => self::XLSX_TEBAL], date('d/m/Y H:i'), ['v' => 'Oleh', 's' => self::XLSX_TEBAL], (string)$this->core->getUserInfo('username', null, true)],
+          [['v' => 'Catatan', 's' => self::XLSX_TEBAL], 'Total = jumlah dalam satuan dasar x harga per satuan dasar. Permintaan yang cost unit-nya sudah disimpan memakai harga yang terkunci saat itu, sisanya memakai HPS terbaru Master Barang. Gunakan tanda panah pada baris judul untuk menyaring data.'],
+          [],
+          array_map(function ($judul) { return ['v' => $judul, 's' => self::XLSX_HEADER]; }, $judulKolom)
+        ];
+        $barisHeader = count($barisRincian);
+
+        $no = 0;
+        $grandTotal = 0.0;
+        $rekapUnit = [];
+        $rekapSppb = [];
+        foreach ($rows as $row) {
+            $qtyDasar = $this->_qtyDasarSppb($row, false);
+            $biaya = $this->_hargaCostUnit($row);
+            $harga = $biaya['harga'];
+            $subtotal = $biaya['subtotal'];
+
+            $barisRincian[] = [
+              ['v' => ++$no, 's' => self::XLSX_BULAT, 't' => 'n'],
+              $teks(date('d/m/Y', strtotime($row['tgl_sppb']))),
+              $teks('Minggu ke-' . (int)$row['minggu_ke']),
+              $teks($row['no_sppb']),
+              $teks($row['kode_unit']),
+              $teks($row['nama_unit']),
+              $teks($row['kode_item']),
+              $teks($row['nama_barang']),
+              $num($row['jumlah']),
+              $teks($row['satuan']),
+              $num($row['faktor_konversi'] ?: 1),
+              $num($qtyDasar),
+              $teks($row['satuan_dasar']),
+              $rp($harga),
+              $rp($subtotal)
+            ];
+
+            $grandTotal += $subtotal;
+            $kodeUnit = $row['kode_unit'];
+            if (!isset($rekapUnit[$kodeUnit])) {
+                $rekapUnit[$kodeUnit] = ['nama' => $row['nama_unit'], 'sppb' => [], 'item' => 0, 'total' => 0.0];
+            }
+            $rekapUnit[$kodeUnit]['sppb'][$row['no_sppb']] = true;
+            $rekapUnit[$kodeUnit]['item']++;
+            $rekapUnit[$kodeUnit]['total'] += $subtotal;
+
+            $noSppb = $row['no_sppb'];
+            if (!isset($rekapSppb[$noSppb])) {
+                $rekapSppb[$noSppb] = [
+                  'tgl' => $row['tgl_sppb'], 'minggu' => (int)$row['minggu_ke'],
+                  'kode_unit' => $kodeUnit, 'unit' => $row['nama_unit'],
+                  'item' => 0, 'total' => 0.0
+                ];
+            }
+            $rekapSppb[$noSppb]['item']++;
+            $rekapSppb[$noSppb]['total'] += $subtotal;
+        }
+
+        if ($no === 0) {
+            $barisRincian[] = [['v' => 'Tidak ada data permintaan rutin pada filter ini.', 's' => self::XLSX_TEBAL]];
+        } else {
+            $barisRincian[] = array_merge(array_fill(0, 13, ['v' => '', 's' => self::XLSX_TOTAL_TEKS]), [
+              ['v' => 'TOTAL KESELURUHAN (' . $no . ' item)', 's' => self::XLSX_TOTAL_TEKS],
+              ['v' => $grandTotal, 's' => self::XLSX_TOTAL_RUPIAH, 't' => 'n']
+            ]);
+        }
+
+        $sheets = [[
+          'name' => 'Rincian Item',
+          'rows' => $barisRincian,
+          'cols' => [5, 14, 12, 18, 11, 26, 16, 34, 14, 14, 13, 16, 13, 18, 18],
+          'freeze' => $barisHeader,
+          'autofilter' => $no > 0 ? 'A' . $barisHeader . ':O' . ($barisHeader + $no) : ''
+        ]];
+
+        // Lembar 2: total cost per unit.
+        $barisUnit = [
+          [['v' => 'REKAP TOTAL COST PER UNIT', 's' => self::XLSX_JUDUL]],
+          [['v' => 'Periode', 's' => self::XLSX_TEBAL], $labelPeriode . ' — ' . $labelMinggu . ' — ' . $labelStatus],
+          [],
+          array_map(function ($judul) { return ['v' => $judul, 's' => self::XLSX_HEADER]; }, ['Kode Unit', 'Unit', 'Jumlah SPPB', 'Jumlah Item', 'Total Cost'])
+        ];
+        $headerUnit = count($barisUnit);
+        uasort($rekapUnit, function ($a, $b) { return $b['total'] <=> $a['total']; });
+        foreach ($rekapUnit as $kode => $data) {
+            $barisUnit[] = [
+              $teks($kode), $teks($data['nama']),
+              ['v' => count($data['sppb']), 's' => self::XLSX_BULAT, 't' => 'n'],
+              ['v' => $data['item'], 's' => self::XLSX_BULAT, 't' => 'n'],
+              $rp($data['total'])
+            ];
+        }
+        if ($rekapUnit) {
+            $barisUnit[] = [
+              ['v' => '', 's' => self::XLSX_TOTAL_TEKS],
+              ['v' => 'TOTAL SELURUH UNIT', 's' => self::XLSX_TOTAL_TEKS],
+              ['v' => count($rekapSppb), 's' => self::XLSX_TOTAL_BULAT, 't' => 'n'],
+              ['v' => $no, 's' => self::XLSX_TOTAL_BULAT, 't' => 'n'],
+              ['v' => $grandTotal, 's' => self::XLSX_TOTAL_RUPIAH, 't' => 'n']
+            ];
+        }
+        $sheets[] = [
+          'name' => 'Rekap per Unit',
+          'rows' => $barisUnit,
+          'cols' => [14, 34, 14, 14, 20],
+          'freeze' => $headerUnit,
+          'autofilter' => $rekapUnit ? 'A' . $headerUnit . ':E' . ($headerUnit + count($rekapUnit)) : ''
+        ];
+
+        // Lembar 3: total per permintaan (SPPB).
+        $barisSppb = [
+          [['v' => 'REKAP PER PERMINTAAN (SPPB)', 's' => self::XLSX_JUDUL]],
+          [['v' => 'Periode', 's' => self::XLSX_TEBAL], $labelPeriode . ' — ' . $labelMinggu . ' — ' . $labelStatus],
+          [],
+          array_map(function ($judul) { return ['v' => $judul, 's' => self::XLSX_HEADER]; }, ['No SPPB', 'Tgl Permintaan', 'Minggu', 'Kode Unit', 'Unit', 'Jumlah Item', 'Total Cost'])
+        ];
+        $headerSppb = count($barisSppb);
+        foreach ($rekapSppb as $noSppb => $data) {
+            $barisSppb[] = [
+              $teks($noSppb),
+              $teks(date('d/m/Y', strtotime($data['tgl']))),
+              $teks('Minggu ke-' . $data['minggu']),
+              $teks($data['kode_unit']),
+              $teks($data['unit']),
+              ['v' => $data['item'], 's' => self::XLSX_BULAT, 't' => 'n'],
+              $rp($data['total'])
+            ];
+        }
+        if ($rekapSppb) {
+            $barisSppb[] = array_merge(array_fill(0, 5, ['v' => '', 's' => self::XLSX_TOTAL_TEKS]), [
+              ['v' => $no, 's' => self::XLSX_TOTAL_BULAT, 't' => 'n'],
+              ['v' => $grandTotal, 's' => self::XLSX_TOTAL_RUPIAH, 't' => 'n']
+            ]);
+        }
+        $sheets[] = [
+          'name' => 'Rekap per SPPB',
+          'rows' => $barisSppb,
+          'cols' => [20, 16, 12, 12, 32, 13, 20],
+          'freeze' => $headerSppb,
+          'autofilter' => $rekapSppb ? 'A' . $headerSppb . ':G' . ($headerSppb + count($rekapSppb)) : ''
+        ];
+
+        $this->_kirimXlsx($namaFile, $sheets);
+        exit();
     }
 
     public function getLaporanPengadaan()
