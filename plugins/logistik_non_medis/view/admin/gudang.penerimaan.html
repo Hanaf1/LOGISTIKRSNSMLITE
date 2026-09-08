@@ -119,6 +119,43 @@
             });
         }
 
+        // Riwayat memakai view yang sama dengan halaman Pengadaan, sehingga
+        // kelas tombolnya ikut sama. Tetapi penangannya di sana terikat pada
+        // form dan pemuat daftar milik halaman Pengadaan, jadi halaman Gudang
+        // perlu penangan sendiri. Didelegasikan ke document karena tabelnya
+        // baru disisipkan setelah AJAX selesai.
+        $(document).on('click', '.edit-penerimaan', function() {
+            openGudangReceiptForm('', $(this).data('no'));
+        });
+
+        $(document).on('click', '.delete-penerimaan', function() {
+            var no_penerimaan = $(this).data('no');
+            if (!confirm('Yakin ingin menghapus penerimaan ' + no_penerimaan + '?')) {
+                return;
+            }
+            $.ajax({
+                url: '{?=url([ADMIN, "logistik_non_medis", "hapuspenerimaan"])?}',
+                type: 'POST',
+                dataType: 'json',
+                data: { no_penerimaan: no_penerimaan },
+                success: function(res) {
+                    if (res.status == 'success') {
+                        loadGudangHistory();
+                    } else {
+                        alert(res.message || 'Data tidak dapat dihapus.');
+                    }
+                },
+                error: function() {
+                    alert('Gagal menghubungi server.');
+                }
+            });
+        });
+
+        $(document).on('click', '.pagination-penerimaan a', function(e) {
+            e.preventDefault();
+            loadGudangHistory($(this).attr('data-hal'));
+        });
+
         loadGudangDashboard();
     });
 </script>

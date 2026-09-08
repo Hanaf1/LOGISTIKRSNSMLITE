@@ -26,6 +26,10 @@
                 <td>
                     {if: $value.status == 'Selesai'}
                     <span class="label label-success">Selesai</span>
+                    {elseif: $value.status == 'Menunggu Verifikasi'}
+                    <span class="label label-info">Menunggu Verifikasi</span>
+                    {elseif: $value.status == 'Ditolak'}
+                    <span class="label label-danger">Ditolak</span>
                     {else}
                     <span class="label label-warning">Draft</span>
                     {/if}
@@ -33,7 +37,7 @@
                 <td>
                     <div class="btn-group">
                         <button class="btn btn-default btn-xs edit-penerimaan" data-no="{$value.no_penerimaan}"><i class="fa fa-edit"></i> Edit</button>
-                        {if: $value.status == 'Draft'}
+                        {if: $value.status != 'Selesai'}
                         <button class="btn btn-danger btn-xs delete-penerimaan" data-no="{$value.no_penerimaan}"><i class="fa fa-trash"></i></button>
                         {/if}
                         {if: $value.status == 'Selesai'}
