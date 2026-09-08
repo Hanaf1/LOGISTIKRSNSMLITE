@@ -323,7 +323,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_asset_groups` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `kode_group` (`kode_group`),
   KEY `item_unit` (`kode_item`,`kode_unit`)
-) ENGINE=InnoDB AUTO_INCREMENT=9283 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9283 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_asset_groups` WRITE;
@@ -452,7 +452,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_fonnte_config` (
   `duration` tinyint NOT NULL DEFAULT '1',
   `delay` tinyint NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_fonnte_config` WRITE;
@@ -470,8 +470,8 @@ CREATE TABLE `rsns_custom_logistik_non_medis_fonnte_send_log` (
   `nomor` varchar(30) NOT NULL,
   `tgl_kirim` datetime NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `dedupe` (`username`,`tipe`,`no_sppb`,`tgl_kirim`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `dedupe` (`username`(50),`tipe`(20),`no_sppb`(50),`tgl_kirim`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_fonnte_send_log` WRITE;
@@ -487,7 +487,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_fonnte_template` (
   `pesan` text NOT NULL,
   `tgl_diperbarui` datetime NOT NULL,
   PRIMARY KEY (`tipe`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_fonnte_template` WRITE;
@@ -504,7 +504,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_inventaris_jenis` (
   `kode_jenis` char(2) NOT NULL,
   `nama_jenis` varchar(150) NOT NULL,
   PRIMARY KEY (`kode_kategori`,`kode_kelompok`,`kode_jenis`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_inventaris_jenis` WRITE;
@@ -519,7 +519,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_inventaris_kategori` (
   `kode_kategori` char(1) NOT NULL,
   `nama_kategori` varchar(100) NOT NULL,
   PRIMARY KEY (`kode_kategori`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_inventaris_kategori` WRITE;
@@ -535,7 +535,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_inventaris_kelompok` (
   `kode_kelompok` char(2) NOT NULL,
   `nama_kelompok` varchar(150) NOT NULL,
   PRIMARY KEY (`kode_kategori`,`kode_kelompok`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_inventaris_kelompok` WRITE;
@@ -568,7 +568,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_inventaris_master` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `jenis_kode` (`jenis_master`,`kode_kategori`,`kode`),
   KEY `idx_inventaris_jenis_kode` (`jenis_master`,`kode`)
-) ENGINE=InnoDB AUTO_INCREMENT=3220 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3220 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_inventaris_master` WRITE;
@@ -795,7 +795,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_notifier_event` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `no_sppb` (`no_sppb`),
   KEY `tgl_dibuat` (`tgl_dibuat`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_notifier_event` WRITE;
@@ -816,7 +816,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_notifikasi` (
   PRIMARY KEY (`id`),
   KEY `user_target` (`user_target`),
   KEY `is_read` (`is_read`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_notifikasi` WRITE;
@@ -1111,7 +1111,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_push_subscription` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `endpoint_hash` (`endpoint_hash`),
   KEY `username_aktif` (`username`,`aktif`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_push_subscription` WRITE;
@@ -1346,11 +1346,11 @@ UNLOCK TABLES;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
 /*!50003 SET character_set_client  = utf8mb4 */ ;
 /*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_lnm_role_permission_normal_ai` AFTER INSERT ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
+/*!50003 CREATE*/ /*!50017 */ /*!50003 TRIGGER `trg_lnm_role_permission_normal_ai` AFTER INSERT ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
   CALL `sp_lnm_sync_role_permission_normal`(NEW.`role`,NEW.`permissions`);
 END */;;
 DELIMITER ;
@@ -1363,11 +1363,11 @@ DELIMITER ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
 /*!50003 SET character_set_client  = utf8mb4 */ ;
 /*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_lnm_role_permission_normal_au` AFTER UPDATE ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
+/*!50003 CREATE*/ /*!50017 */ /*!50003 TRIGGER `trg_lnm_role_permission_normal_au` AFTER UPDATE ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
   IF OLD.`role`<>NEW.`role` THEN
     DELETE FROM `rsns_custom_logistik_non_medis_role_permission_item`
     WHERE `role`=OLD.`role`;
@@ -1384,11 +1384,11 @@ DELIMITER ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
 /*!50003 SET character_set_client  = utf8mb4 */ ;
 /*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_lnm_role_permission_normal_ad` AFTER DELETE ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
+/*!50003 CREATE*/ /*!50017 */ /*!50003 TRIGGER `trg_lnm_role_permission_normal_ad` AFTER DELETE ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
   DELETE FROM `rsns_custom_logistik_non_medis_role_permission_item`
   WHERE `role`=OLD.`role`;
 END */;;
@@ -1928,7 +1928,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_wa_contact` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   KEY `aktif` (`aktif`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_wa_contact` WRITE;
@@ -1948,7 +1948,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_waha_config` (
   `delay` tinyint NOT NULL DEFAULT '1',
   `tgl_diperbarui` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_waha_config` WRITE;
@@ -1968,8 +1968,8 @@ CREATE TABLE `rsns_custom_logistik_non_medis_waha_send_log` (
   `status` varchar(30) NOT NULL DEFAULT 'success',
   `keterangan` text,
   PRIMARY KEY (`id`),
-  KEY `dedupe` (`username`,`tipe`,`no_sppb`,`tgl_kirim`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  KEY `dedupe` (`username`(50),`tipe`(20),`no_sppb`(50),`tgl_kirim`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_waha_send_log` WRITE;
@@ -1985,7 +1985,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_waha_template` (
   `pesan` text NOT NULL,
   `tgl_diperbarui` datetime NOT NULL,
   PRIMARY KEY (`tipe`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 LOCK TABLES `rsns_custom_logistik_non_medis_waha_template` WRITE;
@@ -1999,9 +1999,9 @@ UNLOCK TABLES;
 /*!50001 SET @saved_col_connection     = @@collation_connection */;
 /*!50001 SET character_set_client      = utf8mb4 */;
 /*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+
 /*!50001 VIEW `rsns_custom_logistik_non_medis_v_role_permissions_csv` AS select `rsns_custom_logistik_non_medis_role_permission_item`.`role` AS `role`,group_concat(`rsns_custom_logistik_non_medis_role_permission_item`.`permission` order by `rsns_custom_logistik_non_medis_role_permission_item`.`permission` ASC separator ',') AS `permissions` from `rsns_custom_logistik_non_medis_role_permission_item` group by `rsns_custom_logistik_non_medis_role_permission_item`.`role` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
@@ -2014,7 +2014,7 @@ UNLOCK TABLES;
 /*!50001 SET character_set_results     = cp850 */;
 /*!50001 SET collation_connection      = cp850_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+
 /*!50001 VIEW `rsns_custom_logistik_non_medis_v_sppb_normalized` AS select `s`.`id` AS `id`,`s`.`no_sppb` AS `no_sppb`,`s`.`tgl_sppb` AS `tgl_sppb`,`rm`.`minggu_ke` AS `minggu_ke`,`s`.`kode_unit` AS `kode_unit`,`rm`.`jenis_permintaan` AS `jenis_permintaan`,`f`.`sumber_pemenuhan` AS `sumber_pemenuhan`,`f`.`referensi_pemenuhan` AS `referensi_pemenuhan`,`f`.`catatan_pemenuhan` AS `catatan_pemenuhan`,`f`.`user_tindak_lanjut` AS `user_tindak_lanjut`,`f`.`tgl_tindak_lanjut` AS `tgl_tindak_lanjut`,`rm`.`jenis_keluar` AS `jenis_keluar`,`s`.`kode_item` AS `kode_item`,`im`.`item_sumber` AS `item_sumber`,`im`.`nama_barang_manual` AS `nama_barang_manual`,`im`.`spesifikasi_manual` AS `spesifikasi_manual`,`im`.`estimasi_harga` AS `estimasi_harga`,`att`.`foto_barang` AS `foto_barang`,`rm`.`latar_belakang_tujuan` AS `latar_belakang_tujuan`,`rm`.`sasaran_kegunaan` AS `sasaran_kegunaan`,`rm`.`rencana_digunakan` AS `rencana_digunakan`,`s`.`jumlah` AS `jumlah`,`s`.`jumlah_disetujui` AS `jumlah_disetujui`,`im`.`harga_satuan_cost` AS `harga_satuan_cost`,`im`.`subtotal_cost` AS `subtotal_cost`,`im`.`faktor_konversi` AS `faktor_konversi`,`im`.`jumlah_dasar` AS `jumlah_dasar`,`im`.`jumlah_disetujui_dasar` AS `jumlah_disetujui_dasar`,`im`.`satuan_dasar_snapshot` AS `satuan_dasar_snapshot`,`s`.`satuan` AS `satuan`,`s`.`status` AS `status`,`rm`.`sifat_permintaan` AS `sifat_permintaan`,`rm`.`diajukan_oleh` AS `diajukan_oleh`,`rm`.`penanggung_jawab_1` AS `penanggung_jawab_1`,`rm`.`penanggung_jawab_2` AS `penanggung_jawab_2`,`rm`.`ka_unit` AS `ka_unit`,`s`.`keterangan` AS `keterangan`,`im`.`keterangan_item` AS `keterangan_item`,`s`.`alasan_penolakan` AS `alasan_penolakan`,coalesce(`ar`.`status_asal_penolakan`,`aku`.`status_asal_penolakan`,`aks`.`status_asal_penolakan`,`akb`.`status_asal_penolakan`,`ac`.`status_asal_penolakan`) AS `ditolak_pada_status`,`ac`.`keterangan` AS `keterangan_verifikasi`,`ac`.`username` AS `user_cost`,`ac`.`waktu` AS `tgl_cost`,`s`.`user_input` AS `user_input`,`s`.`tgl_input` AS `tgl_input`,`aku`.`username` AS `user_approve_ka_unit`,`aku`.`waktu` AS `tgl_approve_ka_unit`,`aks`.`username` AS `user_approve_ka_sie`,`aks`.`waktu` AS `tgl_approve_ka_sie`,`akb`.`username` AS `user_approve_ka_bidang`,`akb`.`waktu` AS `tgl_approve_ka_bidang`,`s`.`user_approve_unit` AS `user_approve_unit`,`s`.`tgl_approve_unit` AS `tgl_approve_unit`,`s`.`user_verifikasi` AS `user_verifikasi`,`s`.`tgl_verifikasi` AS `tgl_verifikasi`,`ap`.`username` AS `diambil_oleh`,`ap`.`waktu` AS `tgl_diambil` from ((((((((((`rsns_custom_logistik_non_medis_sppb` `s` left join `rsns_custom_logistik_non_medis_sppb_request_meta` `rm` on((`rm`.`no_sppb` = `s`.`no_sppb`))) left join `rsns_custom_logistik_non_medis_sppb_fulfillment` `f` on((`f`.`no_sppb` = `s`.`no_sppb`))) left join `rsns_custom_logistik_non_medis_sppb_item_meta` `im` on((`im`.`sppb_item_id` = `s`.`id`))) left join `rsns_custom_logistik_non_medis_sppb_approval` `aku` on(((`aku`.`no_sppb` = `s`.`no_sppb`) and (`aku`.`tahap` = 'KA_UNIT')))) left join `rsns_custom_logistik_non_medis_sppb_approval` `aks` on(((`aks`.`no_sppb` = `s`.`no_sppb`) and (`aks`.`tahap` = 'KA_SIE')))) left join `rsns_custom_logistik_non_medis_sppb_approval` `akb` on(((`akb`.`no_sppb` = `s`.`no_sppb`) and (`akb`.`tahap` = 'KA_BIDANG')))) left join `rsns_custom_logistik_non_medis_sppb_approval` `ac` on(((`ac`.`no_sppb` = `s`.`no_sppb`) and (`ac`.`tahap` = 'COSTING')))) left join `rsns_custom_logistik_non_medis_sppb_approval` `ap` on(((`ap`.`no_sppb` = `s`.`no_sppb`) and (`ap`.`tahap` = 'PENGAMBILAN')))) left join `rsns_custom_logistik_non_medis_sppb_approval` `ar` on(((`ar`.`no_sppb` = `s`.`no_sppb`) and (`ar`.`tahap` = 'REJECTION')))) left join (select `rsns_custom_logistik_non_medis_sppb_item_attachment`.`sppb_item_id` AS `sppb_item_id`,concat('[',group_concat(json_quote(`rsns_custom_logistik_non_medis_sppb_item_attachment`.`file_path`) order by `rsns_custom_logistik_non_medis_sppb_item_attachment`.`urutan` ASC,`rsns_custom_logistik_non_medis_sppb_item_attachment`.`id` ASC separator ','),']') AS `foto_barang` from `rsns_custom_logistik_non_medis_sppb_item_attachment` where (`rsns_custom_logistik_non_medis_sppb_item_attachment`.`jenis` = 'FOTO_BARANG') group by `rsns_custom_logistik_non_medis_sppb_item_attachment`.`sppb_item_id`) `att` on((`att`.`sppb_item_id` = `s`.`id`))) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
@@ -2027,7 +2027,7 @@ UNLOCK TABLES;
 /*!50001 SET character_set_results     = latin1 */;
 /*!50001 SET collation_connection      = latin1_swedish_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+
 /*!50001 VIEW `rsns_custom_logistik_non_medis_v_sppb_tambahan_normal` AS select `s`.`id` AS `sppb_item_id`,`s`.`no_sppb` AS `no_sppb`,`rm`.`minggu_ke` AS `minggu_ke`,`rm`.`jenis_permintaan` AS `jenis_permintaan`,`rm`.`jenis_keluar` AS `jenis_keluar`,`rm`.`sifat_permintaan` AS `sifat_permintaan`,`rm`.`diajukan_oleh` AS `diajukan_oleh`,`rm`.`penanggung_jawab_1` AS `penanggung_jawab_1`,`rm`.`penanggung_jawab_2` AS `penanggung_jawab_2`,`rm`.`ka_unit` AS `ka_unit`,`rm`.`latar_belakang_tujuan` AS `latar_belakang_tujuan`,`rm`.`sasaran_kegunaan` AS `sasaran_kegunaan`,`rm`.`rencana_digunakan` AS `rencana_digunakan`,`f`.`sumber_pemenuhan` AS `sumber_pemenuhan`,`f`.`referensi_pemenuhan` AS `referensi_pemenuhan`,`f`.`catatan_pemenuhan` AS `catatan_pemenuhan`,`f`.`user_tindak_lanjut` AS `user_tindak_lanjut`,`f`.`tgl_tindak_lanjut` AS `tgl_tindak_lanjut`,`im`.`item_sumber` AS `item_sumber`,`im`.`nama_barang_manual` AS `nama_barang_manual`,`im`.`spesifikasi_manual` AS `spesifikasi_manual`,`im`.`estimasi_harga` AS `estimasi_harga`,`im`.`harga_satuan_cost` AS `harga_satuan_cost`,`im`.`subtotal_cost` AS `subtotal_cost`,`im`.`keterangan_item` AS `keterangan_item` from (((`rsns_custom_logistik_non_medis_sppb` `s` left join `rsns_custom_logistik_non_medis_sppb_request_meta` `rm` on((`rm`.`no_sppb` = `s`.`no_sppb`))) left join `rsns_custom_logistik_non_medis_sppb_fulfillment` `f` on((`f`.`no_sppb` = `s`.`no_sppb`))) left join `rsns_custom_logistik_non_medis_sppb_item_meta` `im` on((`im`.`sppb_item_id` = `s`.`id`))) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
@@ -2038,25 +2038,36 @@ UNLOCK TABLES;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
 /*!50003 SET character_set_client  = utf8mb4 */ ;
 /*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_lnm_sync_role_permission_normal`(
+CREATE PROCEDURE `sp_lnm_sync_role_permission_normal`(
   IN p_role varchar(50) CHARACTER SET latin1 COLLATE latin1_swedish_ci,
   IN p_permissions text CHARACTER SET latin1 COLLATE latin1_swedish_ci
 )
 BEGIN
+  DECLARE v_sisa text;
+  DECLARE v_item varchar(100);
+
   DELETE FROM `rsns_custom_logistik_non_medis_role_permission_item`
   WHERE `role`=p_role;
 
-  INSERT IGNORE INTO `rsns_custom_logistik_non_medis_role_permission_item` (`role`,`permission`)
-  SELECT p_role,TRIM(j.`permission`)
-  FROM JSON_TABLE(
-    CONCAT('["',REPLACE(COALESCE(p_permissions,''),',','","'),'"]'),
-    '$[*]' COLUMNS (`permission` varchar(100) PATH '$')
-  ) AS j
-  WHERE TRIM(j.`permission`)<>'';
+  -- Dipecah dengan loop, bukan JSON_TABLE, supaya procedure ini tetap bisa
+  -- dibuat di MySQL 5.6/5.7 dan MariaDB di bawah 10.6.
+  SET v_sisa = COALESCE(p_permissions,'');
+  WHILE CHAR_LENGTH(v_sisa) > 0 DO
+    SET v_item = TRIM(SUBSTRING_INDEX(v_sisa, ',', 1));
+    IF v_item <> '' THEN
+      INSERT IGNORE INTO `rsns_custom_logistik_non_medis_role_permission_item` (`role`,`permission`)
+      VALUES (p_role, v_item);
+    END IF;
+    IF LOCATE(',', v_sisa) > 0 THEN
+      SET v_sisa = SUBSTRING(v_sisa, LOCATE(',', v_sisa) + 1);
+    ELSE
+      SET v_sisa = '';
+    END IF;
+  END WHILE;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
