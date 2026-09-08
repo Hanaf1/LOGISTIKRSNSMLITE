@@ -2001,6 +2001,110 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         exit();
     }
 
+    public function getExportMasterBarang()
+    {
+        $this->_initDataBarang();
+        $this->_initKategori();
+
+        // Filter disamakan dengan tampilan Data Barang agar isi file selalu sama
+        // dengan yang sedang dilihat petugas di layar.
+        $cari = trim((string)($_GET['cari'] ?? ''));
+        $kategori = trim((string)($_GET['kategori'] ?? ''));
+        $where = ['1=1'];
+        $params = [];
+        if ($cari !== '') {
+            $where[] = '(b.kode_item LIKE ? OR b.nama_barang LIKE ?)';
+            $like = '%' . $cari . '%';
+            $params[] = $like;
+            $params[] = $like;
+        }
+        if ($kategori !== '') {
+            $where[] = 'b.kode_kategori = ?';
+            $params[] = $kategori;
+        }
+
+        $sql = "SELECT b.kode_item, b.barcode, b.nama_barang, b.spesifikasi,
+                       COALESCE(NULLIF(k.nama_kategori,''), NULLIF(b.kategori,''), b.kode_kategori, '-') nama_kategori,
+                       b.sub_kategori, b.jenis_item, b.tipe_barang,
+                       b.satuan_dasar, b.satuan_konversi, b.harga_referensi,
+                       b.stok_min, b.stok_max, b.safety_stock,
+                       COALESCE(NULLIF(l.nama_lokasi,''), b.default_kode_lokasi, '') nama_lokasi,
+                       b.status
+                FROM rsns_custom_logistik_non_medis_master_barang b
+                LEFT JOIN rsns_custom_logistik_non_medis_kategori k ON k.kode_kategori = b.kode_kategori
+                LEFT JOIN rsns_custom_logistik_non_medis_lokasi_gudang l ON l.kode_lokasi = b.default_kode_lokasi
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY b.kode_item DESC";
+        $stmt = $this->db()->pdo()->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $labelKategori = 'Semua Kategori';
+        if ($kategori !== '') {
+            $rowKategori = $this->db('rsns_custom_logistik_non_medis_kategori')->where('kode_kategori', $kategori)->oneArray();
+            $labelKategori = ($rowKategori['nama_kategori'] ?? $kategori) . ' (' . $kategori . ')';
+        }
+        $namaFile = 'master-barang-' . date('Ymd_His')
+          . ($kategori !== '' ? '-' . preg_replace('/[^A-Za-z0-9_-]/', '', $kategori) : '')
+          . '.xlsx';
+
+        $teks = function ($nilai) { return ['v' => $nilai, 's' => self::XLSX_TEKS]; };
+        $num = function ($nilai) { return ['v' => (float)$nilai, 's' => self::XLSX_ANGKA, 't' => 'n']; };
+        $rp = function ($nilai) { return ['v' => (float)$nilai, 's' => self::XLSX_RUPIAH, 't' => 'n']; };
+
+        $judulKolom = [
+          'No', 'Kode Item', 'Barcode', 'Nama Barang', 'Kategori', 'Sub Kategori',
+          'Jenis Item', 'Tipe Barang', 'Satuan Dasar', 'Satuan Konversi',
+          'Harga Referensi (HPS)', 'Stok Min', 'Stok Max', 'Safety Stock',
+          'Lokasi Default', 'Spesifikasi', 'Status'
+        ];
+        $baris = [
+          [['v' => 'MASTER DATA BARANG — LOGISTIK NON MEDIS', 's' => self::XLSX_JUDUL]],
+          [['v' => 'Kategori', 's' => self::XLSX_TEBAL], $labelKategori, ['v' => 'Pencarian', 's' => self::XLSX_TEBAL], ($cari !== '' ? $cari : 'Tidak ada')],
+          [['v' => 'Dicetak', 's' => self::XLSX_TEBAL], date('d/m/Y H:i'), ['v' => 'Oleh', 's' => self::XLSX_TEBAL], (string)$this->core->getUserInfo('username', null, true)],
+          [['v' => 'Catatan', 's' => self::XLSX_TEBAL], 'Harga Referensi adalah HPS terbaru pada Master Barang. Gunakan tanda panah pada baris judul untuk menyaring data.'],
+          [],
+          array_map(function ($judul) { return ['v' => $judul, 's' => self::XLSX_HEADER]; }, $judulKolom)
+        ];
+        $barisHeader = count($baris);
+
+        $no = 0;
+        foreach ($rows as $row) {
+            $baris[] = [
+              ['v' => ++$no, 's' => self::XLSX_BULAT, 't' => 'n'],
+              $teks($row['kode_item']),
+              $teks($row['barcode']),
+              $teks($row['nama_barang']),
+              $teks($row['nama_kategori']),
+              $teks($row['sub_kategori']),
+              $teks($row['jenis_item']),
+              $teks($row['tipe_barang']),
+              $teks($row['satuan_dasar']),
+              $teks($row['satuan_konversi']),
+              $rp($row['harga_referensi']),
+              $num($row['stok_min']),
+              $num($row['stok_max']),
+              $num($row['safety_stock']),
+              $teks($row['nama_lokasi']),
+              $teks($row['spesifikasi']),
+              $teks($row['status'])
+            ];
+        }
+        if ($no === 0) {
+            $baris[] = [['v' => 'Tidak ada barang yang cocok dengan filter ini.', 's' => self::XLSX_TEKS]];
+        }
+
+        $barisAkhir = max($barisHeader, count($baris));
+        $this->_kirimXlsx($namaFile, [[
+          'name' => 'Master Barang',
+          'freeze' => $barisHeader,
+          'autofilter' => 'A' . $barisHeader . ':' . $this->_xlsxKolom(count($judulKolom)) . $barisAkhir,
+          'cols' => [6, 16, 16, 38, 20, 18, 12, 14, 14, 14, 18, 10, 10, 12, 22, 40, 12],
+          'rows' => $baris
+        ]]);
+        exit();
+    }
+
     public function anyDetailMasterBarang()
     {
         if (isset($_POST['kode_item'])) {
@@ -7762,6 +7866,13 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
     {
         $this->_initStok();
 
+        // Kolom `tgl_expired` bertipe DATE. Form penerimaan mengirim string
+        // kosong kalau barangnya tidak punya kedaluwarsa, dan MySQL dalam mode
+        // ketat menolak '' sebagai tanggal. Samakan dulu jadi NULL di sini agar
+        // seluruh pemanggil ikut terlindungi, bukan hanya alur penerimaan.
+        $tgl_expired = trim((string)($tgl_expired ?? ''));
+        $tgl_expired = ($tgl_expired === '' || $tgl_expired === '0000-00-00') ? null : $tgl_expired;
+
         if ($tipe == 'Masuk' || $tipe == 'Retur' || $tipe == 'Opname') {
             if ($tipe == 'Opname') {
                 // For Opname, we reset the batch stock.
@@ -8928,8 +9039,14 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
     public function getGudangMutasi()
     {
         $this->_initMutasi();
+        $this->_initKategori();
         $this->_addHeaderFiles();
-        $items = $this->db('rsns_custom_logistik_non_medis_master_barang')->toArray();
+        // Dropdown filter mengikuti daftar yang tampil, jadi barang yang
+        // dikecualikan tidak ikut ditawarkan.
+        $items = $this->db('rsns_custom_logistik_non_medis_master_barang')
+                     ->where('kode_item', 'NOT IN', $this->_kodeItemDikecualikanMutasi())
+                     ->asc('nama_barang')
+                     ->toArray();
         $lokasi = $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->toArray();
         $kode_item = $_GET['kode_item'] ?? '';
         return $this->draw('gudang.mutasi.html', [
@@ -9434,36 +9551,87 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         exit();
     }
 
+    /**
+     * Barang yang tidak ditampilkan pada Penyesuaian Stok (Mutasi).
+     *
+     * "*** BARANG BARU / LAINNYA ***" hanya penampung sementara saat impor,
+     * bukan barang nyata. Kategori Fotocopy dikelola di luar mutasi gudang.
+     * Dicocokkan lewat nama kategori supaya tetap benar walau kodenya berubah.
+     */
+    private function _kodeItemDikecualikanMutasi(): array
+    {
+        $stmt = $this->db()->pdo()->query(
+            "SELECT b.kode_item
+               FROM rsns_custom_logistik_non_medis_master_barang b
+               LEFT JOIN rsns_custom_logistik_non_medis_kategori k
+                 ON k.kode_kategori = b.kode_kategori
+              WHERE b.kode_item = 'BRG-BARU'
+                 OR b.nama_barang LIKE '%BARANG BARU / LAINNYA%'
+                 OR k.nama_kategori = 'Fotocopy'"
+        );
+        $kode = $stmt ? $stmt->fetchAll(\PDO::FETCH_COLUMN) : [];
+        // Selalu sisakan minimal satu nilai agar klausa NOT IN tetap sah.
+        return !empty($kode) ? $kode : ['BRG-BARU'];
+    }
+
     public function anyDisplayKartuStok()
     {
+        $tabel = 'rsns_custom_logistik_non_medis_kartu_stok';
         $kode_item = $_POST['kode_item'] ?? '';
         $kode_lokasi = $_POST['kode_lokasi'] ?? '';
         $tgl_awal = empty($_POST['tgl_awal']) ? '2000-01-01' : $_POST['tgl_awal'];
         $tgl_akhir = empty($_POST['tgl_akhir']) ? '2099-12-31' : $_POST['tgl_akhir'];
+        $perpage = 20;
+        $halaman = max(1, (int)($_POST['halaman'] ?? 1));
+        $dikecualikan = $this->_kodeItemDikecualikanMutasi();
 
-        $query = $this->db('rsns_custom_logistik_non_medis_kartu_stok')
-                    ->select('rsns_custom_logistik_non_medis_kartu_stok.*, rsns_custom_logistik_non_medis_master_barang.nama_barang, COALESCE(NULLIF(rsns_custom_logistik_non_medis_kartu_stok.satuan_snapshot, \'\'), rsns_custom_logistik_non_medis_master_barang.satuan_dasar, \'-\') AS satuan')
-                    ->leftJoin('rsns_custom_logistik_non_medis_master_barang', 'rsns_custom_logistik_non_medis_kartu_stok.kode_item = rsns_custom_logistik_non_medis_master_barang.kode_item')
-                    ->where('rsns_custom_logistik_non_medis_kartu_stok.tgl_transaksi', '>=', $tgl_awal . ' 00:00:00')
-                    ->where('rsns_custom_logistik_non_medis_kartu_stok.tgl_transaksi', '<=', $tgl_akhir . ' 23:59:59');
+        // Filter dipasang lewat closure supaya hitungan total dan pengambilan
+        // baris memakai syarat yang sama persis, tanpa menyalin kodenya dua kali.
+        $pasangFilter = function ($query) use ($tabel, $kode_item, $kode_lokasi, $tgl_awal, $tgl_akhir, $dikecualikan) {
+            $query->where($tabel . '.tgl_transaksi', '>=', $tgl_awal . ' 00:00:00')
+                  ->where($tabel . '.tgl_transaksi', '<=', $tgl_akhir . ' 23:59:59');
+            if (!empty($kode_item)) {
+                $query->where($tabel . '.kode_item', $kode_item);
+            }
+            if (!empty($kode_lokasi)) {
+                $query->where($tabel . '.kode_lokasi', $kode_lokasi);
+            }
+            $query->where($tabel . '.kode_item', 'NOT IN', $dikecualikan);
+            return $query;
+        };
 
-        if (!empty($kode_item)) {
-            $query->where('rsns_custom_logistik_non_medis_kartu_stok.kode_item', $kode_item);
+        $jumlah_data = (int)$pasangFilter($this->db($tabel))->count();
+        $jml_halaman = (int)ceil($jumlah_data / $perpage);
+        // Kalau filter menyusutkan data, halaman aktif jangan sampai melewati batas.
+        if ($jml_halaman > 0 && $halaman > $jml_halaman) {
+            $halaman = $jml_halaman;
         }
-        if (!empty($kode_lokasi)) {
-            $query->where('rsns_custom_logistik_non_medis_kartu_stok.kode_lokasi', $kode_lokasi);
-        }
+        $_offset = ($halaman - 1) * $perpage;
 
-        $rows = $query->asc('tgl_transaksi')->asc('id')->toArray();
+        $query = $pasangFilter($this->db($tabel))
+                    ->select($tabel . '.*, rsns_custom_logistik_non_medis_master_barang.nama_barang, COALESCE(NULLIF(' . $tabel . '.satuan_snapshot, \'\'), rsns_custom_logistik_non_medis_master_barang.satuan_dasar, \'-\') AS satuan')
+                    ->leftJoin('rsns_custom_logistik_non_medis_master_barang', $tabel . '.kode_item = rsns_custom_logistik_non_medis_master_barang.kode_item');
+
+        // Transaksi terbaru di baris paling atas; saldo awal justru paling jarang dilihat.
+        $rows = $query->desc('tgl_transaksi')->desc('id')->offset($_offset)->limit($perpage)->toArray();
+
+        // Rentang dirakit di sini supaya template tidak perlu berhitung sendiri.
+        $info_halaman = $jumlah_data > 0
+          ? 'Menampilkan ' . ($_offset + 1) . '–' . min($_offset + $perpage, $jumlah_data) . ' dari ' . $jumlah_data . ' transaksi'
+          : 'Tidak ada transaksi pada filter ini';
 
         echo $this->draw('gudang.mutasi.display.html', [
           'mutasi_history' => $rows, // Changed to mutasi_history to avoid conflict with transaction list
           'kode_item' => $kode_item,
           'kode_lokasi' => $kode_lokasi,
           'is_history' => true,
-          'jml_halaman' => 1,
-          'pages' => [1],
-          'halaman' => 1
+          'jumlah_data' => $jumlah_data,
+          'jml_halaman' => $jml_halaman,
+          'pages' => $jml_halaman > 1 ? range(1, $jml_halaman) : [],
+          'halaman' => $halaman,
+          'halaman_sebelum' => max(1, $halaman - 1),
+          'halaman_sesudah' => min(max(1, $jml_halaman), $halaman + 1),
+          'info_halaman' => $info_halaman
         ]);
         exit();
     }

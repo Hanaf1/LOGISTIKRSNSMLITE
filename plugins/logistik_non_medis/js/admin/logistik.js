@@ -275,6 +275,16 @@ $(document).ready(function () {
         loadMasterBarang(1);
     });
 
+    $('.btn-export-barang').on('click', function (e) {
+        e.preventDefault();
+        var exportUrl = $(this).attr('href');
+        var separator = exportUrl.indexOf('?') === -1 ? '?' : '&';
+        window.location.href = exportUrl + separator + $.param({
+            cari: $('#cari-barang').val() || '',
+            kategori: $('#filter-kategori-barang').val() || ''
+        });
+    });
+
     $(document).on('click', '.pagination-master-barang a', function (e) {
         e.preventDefault();
         var page = $(this).data('page');

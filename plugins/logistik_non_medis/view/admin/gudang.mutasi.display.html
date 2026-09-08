@@ -48,15 +48,22 @@
             </tbody>
         </table>
     </div>
-    {if: $jml_halaman > 1}
-    <nav class="text-center">
-        <ul class="pagination pagination-sm">
-            {loop: $pages}
-            <li class="{if: $halaman == $value}active{/if}"><a href="javascript:void(0)" onclick="loadKartuStok({$value})">{$value}</a></li>
-            {/loop}
-        </ul>
-    </nav>
-    {/if}
+    <div class="row">
+        <div class="col-sm-4">
+            <p class="text-muted" style="padding-top:8px">{$info_halaman}</p>
+        </div>
+        <div class="col-sm-8 text-right">
+            {if: $jml_halaman > 1}
+            <ul class="pagination pagination-sm" style="margin:0">
+                <li class="{if: $halaman == 1}disabled{/if}"><a href="javascript:void(0)" onclick="loadKartuStok({$halaman_sebelum})">&laquo;</a></li>
+                {loop: $pages}
+                <li class="{if: $halaman == $value}active{/if}"><a href="javascript:void(0)" onclick="loadKartuStok({$value})">{$value}</a></li>
+                {/loop}
+                <li class="{if: $halaman == $jml_halaman}disabled{/if}"><a href="javascript:void(0)" onclick="loadKartuStok({$halaman_sesudah})">&raquo;</a></li>
+            </ul>
+            {/if}
+        </div>
+    </div>
 {else}
     <!-- DISPLAY DAFTAR MUTASI -->
     <div class="table-responsive">
