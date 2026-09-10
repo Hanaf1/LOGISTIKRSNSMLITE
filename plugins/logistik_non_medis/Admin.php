@@ -1762,6 +1762,23 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         exit();
     }
 
+    public function getDownloadTemplateSppbMingguan()
+    {
+        // Urutan kolom mengikuti pembacaan postImportsppbmingguan(): indeks 0
+        // nomor urut, 1 nama unit, 2 nama barang, 3 jumlah. Unit dan barang
+        // dicocokkan berdasarkan NAMA, jadi harus sama persis dengan master data.
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=template_import_sppb_mingguan.csv');
+
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['No', 'Ruang / Unit', 'Nama Barang', 'Jumlah']);
+        fclose($output);
+        exit();
+    }
+
     public function postImportCSV()
     {
         $type = $_POST['type'] ?? '';
@@ -2981,6 +2998,72 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         exit();
     }
 
+    public function getExportMasterUnit()
+    {
+        $this->_initUnit();
+
+        // Filter disamakan dengan tampilan Data Unit agar isi file selalu sama
+        // dengan yang sedang dilihat petugas di layar.
+        $cari = trim((string)($_GET['cari'] ?? ''));
+        $where = ['1=1'];
+        $params = [];
+        if ($cari !== '') {
+            $where[] = '(u.kode_unit LIKE ? OR u.nama_unit LIKE ? OR u.pj_unit LIKE ?)';
+            $like = '%' . $cari . '%';
+            $params = [$like, $like, $like];
+        }
+
+        $sql = "SELECT u.kode_unit, u.nama_unit,
+                       COALESCE(NULLIF(p.nama_unit,''), '-') AS nama_induk,
+                       u.pj_unit, u.pj_nik, u.gedung, u.lantai, u.lokasi_detail, u.status
+                FROM rsns_custom_logistik_non_medis_unit u
+                LEFT JOIN rsns_custom_logistik_non_medis_unit p ON p.id = u.parent_id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY u.kode_unit ASC";
+        $stmt = $this->db()->pdo()->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $teks = function ($nilai) { return ['v' => $nilai, 's' => self::XLSX_TEKS]; };
+        $judulKolom = ['No', 'Kode Unit', 'Nama Unit', 'Struktur Induk', 'PJ Unit', 'NIK PJ', 'Gedung', 'Lantai', 'Lokasi Detail', 'Status'];
+        $baris = [
+          [['v' => 'MASTER DATA UNIT — LOGISTIK NON MEDIS', 's' => self::XLSX_JUDUL]],
+          [['v' => 'Pencarian', 's' => self::XLSX_TEBAL], ($cari !== '' ? $cari : 'Tidak ada')],
+          [['v' => 'Dicetak', 's' => self::XLSX_TEBAL], date('d/m/Y H:i'), ['v' => 'Oleh', 's' => self::XLSX_TEBAL], (string)$this->core->getUserInfo('username', null, true)],
+          [],
+          array_map(function ($judul) { return ['v' => $judul, 's' => self::XLSX_HEADER]; }, $judulKolom)
+        ];
+        $barisHeader = count($baris);
+
+        $no = 0;
+        foreach ($rows as $row) {
+            $baris[] = [
+              ['v' => ++$no, 's' => self::XLSX_BULAT, 't' => 'n'],
+              $teks($row['kode_unit']),
+              $teks($row['nama_unit']),
+              $teks($row['nama_induk']),
+              $teks($row['pj_unit']),
+              $teks($row['pj_nik']),
+              $teks($row['gedung']),
+              $teks($row['lantai']),
+              $teks($row['lokasi_detail']),
+              $teks($row['status'])
+            ];
+        }
+        if ($no === 0) {
+            $baris[] = [['v' => 'Tidak ada unit yang cocok dengan filter ini.', 's' => self::XLSX_TEKS]];
+        }
+
+        $this->_kirimXlsx('master-unit-' . date('Ymd_His') . '.xlsx', [[
+          'name' => 'Master Unit',
+          'freeze' => $barisHeader,
+          'autofilter' => 'A' . $barisHeader . ':' . $this->_xlsxKolom(count($judulKolom)) . max($barisHeader, count($baris)),
+          'cols' => [6, 18, 34, 30, 26, 20, 16, 10, 30, 14],
+          'rows' => $baris
+        ]]);
+        exit();
+    }
+
     public function anyFormMasterUnit()
     {
         $units_raw = $this->db('rsns_custom_logistik_non_medis_unit')->toArray();
@@ -3594,6 +3677,56 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           'jml_halaman' => $jml_halaman,
           'admin_mode' => $this->settings->get('settings.admin_mode')
         ]);
+        exit();
+    }
+
+    public function getExportMasterSatuan()
+    {
+        $this->_initSatuan();
+
+        // Filter disamakan dengan tampilan Data Satuan agar isi file selalu sama
+        // dengan yang sedang dilihat petugas di layar.
+        $cari = trim((string)($_GET['cari'] ?? ''));
+        $query = $this->db('rsns_custom_logistik_non_medis_satuan');
+        if ($cari !== '') {
+            $query->where('kode_satuan', 'LIKE', '%' . $cari . '%')
+                  ->orLike('nama_satuan', '%' . $cari . '%');
+        }
+        $rows = $query->asc('kode_satuan')->toArray();
+
+        $teks = function ($nilai) { return ['v' => $nilai, 's' => self::XLSX_TEKS]; };
+        $judulKolom = ['No', 'Kode Satuan', 'Nama Satuan', 'Satuan Dasar', 'Nilai Konversi'];
+        $baris = [
+          [['v' => 'MASTER DATA SATUAN — LOGISTIK NON MEDIS', 's' => self::XLSX_JUDUL]],
+          [['v' => 'Pencarian', 's' => self::XLSX_TEBAL], ($cari !== '' ? $cari : 'Tidak ada')],
+          [['v' => 'Dicetak', 's' => self::XLSX_TEBAL], date('d/m/Y H:i'), ['v' => 'Oleh', 's' => self::XLSX_TEBAL], (string)$this->core->getUserInfo('username', null, true)],
+          [['v' => 'Catatan', 's' => self::XLSX_TEBAL], 'Nilai konversi adalah jumlah satuan dasar untuk setiap 1 satuan ini.'],
+          [],
+          array_map(function ($judul) { return ['v' => $judul, 's' => self::XLSX_HEADER]; }, $judulKolom)
+        ];
+        $barisHeader = count($baris);
+
+        $no = 0;
+        foreach ($rows as $row) {
+            $baris[] = [
+              ['v' => ++$no, 's' => self::XLSX_BULAT, 't' => 'n'],
+              $teks($row['kode_satuan']),
+              $teks($row['nama_satuan']),
+              $teks($row['satuan_dasar']),
+              ['v' => (float)($row['nilai_konversi'] ?? 0), 's' => self::XLSX_ANGKA, 't' => 'n']
+            ];
+        }
+        if ($no === 0) {
+            $baris[] = [['v' => 'Tidak ada satuan yang cocok dengan filter ini.', 's' => self::XLSX_TEKS]];
+        }
+
+        $this->_kirimXlsx('master-satuan-' . date('Ymd_His') . '.xlsx', [[
+          'name' => 'Master Satuan',
+          'freeze' => $barisHeader,
+          'autofilter' => 'A' . $barisHeader . ':' . $this->_xlsxKolom(count($judulKolom)) . max($barisHeader, count($baris)),
+          'cols' => [6, 18, 30, 20, 18],
+          'rows' => $baris
+        ]]);
         exit();
     }
 
