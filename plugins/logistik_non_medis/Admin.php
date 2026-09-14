@@ -12395,7 +12395,12 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             exit;
         }
 
-        $header = fgetcsv($handle);
+        // Excel regional Indonesia menyimpan CSV dengan titik koma.
+        $firstLine = (string)fgets($handle);
+        $delimiter = substr_count($firstLine, ';') > substr_count($firstLine, ',') ? ';' : ',';
+        rewind($handle);
+
+        $header = fgetcsv($handle, 0, $delimiter);
         if (!$header) {
             echo json_encode(['status' => 'error', 'message' => 'File kosong atau format salah']);
             exit;
@@ -12419,7 +12424,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             $item_map[strtolower(trim($i['nama_barang']))] = $i['kode_item'];
         }
 
-        while (($data = fgetcsv($handle)) !== false) {
+        while (($data = fgetcsv($handle, 0, $delimiter)) !== false) {
             $row_num++;
             if (count($data) < 4) {
                 continue;
@@ -12461,8 +12466,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         fclose($handle);
 
         if (empty($sppb_data)) {
-            $msg = "Tidak ada data valid yang bisa diimport. " . implode("<br>", $errors);
-            echo json_encode(['status' => 'error', 'message' => $msg]);
+            echo json_encode(['status' => 'error', 'message' => 'Tidak ada data valid yang bisa diimport.', 'errors' => $errors]);
             exit;
         }
 
@@ -12495,14 +12499,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         }
 
         $msg = "Berhasil mengimport $success_count item ke dalam " . count($sppb_data) . " nomor SPPB.";
-        if (!empty($errors)) {
-            $msg .= "<br><br><strong>Peringatan:</strong><br>" . implode("<br>", array_slice($errors, 0, 10));
-            if (count($errors) > 10) {
-                $msg .= "<br>...dan " . (count($errors) - 10) . " error lainnya.";
-            }
-        }
-
-        echo json_encode(['status' => 'success', 'message' => $msg]);
+        echo json_encode(['status' => 'success', 'message' => $msg, 'errors' => $errors]);
         exit;
     }
 

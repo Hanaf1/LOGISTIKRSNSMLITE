@@ -147,13 +147,13 @@
                     <h3 class="panel-title pull-left" style="line-height: 34px;"><i class="fa fa-shopping-cart"></i> {if: !empty($jenis_page)}{if: $jenis_page == 'Non Rutin'}Pengadaan Non Rutin{else}Permintaan Rutin (BHP Mingguan){/if}{else}Permintaan Barang (SPPB){/if}</h3>
                     {if: !empty($can_create_sppb) || (!empty($can_manage_distribusi_controls) && (empty($jenis_page) || $jenis_page == 'Rutin'))}
                     <div class="btn-group pull-right">
-                        {if: empty($jenis_page) || $jenis_page == 'Rutin'}
+                        {if: !empty($can_manage_distribusi_controls) && (empty($jenis_page) || $jenis_page == 'Rutin')}
                         <div class="btn-group" style="margin-right: 5px;">
                             <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="fa fa-file-excel-o"></i> Excel <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-right">
-                                <li><a href="{?=url(ADMIN.'/logistik_non_medis/downloadtemplatesppb')?}"><i class="fa fa-download"></i> Unduh Template Import (CSV)</a></li>
+                                <li><a href="{?=url(ADMIN.'/logistik_non_medis/downloadtemplatesppbmingguan')?}"><i class="fa fa-download"></i> Unduh Template Import (CSV)</a></li>
                                 <li><a href="javascript:void(0)" onclick="$('#modal-import-sppb').modal('show')"><i class="fa fa-upload"></i> Import SPPB (CSV)</a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a href="javascript:void(0)" onclick="exportSppbAktif()"><i class="fa fa-file-excel-o"></i> Export Data Tabel (CSV)</a></li>
@@ -644,8 +644,8 @@ $(document).ready(function() {
             return;
         }
         var extension = (file.name.split('.').pop() || '').toLowerCase();
-        if ($.inArray(extension, ['csv', 'xlsx']) === -1) {
-            $result.removeClass('alert-info alert-success').addClass('alert-danger').html('<i class="fa fa-times-circle"></i> Format harus CSV atau XLSX.').show();
+        if (extension !== 'csv') {
+            $result.removeClass('alert-info alert-success').addClass('alert-danger').html('<i class="fa fa-times-circle"></i> Format harus CSV.').show();
             return;
         }
         if (file.size > 10 * 1024 * 1024) {
@@ -1013,43 +1013,6 @@ function exportSppbAktif() {
     window.location.href = url;
 }
 
-$('#form-import-sppb').on('submit', function(e) {
-    e.preventDefault();
-    var formData = new FormData(this);
-    var btn = $(this).find('button[type="submit"]');
-    var defaultBtnHtml = btn.html();
-    
-    btn.html('<i class="fa fa-spinner fa-spin"></i> Mengimpor...').prop('disabled', true);
-    
-    $.ajax({
-        url: '{?=url(ADMIN."/logistik_non_medis/importsppb")?}',
-        type: 'POST',
-        data: formData,
-        contentType: false,
-        processData: false,
-        success: function(res) {
-            btn.html(defaultBtnHtml).prop('disabled', false);
-            try {
-                var response = typeof res === 'string' ? JSON.parse(res) : res;
-                if (response.status === 'success') {
-                    bootbox.alert('Import berhasil! Data telah ditambahkan sebagai SPPB Rutin baru.', function() {
-                        $('#modal-import-sppb').modal('hide');
-                        $('#form-import-sppb')[0].reset();
-                        loadDisplay();
-                    });
-                } else {
-                    bootbox.alert('Gagal: ' + response.message);
-                }
-            } catch(e) {
-                bootbox.alert('Terjadi kesalahan saat mengurai respons dari server.');
-            }
-        },
-        error: function() {
-            btn.html(defaultBtnHtml).prop('disabled', false);
-            bootbox.alert('Terjadi kesalahan jaringan atau server.');
-        }
-    });
-});
 </script>
 
 <div class="modal fade" id="modal-import-sppb" tabindex="-1" role="dialog">
@@ -1062,17 +1025,42 @@ $('#form-import-sppb').on('submit', function(e) {
             <form id="form-import-sppb" enctype="multipart/form-data">
                 <div class="modal-body">
                     <div class="alert alert-info">
-                        <strong>Perhatian:</strong> Silakan unggah file berformat <strong>CSV</strong>. Anda bisa mengunduh formatnya terlebih dahulu melalui menu <strong>Unduh Template Import (CSV)</strong>.
+                        <strong>Format file:</strong> No; Ruang / Unit; Nama Barang; Jumlah.<br>
+                        Nama unit dan nama barang harus sama dengan master data. Nomor SPPB dibuat otomatis per unit.<br><br>
+                        <a class="btn btn-default btn-sm" href="{?=url(ADMIN.'/logistik_non_medis/downloadtemplatesppbmingguan')?}"><i class="fa fa-download"></i> Download Template CSV</a>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Periode Bulan / Tahun <span class="text-danger">*</span></label>
+                                <div class="input-group date" id="periode-import-sppb">
+                                    <input name="periode" class="form-control" value="{?=date('Y-m')?}" readonly required>
+                                    <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Minggu Ke- <span class="text-danger">*</span></label>
+                                <select name="minggu_ke" class="form-control" required>
+                                    <option value="1">Minggu ke-1</option>
+                                    <option value="2">Minggu ke-2</option>
+                                    <option value="3">Minggu ke-3</option>
+                                    <option value="4">Minggu ke-4</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label>Pilih File Excel (CSV)</label>
-                        <input type="file" name="file_excel" class="form-control" accept=".csv" required>
-                        <p class="help-block">Pastikan kolom Kode Barang terisi dengan benar. Baris dengan Kode Barang yang salah/tidak ditemukan akan otomatis diabaikan.</p>
+                        <label>File CSV <span class="text-danger">*</span></label>
+                        <input type="file" name="file" class="form-control" accept=".csv" required>
+                        <p class="help-block">Maksimal 10 MB. Pemisah kolom koma (,) atau titik koma (;).</p>
                     </div>
+                    <div id="import-sppb-result" class="alert" style="display:none;margin-bottom:0"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-success"><i class="fa fa-cloud-upload"></i> Mulai Import</button>
+                    <button type="submit" id="btn-proses-import-sppb" class="btn btn-success">Proses Import</button>
                 </div>
             </form>
         </div>
