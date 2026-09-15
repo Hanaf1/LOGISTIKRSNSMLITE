@@ -161,7 +161,7 @@
                         </div>
                         {/if}
                         {if: !empty($can_create_sppb)}
-                            {if: $jenis_page != 'Rutin' || $role != 'unit'}
+                            {if: $jenis_page != 'Rutin' || empty($is_unit_requester)}
                             <button class="btn btn-primary" id="btn-tambah"><i class="fa fa-plus"></i> Tambah Permintaan</button>
                             {/if}
                         {/if}
@@ -231,7 +231,7 @@
                     </ul>
                     {/if}
                     <div id="sppb-list-pane">
-                    {if: $role == 'kepala_unit' || $role == 'kepala_sie' || $role == 'kepala_bidang'}
+                    {if: ($role == 'kepala_unit' && $jenis_page != 'Rutin') || $role == 'kepala_sie' || $role == 'kepala_bidang'}
                     <ul class="nav nav-tabs sppb-approval-tabs" id="approvalTabs">
                         <li class="active">
                             <a href="javascript:void(0)" class="approval-tab-link" data-tab="pending">
@@ -243,6 +243,13 @@
                                 <i class="fa fa-history"></i> Riwayat Persetujuan
                             </a>
                         </li>
+                        {if: $role == 'kepala_unit'}
+                        <li>
+                            <a href="javascript:void(0)" class="approval-tab-link" data-tab="mine">
+                                <i class="fa fa-user"></i> Permintaan Unit Saya
+                            </a>
+                        </li>
+                        {/if}
                     </ul>
                     <div style="margin-top:15px;"></div>
                     {/if}
@@ -315,7 +322,7 @@
                         </div>
                     </div>
                     {/if}
-                    {if: !empty($jenis_page) && $jenis_page == 'Rutin' && $role == 'unit'}
+                    {if: !empty($jenis_page) && $jenis_page == 'Rutin' && !empty($is_unit_requester)}
                     <div id="sppb-active-rutin">
                         {if: !empty($current_week_sppb)}
                             {if: $current_week_sppb.status == 'Selesai' || $current_week_sppb.status == 'Diterima'}
@@ -544,7 +551,7 @@ var sppbCurrentRole = '{$role}';
 var sppbCurrentTab = 'pending';
 var sppbJenisPage = '{$jenis_page}';
 var sppbListTab = sppbJenisPage ? 'active' : '';
-var sppbRutinUnitMode = sppbJenisPage === 'Rutin' && sppbCurrentRole === 'unit';
+var sppbRutinUnitMode = sppbJenisPage === 'Rutin' && (sppbCurrentRole === 'unit' || sppbCurrentRole === 'kepala_unit');
 var sppbToastStorageKey = 'logistik_sppb_toast';
 
 $(document).ready(function() {
@@ -753,7 +760,7 @@ function loadDisplay(halaman) {
         halaman: halaman
     };
 
-    if (sppbCurrentRole === 'kepala_unit' || sppbCurrentRole === 'kepala_sie' || sppbCurrentRole === 'kepala_bidang') {
+    if (!sppbRutinUnitMode && (sppbCurrentRole === 'kepala_unit' || sppbCurrentRole === 'kepala_sie' || sppbCurrentRole === 'kepala_bidang')) {
         postData.approval_tab = sppbCurrentTab;
     }
 
@@ -895,7 +902,8 @@ function flushStoredSppbToast() {
 }
 
 function showSppbNotificationResult(notification) {
-    if (!notification) return;
+    // Hasil pengiriman WhatsApp hanya ditampilkan untuk Admin Logistik
+    if (!notification || sppbCurrentRole !== 'admin') return;
     var status = notification.wa_status || 'skipped';
     var type = status === 'sent' ? 'success' : (status === 'failed' ? 'error' : 'info');
     var title = status === 'sent' ? 'WhatsApp berhasil dikirim' : (status === 'failed' ? 'WhatsApp gagal dikirim' : (status === 'partial' ? 'WhatsApp terkirim sebagian' : 'WhatsApp tidak dikirim'));
@@ -916,9 +924,17 @@ function buatSuratOrderNonRutin(no_sppb) {
 
 function approveUnit(no_sppb, label) {
     if(!label) label = 'Penyetuju';
-    bootbox.confirm('Setujui permintaan ini (' + label + ')?', function(result) {
-        if(result) {
-            $.post('{?=url(ADMIN."/logistik_non_medis/approvesppb")?}', {no_sppb: no_sppb}, function(data) {
+    bootbox.prompt({
+        title: 'Setujui permintaan ini (' + label + ')?',
+        message: 'Catatan persetujuan (opsional, kosongkan jika tidak ada):',
+        inputType: 'textarea',
+        buttons: {
+            confirm: { label: '<i class="fa fa-check"></i> Setujui', className: 'btn-success' },
+            cancel: { label: 'Batal', className: 'btn-default' }
+        },
+        callback: function(catatan) {
+            if (catatan === null) return;
+            $.post('{?=url(ADMIN."/logistik_non_medis/approvesppb")?}', {no_sppb: no_sppb, keterangan: $.trim(catatan)}, function(data) {
                 var res = JSON.parse(data);
                 if(res.status == 'success') {
                     showSppbStatusResult(res, 'Permintaan berhasil disetujui.');

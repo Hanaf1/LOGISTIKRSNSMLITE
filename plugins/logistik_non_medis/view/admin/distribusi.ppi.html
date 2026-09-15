@@ -834,9 +834,17 @@ function hapusSPPB(no_sppb) {
 
 function approveUnit(no_sppb, label) {
     if(!label) label = 'Penyetuju';
-    bootbox.confirm('Setujui permintaan ini (' + label + ')?', function(result) {
-        if(result) {
-            $.post('{?=url(ADMIN."/logistik_non_medis/approvesppb")?}', {no_sppb: no_sppb}, function(data) {
+    bootbox.prompt({
+        title: 'Setujui permintaan ini (' + label + ')?',
+        message: 'Catatan persetujuan (opsional, kosongkan jika tidak ada):',
+        inputType: 'textarea',
+        buttons: {
+            confirm: { label: '<i class="fa fa-check"></i> Setujui', className: 'btn-success' },
+            cancel: { label: 'Batal', className: 'btn-default' }
+        },
+        callback: function(catatan) {
+            if (catatan === null) return;
+            $.post('{?=url(ADMIN."/logistik_non_medis/approvesppb")?}', {no_sppb: no_sppb, keterangan: $.trim(catatan)}, function(data) {
                 var res = JSON.parse(data);
                 if(res.status == 'success') {
                     loadDisplay();

@@ -1,4 +1,14 @@
 <div class="table-responsive">
+    <style>
+        .sppb-aksi { display:flex; flex-direction:column; align-items:center; gap:6px; }
+        .sppb-aksi-keputusan { display:flex; gap:6px; width:100%; justify-content:center; }
+        .sppb-aksi-keputusan .btn { flex:1 1 0; min-width:78px; font-weight:600; padding:4px 8px; border-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,.15); white-space:nowrap; }
+        .sppb-aksi-keputusan .btn i { margin-right:3px; }
+        .sppb-aksi-tahap { display:block; font-size:10px; color:#8a8f96; text-transform:uppercase; letter-spacing:.3px; margin-bottom:-2px; }
+        .sppb-aksi-tools { display:inline-flex; flex-wrap:wrap; justify-content:center; }
+        .sppb-aksi-tools .btn-hapus { color:#c9302c; }
+        .sppb-aksi-tools .btn-hapus:hover { color:#fff; background:#c9302c; border-color:#ac2925; }
+    </style>
     <table class="table table-striped table-hover">
         <thead>
             <tr>
@@ -8,7 +18,7 @@
                 {if: $role != 'unit'}<th>Unit Pengaju</th>{/if}
                 <th>Daftar Barang</th>
                 <th width="120">Status</th>
-                <th width="150" class="text-center">Aksi</th>
+                <th width="200" class="text-center">Aksi</th>
             </tr>
         </thead>
         <tbody>
@@ -121,7 +131,23 @@
                             {/if}
                         </td>
                         <td class="text-center">
-                            <div class="btn-group">
+                          <div class="sppb-aksi">
+                            {if: $value.can_approve_ka_unit || $value.can_approve_ka_sie || $value.can_approve_ka_bidang}
+                            <div style="width:100%">
+                                <span class="sppb-aksi-tahap">{if: $value.can_approve_ka_unit}Persetujuan Ka. Unit{elseif: $value.can_approve_ka_sie}Persetujuan KASI{else}Persetujuan KABID{/if}</span>
+                                <div class="sppb-aksi-keputusan">
+                                    {if: $value.can_approve_ka_unit}
+                                    <button class="btn btn-sm btn-success" onclick="approveUnit('{$value.no_sppb}', 'Kepala Unit')" title="Setujui Ka. Unit"><i class="fa fa-check"></i> Setujui</button>
+                                    {elseif: $value.can_approve_ka_sie}
+                                    <button class="btn btn-sm btn-success" onclick="approveUnit('{$value.no_sppb}', 'KASI')" title="ACC KASI"><i class="fa fa-check"></i> Setujui</button>
+                                    {else}
+                                    <button class="btn btn-sm btn-success" onclick="approveUnit('{$value.no_sppb}', 'KABID')" title="ACC KABID"><i class="fa fa-check"></i> Setujui</button>
+                                    {/if}
+                                    <button class="btn btn-sm btn-danger" onclick="rejectUnit('{$value.no_sppb}')" title="Tolak Permintaan"><i class="fa fa-times"></i> Tolak</button>
+                                </div>
+                            </div>
+                            {/if}
+                            <div class="btn-group sppb-aksi-tools">
                                 {if: $value.jenis_permintaan == 'Non Rutin'}
                                     <button class="btn btn-xs btn-default" onclick="dokumenSPPB('{$value.no_sppb}')" title="Buka Dokumen Persetujuan"><i class="fa fa-file-text-o"></i></button>
                                 {/if}
@@ -129,19 +155,7 @@
                                     <button class="btn btn-xs {if: $value.status == 'Ditolak'}btn-warning{else}btn-default{/if}" onclick="editSPPB('{$value.no_sppb}')" title="{if: $value.status == 'Ditolak'}Revisi Permintaan{else}Edit{/if}"><i class="fa fa-pencil"></i>{if: $value.status == 'Ditolak'} Revisi{/if}</button>
                                 {/if}
                                 {if: $value.can_delete}
-                                    <button class="btn btn-xs btn-danger" onclick="hapusSPPB('{$value.no_sppb}')" title="{if: $value.status == 'Diajukan'}Batalkan Permintaan{else}Hapus Draft{/if}"><i class="fa fa-trash"></i></button>
-                                {/if}
-                                {if: $value.can_approve_ka_unit}
-                                    <button class="btn btn-xs btn-primary" onclick="approveUnit('{$value.no_sppb}', 'Kepala Unit')" title="Setujui Ka. Unit"><i class="fa fa-check-circle"></i></button>
-                                    <button class="btn btn-xs btn-danger" onclick="rejectUnit('{$value.no_sppb}')" title="Tolak Permintaan"><i class="fa fa-times-circle"></i></button>
-                                {/if}
-                                {if: $value.can_approve_ka_sie}
-                                    <button class="btn btn-xs btn-warning" onclick="approveUnit('{$value.no_sppb}', 'KASI')" title="ACC KASI"><i class="fa fa-check-circle"></i></button>
-                                    <button class="btn btn-xs btn-danger" onclick="rejectUnit('{$value.no_sppb}')" title="Tolak Permintaan"><i class="fa fa-times-circle"></i></button>
-                                {/if}
-                                {if: $value.can_approve_ka_bidang}
-                                    <button class="btn btn-xs btn-success" onclick="approveUnit('{$value.no_sppb}', 'KABID')" title="ACC KABID"><i class="fa fa-check-circle"></i></button>
-                                    <button class="btn btn-xs btn-danger" onclick="rejectUnit('{$value.no_sppb}')" title="Tolak Permintaan"><i class="fa fa-times-circle"></i></button>
+                                    <button class="btn btn-xs btn-default btn-hapus" onclick="hapusSPPB('{$value.no_sppb}')" title="{if: $value.status == 'Diajukan'}Batalkan Permintaan{else}Hapus Draft{/if}"><i class="fa fa-trash"></i></button>
                                 {/if}
                                 {if: $value.can_proses_logistik}
                                     <button class="btn btn-xs btn-success" onclick="verifikasiLogistik('{$value.no_sppb}')" title="{if: $value.jenis_permintaan == 'Non Rutin'}Serahkan ke KASIE Umum & Administrasi{else}Proses Logistik{/if}"><i class="fa fa-arrow-right"></i></button>
@@ -180,6 +194,7 @@
                                 {/if}
                                 <button class="btn btn-xs btn-info" onclick="detailSPPB('{$value.no_sppb}')" title="Detail"><i class="fa fa-eye"></i></button>
                             </div>
+                          </div>
                         </td>
                     </tr>
                 {/loop}

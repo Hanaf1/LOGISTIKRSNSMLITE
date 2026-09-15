@@ -616,7 +616,8 @@ $(document).ready(function() {
                     }
                     if (typeof storeSppbToast === 'function') {
                         storeSppbToast('success', successTitle, successMessage);
-                        if (res.notification) {
+                        // Hasil pengiriman WhatsApp hanya ditampilkan untuk Admin Logistik
+                        if (res.notification && '{$role}' === 'admin') {
                             var waStatus = res.notification.wa_status || 'skipped';
                             storeSppbToast(
                                 waStatus === 'sent' ? 'success' : (waStatus === 'failed' ? 'error' : 'info'),

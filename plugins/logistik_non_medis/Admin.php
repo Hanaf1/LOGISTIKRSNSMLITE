@@ -11443,7 +11443,8 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         }
 
         $current_week_sppb = null;
-        if ($jenis === 'Rutin' && $role === 'unit' && !empty($userRoleData['kode_unit'])) {
+        $is_unit_requester = in_array($role, ['unit', 'kepala_unit'], true);
+        if ($jenis === 'Rutin' && $is_unit_requester && !empty($userRoleData['kode_unit'])) {
             $timestamp = time();
             $dayOfWeek = date('w', $timestamp);
             $offset = $dayOfWeek == 0 ? 6 : $dayOfWeek - 1;
@@ -11484,7 +11485,8 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
           'weekly_count_tambahan' => $fridaySummary['tambahan_aktif'],
           'weekly_period_start' => $fridaySummary['periode_awal'],
           'weekly_period_end' => $fridaySummary['periode_akhir'],
-          'can_create_sppb' => in_array($role, ['admin', 'unit', 'logistik'], true),
+          'can_create_sppb' => in_array($role, ['admin', 'unit', 'kepala_unit', 'logistik'], true),
+          'is_unit_requester' => $is_unit_requester,
           'can_manage_distribusi_controls' => in_array($role, ['admin', 'logistik'], true),
           'can_access_rekap_nonrutin' => $jenis === 'Non Rutin' && $this->_canAccessRekapNonRutin(),
           'rekap_tanggal_awal' => date('Y-m-01'),
@@ -11868,6 +11870,15 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                     } elseif ($role === 'kepala_bidang') {
                         $sql .= " AND s.jenis_permintaan = 'Non Rutin' AND s.status = 'Disetujui Ka. Sie' ";
                     }
+                } elseif ($approval_tab === 'mine') {
+                    // Permintaan yang diajukan sendiri oleh Ka. Unit
+                    $sql .= " AND s.user_input = ? ";
+                    $params[] = $username;
+                    if ($list_tab === 'active') {
+                        $sql .= " AND s.status NOT IN ('Selesai', 'Batal', 'Dibatalkan', 'Ditolak') ";
+                    } elseif ($list_tab === 'history') {
+                        $sql .= " AND s.status IN ('Selesai', 'Batal', 'Dibatalkan', 'Ditolak') ";
+                    }
                 } elseif ($approval_tab === 'history') {
                     if ($role === 'kepala_unit') {
                         $sql .= " AND s.user_approve_ka_unit = ? ";
@@ -12067,6 +12078,14 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             }
             $units[] = $u;
         }
+        // Ka. Unit hanya dapat mengajukan untuk unit dalam lingkupnya
+        $kepala_unit_scope = [];
+        if ($role === 'kepala_unit' && !empty($user_kode_unit)) {
+            $kepala_unit_scope = array_values(array_unique(array_map('trim', $this->getChildUnitCodes(explode(',', $user_kode_unit)))));
+            $units = array_values(array_filter($units, function ($u) use ($kepala_unit_scope) {
+                return in_array($u['kode_unit'] ?? '', $kepala_unit_scope, true);
+            }));
+        }
         foreach ($units as &$unit_row) {
             $unit_row['ka_unit_parent'] = $this->_getKaUnitFromParent($unit_row['kode_unit'] ?? '');
         }
@@ -12167,7 +12186,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             $sppb = [
               'no_sppb' => '',
               'tgl_sppb' => date('Y-m-d'),
-              'kode_unit' => ($role === 'unit' && !empty($user_kode_unit)) ? $user_kode_unit : '',
+              'kode_unit' => ($role === 'unit' && !empty($user_kode_unit)) ? $user_kode_unit : (count($units) === 1 && $role === 'kepala_unit' ? $units[0]['kode_unit'] : ''),
               'jenis_permintaan' => isset($_POST['jenis']) ? $_POST['jenis'] : 'Rutin',
               'status' => 'Draft',
               'latar_belakang_tujuan' => '',
@@ -12533,6 +12552,18 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
         if ($role === 'unit' && !empty($user_kode_unit)) {
             $kode_unit = $user_kode_unit; // enforce user's unit
+        }
+
+        // Ka. Unit hanya boleh mengajukan untuk unit dalam lingkupnya
+        if ($role === 'kepala_unit' && !empty($user_kode_unit)) {
+            $kepala_unit_scope = array_map('trim', $this->getChildUnitCodes(explode(',', $user_kode_unit)));
+            if (!in_array($kode_unit, $kepala_unit_scope, true)) {
+                while (ob_get_level()) {
+                    ob_end_clean();
+                }
+                echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak mengajukan permintaan untuk unit lain!']);
+                exit();
+            }
         }
 
         if (empty($no_sppb)) {
@@ -12994,6 +13025,23 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             $this->_logAction('logistik_non_medis_sppb', 'Simpan SPPB: ' . $no_sppb . ' | Status: ' . $status);
             $notification_result = null;
 
+            // Non Rutin yang diajukan Ka. Unit sendiri langsung dianggap disetujui Ka. Unit
+            if ($role === 'kepala_unit' && $jenis_permintaan === 'Non Rutin' && $status === 'Diajukan') {
+                $auto_approved = $this->_updateSppbNormalized(['no_sppb' => $no_sppb], [
+                  'status' => 'Disetujui Ka. Unit',
+                  'user_approve_ka_unit' => $user,
+                  'tgl_approve_ka_unit' => date('Y-m-d H:i:s')
+                ]);
+                if ($auto_approved) {
+                    $stmt_qty = $this->db()->pdo()->prepare("UPDATE rsns_custom_logistik_non_medis_sppb
+                      SET jumlah_disetujui = jumlah
+                      WHERE no_sppb = ? AND status != 'Ditolak' AND jumlah_disetujui <= 0");
+                    $stmt_qty->execute([$no_sppb]);
+                    $status = 'Disetujui Ka. Unit';
+                    $this->_logAction('logistik_non_medis_sppb', 'Auto Approve SPPB Non Rutin Ka. Unit (pengaju Ka. Unit): ' . $no_sppb, 'U');
+                }
+            }
+
             $jenis_perm = $_POST['jenis_permintaan'] ?? 'Rutin';
             if ($jenis_perm === 'Rutin' && $status === 'Diajukan') {
                 $unit_row = $this->db('rsns_custom_logistik_non_medis_unit')->where('kode_unit', $kode_unit)->oneArray();
@@ -13016,6 +13064,14 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                     $no_sppb,
                     'Permintaan Non Rutin ' . $no_sppb . ' membutuhkan persetujuan Ka. Unit.',
                     'approval_ka_unit'
+                );
+            } elseif ($jenis_perm === 'Non Rutin' && $status === 'Disetujui Ka. Unit') {
+                $notification_result = $this->_notifyApprovalRecipients(
+                    'kepala_sie',
+                    $kode_unit,
+                    $no_sppb,
+                    'Permintaan Non Rutin ' . $no_sppb . ' diajukan oleh Ka. Unit dan membutuhkan persetujuan KASI.',
+                    'approval_kasie'
                 );
             }
 
@@ -13302,7 +13358,13 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $keterangan_baru = trim((string)($_POST['keterangan'] ?? ''));
         if ($keterangan_baru !== '') {
             $ket_lama = trim((string)($cek['keterangan'] ?? ''));
-            $prefix = '[' . date('d/m/Y H:i') . ' - ' . $user . ']: ';
+            $tahap_labels = [
+              'Disetujui Ka. Unit' => 'Ka. Unit',
+              'Disetujui Ka. Sie' => 'KASI',
+              'Disetujui Kabid' => 'KABID'
+            ];
+            $tahap_label = $tahap_labels[$update_data['status'] ?? ''] ?? 'Persetujuan';
+            $prefix = '[' . date('d/m/Y H:i') . ' - ' . $user . '] ' . $tahap_label . ' - ';
             $update_data['keterangan'] = ($ket_lama === '') ? $prefix . $keterangan_baru : $ket_lama . "\n" . $prefix . $keterangan_baru;
         }
 
