@@ -3,7 +3,7 @@
 <tr>
     <td class="text-center">{$value.nomor_tabel}</td>
     <td>
-        <strong class="asset-name">{$value.nama_aset}</strong>
+        <strong class="asset-name">{$value.nama_aset}</strong><br><span class="label label-info">{$value.klasifikasi_label}</span>
         {if: !empty($value.merk_type)}<br><span class="label label-default">{$value.merk_type}</span>{/if}
         <br><small class="asset-classification">{$value.nama_kelompok} &rsaquo; {$value.nama_jenis}</small>
     </td>

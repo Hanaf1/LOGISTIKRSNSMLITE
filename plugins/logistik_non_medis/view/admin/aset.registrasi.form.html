@@ -198,6 +198,12 @@
                                 <div class="form-group">
                                     <label class="control-label">Harga Beli / Nilai Aset (Rp)</label>
                                     <input type="text" id="form_harga_beli" name="harga_beli" class="form-control" style="font-weight: bold;" value="{$aset.harga_beli}" placeholder="Rp. 0" required>
+                                    <p class="help-block">Harga perolehan per unit: di bawah Rp1.000.000 menjadi Inventaris Non-Aset; di atasnya Aset. Harga nol/belum valid dan tepat Rp1.000.000: Belum Ditentukan. Penyusutan hanya untuk Aset yang memenuhi syarat.</p>
+                                    {if: !empty($aset.id)}<p>Klasifikasi saat ini: <strong>{if: isset($aset.klasifikasi_pencatatan) && $aset.klasifikasi_pencatatan == 'ASET'}Aset{elseif: isset($aset.klasifikasi_pencatatan) && $aset.klasifikasi_pencatatan == 'INVENTARIS_NON_ASET'}Inventaris Non-Aset{else}Belum Ditentukan{/if}</strong></p>{/if}
+                                    <label><input type="checkbox" name="konfirmasi_harga_perolehan" value="1"> Saya memvalidasi harga perolehan ini untuk klasifikasi ulang data lama.</label>
+                                    <label for="alasan_klasifikasi">Alasan perubahan harga/klasifikasi</label>
+                                    <input type="text" id="alasan_klasifikasi" name="alasan_klasifikasi" class="form-control" placeholder="Wajib saat mengubah harga/klasifikasi data lama">
+
                                 </div>
                             </div>
                         </div>

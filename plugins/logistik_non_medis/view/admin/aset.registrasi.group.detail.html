@@ -36,7 +36,7 @@
             {loop: $items}
             <tr>
               <td class="text-center">{?=$offset + $key + 1?}</td>
-              <td><code>{$value.nomor_inventaris}</code></td>
+              <td><code>{$value.nomor_inventaris}</code><br><small>{if: $value.klasifikasi_pencatatan == 'ASET'}Aset{elseif: $value.klasifikasi_pencatatan == 'INVENTARIS_NON_ASET'}Inventaris Non-Aset{else}Belum Ditentukan{/if}</small></td>
               <td>{if: !empty($value.serial_number)}{$value.serial_number}{else}<span class="text-muted">-</span>{/if}</td>
               <td>{if: !empty($value.lokasi_fisik)}{$value.lokasi_fisik}{else}<span class="text-muted">-</span>{/if}</td>
               <td><select class="form-control input-sm kondisi-aset-group" data-id="{$value.id}"><option value="Baik" {if: $value.status_kondisi == 'Baik'}selected{/if}>Baik</option><option value="Rusak Ringan" {if: $value.status_kondisi == 'Rusak Ringan'}selected{/if}>Rusak Ringan</option><option value="Rusak Berat" {if: $value.status_kondisi == 'Rusak Berat'}selected{/if}>Rusak Berat</option></select></td>

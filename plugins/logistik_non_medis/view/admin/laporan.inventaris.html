@@ -59,6 +59,15 @@
               </div>
             </div>
             <div class="row" style="margin-top:10px;">
+              <div class="col-md-4">
+                <label for="filter_klasifikasi">Klasifikasi Pencatatan</label>
+                <select id="filter_klasifikasi" class="form-control">
+                  <option value="">Semua Inventaris</option>
+                  <option value="ASET">Aset</option>
+                  <option value="INVENTARIS_NON_ASET">Inventaris Non-Aset</option>
+                  <option value="BELUM_DITENTUKAN">Belum Ditentukan</option>
+                </select>
+              </div>
               <div class="col-md-12 text-right">
                 <button type="button" class="btn btn-success btn-export-kib-xlsx">
                   <i class="fa fa-file-excel-o"></i> Export XLSX Sesuai Filter
@@ -109,7 +118,7 @@ $(function() {
     searchTimeout = setTimeout(function(){ loadKib(1); }, 300);
   });
 
-  $('#filter_unit,#filter_kelompok,#filter_jenis,#filter_harga').on('change', function() {
+  $('#filter_unit,#filter_kelompok,#filter_jenis,#filter_harga,#filter_klasifikasi').on('change', function() {
     if (this.id === 'filter_kelompok') {
       filterJenisOptionsByKelompok($(this).val());
       $('#filter_jenis').val('').trigger('change.select2');
@@ -118,6 +127,7 @@ $(function() {
   });
 
   $('.btn-reset-filter').on('click', function() {
+    $('#filter_klasifikasi').val('');
     $('#form-filter-kib')[0].reset();
     filterJenisOptionsByKelompok('');
     $('#filter_unit').val('').trigger('change');
@@ -224,6 +234,7 @@ function getKibFilters() {
     filter_unit: $('#filter_unit').val() || '',
     filter_kelompok: $('#filter_kelompok').val() || '',
     filter_jenis: $('#filter_jenis').val() || '',
+    filter_klasifikasi: $('#filter_klasifikasi').val() || '',
     filter_harga: $('#filter_harga').val() || ''
   };
 }

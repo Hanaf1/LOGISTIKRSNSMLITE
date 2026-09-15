@@ -60,7 +60,7 @@
                         </tr>
                         <tr>
                             <td style="font-weight: bold;">Nama Aset</td>
-                            <td style="font-weight: bold;">{$aset.nama_aset}</td>
+                            <td style="font-weight: bold;">{$aset.nama_aset} <small>{if: $aset.klasifikasi_pencatatan == 'ASET'}Aset{elseif: $aset.klasifikasi_pencatatan == 'INVENTARIS_NON_ASET'}Inventaris Non-Aset{else}Belum Ditentukan{/if}</small></td>
                         </tr>
                         <tr>
                             <td style="font-weight: bold;">Merk / Tipe</td>

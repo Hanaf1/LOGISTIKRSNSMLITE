@@ -5,6 +5,8 @@ namespace Plugins\Logistik_non_medis;
 use Systems\AdminModule;
 use Mpdf\HTMLParserMode;
 
+require_once __DIR__ . '/InventarisClassification.php';
+
 class Admin extends AdminModule
 {
     private function _demoModeEnabled(): bool
@@ -522,6 +524,9 @@ class Admin extends AdminModule
         }
         if (strpos($method, 'laporanaset') !== false) {
             return 'laporanaset';
+        }
+        if (strpos($method, 'laporaninventaris') !== false) {
+            return 'laporaninventaris';
         }
         if (strpos($method, 'laporandashboardkpi') !== false) {
             return 'laporandashboardkpi';
@@ -1552,10 +1557,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           `status` varchar(50) NOT NULL DEFAULT 'Aktif',
           PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
+            InventarisClassification::ensureSchema($pdo);
             $dash_total_aset = (int) $pdo->query("
             SELECT COUNT(*)
             FROM rsns_custom_logistik_non_medis_aset
-            WHERE status = 'Aktif'
+            WHERE status = 'Aktif' AND klasifikasi_pencatatan = 'ASET'
         ")->fetchColumn();
         } catch (\Exception $e) {
             $dash_total_aset = 0;
@@ -16972,6 +16978,8 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         KEY `kode_unit` (`kode_unit`)
       ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
+        InventarisClassification::ensureSchema($this->db()->pdo());
+
         $check_asset_group = $this->db()->pdo()->query("SHOW COLUMNS FROM `rsns_custom_logistik_non_medis_aset` LIKE 'asset_group_id'")->fetch();
         if (!$check_asset_group) {
             $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_aset` ADD `asset_group_id` int(11) DEFAULT NULL AFTER `id`, ADD KEY `asset_group_id` (`asset_group_id`)");
@@ -17171,6 +17179,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
 
     private function _initPenyusutan()
     {
+        $this->_initAset();
         $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_aset_penyusutan` (
         `id` int(11) NOT NULL AUTO_INCREMENT,
         `kode_aset` varchar(100) NOT NULL,
@@ -17875,6 +17884,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         ]);
     }
 
+    public function getLaporanInventarisExportXlsx()
+    {
+        $this->getExportAset();
+    }
+
     public function getExportAset()
     {
         $this->_initAset();
@@ -17890,6 +17904,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
             $where[] = '(a.kode_aset LIKE ? OR a.nomor_inventaris LIKE ? OR a.nama_aset LIKE ? OR a.serial_number LIKE ? OR im.nama LIKE ?)';
             $like = '%' . $cari . '%';
             $params = [$like, $like, $like, $like, $like];
+        }
+        $filter_klasifikasi = InventarisClassification::validFilter($_GET['filter_klasifikasi'] ?? '');
+        if ($filter_klasifikasi !== '') {
+            $where[] = 'a.klasifikasi_pencatatan = ?';
+            $params[] = $filter_klasifikasi;
         }
         if ($filter_unit !== '') {
             $where[] = 'a.kode_unit = ?';
@@ -17915,19 +17934,27 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
             }
         }
         if ($filter_jenis !== '') {
-            $jenisParts = explode('|', $filter_jenis);
+            $jenisParts = preg_split('/[|.]/', $filter_jenis);
             if (count($jenisParts) === 3) {
                 $where[] = 'im.kode_kategori = ? AND im.kode_kelompok = ? AND im.kode_jenis = ?';
                 $params[] = $jenisParts[0];
                 $params[] = $jenisParts[1];
                 $params[] = $jenisParts[2];
+            } elseif (count($jenisParts) === 2) {
+                $where[] = 'im.kode_kelompok = ? AND im.kode_jenis = ?';
+                $params[] = $jenisParts[0];
+                $params[] = $jenisParts[1];
             } else {
                 $where[] = 'im.kode_jenis = ?';
                 $params[] = $filter_jenis;
             }
         }
+        $filter_harga = $_GET['filter_harga'] ?? '';
+        if ($filter_harga === 'tersedia') $where[] = 'a.harga_beli > 0';
+        if ($filter_harga === 'kosong') $where[] = 'a.harga_beli <= 0';
         $sql = "SELECT COALESCE(a.asset_group_id,-a.id) group_key,
-                     MIN(a.nomor_inventaris) nomor_awal, MAX(a.nomor_inventaris) nomor_akhir,
+                     CASE WHEN COUNT(DISTINCT a.klasifikasi_pencatatan)=1 THEN MAX(a.klasifikasi_pencatatan) ELSE 'CAMPURAN' END AS klasifikasi_pencatatan,
+                 MIN(a.nomor_inventaris) nomor_awal, MAX(a.nomor_inventaris) nomor_akhir,
                      MAX(COALESCE(im.nama,a.nama_aset)) nama_barang, MAX(a.merk_type) merk_type,
                      MAX(a.satuan) satuan, COUNT(DISTINCT a.id) jumlah_aset,
                      SUM(a.status_kondisi='Baik') jumlah_baik,
@@ -17950,13 +17977,15 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         $stmt->execute($params);
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         $labels = [];
+        if ($filter_klasifikasi !== '') $labels[] = InventarisClassification::label($filter_klasifikasi);
+        if ($filter_harga !== '') $labels[] = 'Harga: ' . ($filter_harga === 'tersedia' ? 'Terisi' : 'Belum diisi');
         if ($cari !== '') $labels[] = 'Pencarian: ' . $cari;
         if ($filter_unit !== '') $labels[] = 'Unit: ' . $filter_unit;
         if ($filter_sumber !== '') $labels[] = 'Asal: ' . $filter_sumber;
         if ($filter_kondisi !== '') $labels[] = 'Kondisi: ' . $filter_kondisi;
         if ($filter_kelompok !== '') $labels[] = 'Kelompok: ' . $filter_kelompok;
         if ($filter_jenis !== '') $labels[] = 'Jenis: ' . $filter_jenis;
-        $this->_outputAsetKibXlsx($rows, $labels ? implode(' | ', $labels) : 'Semua aset aktif');
+        $this->_outputAsetKibXlsx($rows, $labels ? implode(' | ', $labels) : 'Semua inventaris aktif');
     }
 
     public function anyDisplayAsetRegistrasi()
@@ -17988,6 +18017,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
             for ($i = 0; $i < 6; $i++) {
                 $params[] = '%' . $cari . '%';
             }
+        }
+        $filter_klasifikasi = InventarisClassification::validFilter($_POST['filter_klasifikasi'] ?? '');
+        if ($filter_klasifikasi !== '') {
+            $where[] = 'a.klasifikasi_pencatatan = ?';
+            $params[] = $filter_klasifikasi;
         }
         if (!empty($filter_unit)) {
             $where[] = "a.kode_unit = ?";
@@ -18068,6 +18102,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
                  MAX(a.tanggal_perolehan) AS tanggal_perolehan,
                  MAX(a.satuan) AS satuan,
                  COUNT(DISTINCT a.id) AS jumlah_aset,
+                 CASE WHEN COUNT(DISTINCT a.klasifikasi_pencatatan)=1 THEN MAX(a.klasifikasi_pencatatan) ELSE 'CAMPURAN' END AS klasifikasi_pencatatan,
                  MIN(a.nomor_inventaris) AS nomor_awal,
                  MAX(a.nomor_inventaris) AS nomor_akhir,
                  SUM(CASE WHEN a.status_kondisi='Baik' THEN 1 ELSE 0 END) AS jumlah_baik,
@@ -18093,6 +18128,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
 
         $nomor_tabel = $_offset;
         foreach ($rows as &$row) {
+            $row['klasifikasi_label'] = InventarisClassification::label($row['klasifikasi_pencatatan']);
             $row['nomor_tabel'] = ++$nomor_tabel;
             $row['nama_kelompok'] = $row['nama_kelompok'] ?? '-';
             $row['nama_jenis'] = $row['nama_jenis'] ?? '-';
@@ -18332,6 +18368,37 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         exit();
     }
 
+    private function _updateInventarisClassified(array $expected, array $data): bool
+    {
+        $pdo = $this->db()->pdo();
+        $pdo->beginTransaction();
+        try {
+            $lock = $pdo->prepare('SELECT * FROM rsns_custom_logistik_non_medis_aset WHERE id=? FOR UPDATE');
+            $lock->execute([$expected['id']]);
+            $current = $lock->fetch(\PDO::FETCH_ASSOC);
+            if (!$current || (float)$current['harga_beli'] !== (float)$expected['harga_beli']
+                || $current['klasifikasi_pencatatan'] !== $expected['klasifikasi_pencatatan']) {
+                throw new \RuntimeException('Data inventaris berubah. Muat ulang formulir.');
+            }
+            if ((float)$data['harga_beli'] !== (float)$current['harga_beli']
+                || $data['klasifikasi_pencatatan'] !== $current['klasifikasi_pencatatan']) {
+                $history = $pdo->prepare('SELECT id FROM rsns_custom_logistik_non_medis_aset_penyusutan WHERE kode_aset=? LIMIT 1');
+                $history->execute([$current['kode_aset']]);
+                if ($history->fetchColumn() || (float)$current['akumulasi_penyusutan'] != 0) {
+                    throw new \RuntimeException('Rekonsiliasi penyusutan diperlukan sebelum mengubah harga/klasifikasi.');
+                }
+            }
+            $data['nilai_buku'] = (float)$data['harga_beli'] - (float)$current['akumulasi_penyusutan'];
+            $saved = $this->db('rsns_custom_logistik_non_medis_aset')->where('id', $current['id'])->update($data);
+            if (!$saved) throw new \RuntimeException('Gagal memperbarui inventaris.');
+            $pdo->commit();
+            return true;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public function postSaveAsetRegistrasi()
     {
         $this->_initAset();
@@ -18357,6 +18424,32 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         $nomor_inventaris = preg_replace('/[^0-9]/', '', $_POST['nomor_inventaris'] ?? '');
         $jumlah_registrasi = empty($id) ? max(1, (int)($_POST['jumlah'] ?? 1)) : 1;
         $aset_saat_ini = !empty($id) ? $this->db('rsns_custom_logistik_non_medis_aset')->where('id', $id)->oneArray() : null;
+        $klasifikasi = InventarisClassification::fromPrice($harga_beli);
+        $alasan_klasifikasi = trim((string)($_POST['alasan_klasifikasi'] ?? ''));
+        if (!empty($id) && !$aset_saat_ini) {
+            echo json_encode(['status' => 'error', 'message' => 'Inventaris tidak ditemukan.']);
+            exit();
+        }
+        // An ordinary metadata edit must not silently classify unreviewed legacy data.
+        $konfirmasi_harga = !empty($_POST['konfirmasi_harga_perolehan']);
+        if ($aset_saat_ini && (float)$aset_saat_ini['harga_beli'] === $harga_beli && !$konfirmasi_harga) {
+            $klasifikasi = $aset_saat_ini['klasifikasi_pencatatan'];
+        }
+        $ubah_keuangan = $aset_saat_ini && ((float)$aset_saat_ini['harga_beli'] !== $harga_beli
+            || $aset_saat_ini['klasifikasi_pencatatan'] !== $klasifikasi);
+        if ($ubah_keuangan) {
+            $this->_initPenyusutan();
+            $riwayat = $this->db('rsns_custom_logistik_non_medis_aset_penyusutan')
+                ->where('kode_aset', $aset_saat_ini['kode_aset'])->oneArray();
+            if ($riwayat || (float)$aset_saat_ini['akumulasi_penyusutan'] != 0) {
+                echo json_encode(['status' => 'error', 'message' => 'Harga/klasifikasi tidak dapat diubah karena ada penyusutan. Rekonsiliasi riwayat terlebih dahulu.']);
+                exit();
+            }
+            if ($alasan_klasifikasi === '') {
+                echo json_encode(['status' => 'error', 'message' => 'Alasan perubahan harga/klasifikasi wajib diisi.']);
+                exit();
+            }
+        }
         $kode_kategori_aset = trim((string)($_POST['kode_kategori_aset'] ?? '2'));
         $barang_inventaris = $this->db('rsns_custom_logistik_non_medis_inventaris_master')
                                   ->where('jenis_master', 'BARANG')
@@ -18420,6 +18513,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           'tanggal_perolehan' => $tanggal_perolehan !== '' ? $tanggal_perolehan : null,
           'tahun_beli' => !empty($_POST['tahun_beli']) ? (int) $_POST['tahun_beli'] : null,
           'harga_beli' => $harga_beli,
+          'klasifikasi_pencatatan' => $klasifikasi,
           'sumber_perolehan' => $_POST['sumber_perolehan'] ?? 'Beli',
           'kode_unit' => $kode_unit,
           'lokasi_fisik' => $_POST['lokasi_fisik'] ?? '',
@@ -18651,7 +18745,12 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
                 unlink($upload_dir . '/' . $existing['foto_detail']);
             }
 
-            $query = $this->db('rsns_custom_logistik_non_medis_aset')->where('id', $id)->update($data);
+            try {
+                $query = $this->_updateInventarisClassified($aset_saat_ini, $data);
+            } catch (\Throwable $e) {
+                echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+                exit();
+            }
 
             if ($existing['kode_unit'] != $kode_unit || $existing['pic'] != $data['pic']) {
                 $this->db('rsns_custom_logistik_non_medis_aset_mutasi')->save([
@@ -18677,6 +18776,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
             $log_kode_aset = empty($id) && !empty($created_codes) ? implode(',', $created_codes) : $kode_aset;
             $logdata = '' . $log_kode_aset . ' | ' . $data['serial_number'] . ' | ' . $data['kode_item'] . ' | ' . $data['nama_aset'] . ' | ' . $data['spesifikasi'] . ' | ' . $data['tanggal_perolehan'] . ' | ' . $data['harga_beli'] . ' | ' . $data['sumber_perolehan'] . ' | ' . $data['kode_unit'] . ' | ' . $data['pic'] . ' | ' . $data['status_kondisi'] . ' | ' . $user . '';
 
+            $logdata .= ' | Harga sebelumnya: ' . ($aset_saat_ini['harga_beli'] ?? '-') . ' | Klasifikasi: ' . ($aset_saat_ini['klasifikasi_pencatatan'] ?? 'BARU') . ' -> ' . $klasifikasi . ' | Alasan: ' . $alasan_klasifikasi;
             $this->db('mlite_tracksql')->save([
               'log_id' => null,
               'log_modul' => 'logistik_non_medis_aset',
@@ -18688,8 +18788,8 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
             ]);
 
             $message = empty($id) && $jumlah_registrasi > 1
-              ? 'Berhasil membuat ' . $jumlah_registrasi . ' aset inventaris, masing-masing 1 ' . ($data['satuan'] ?: 'unit') . '.'
-              : 'Data Registrasi Aset berhasil disimpan.';
+              ? 'Berhasil membuat ' . $jumlah_registrasi . ' barang inventaris, masing-masing 1 ' . ($data['satuan'] ?: 'unit') . '.'
+              : 'Data Registrasi Inventaris berhasil disimpan.';
             echo json_encode(['status' => 'success', 'message' => $message]);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data ke database']);
@@ -19141,7 +19241,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         $perpage = 25;
         $_offset = ($halaman - 1) * $perpage;
 
-        $where = ["a.status = 'Aktif'"];
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'"];
         $params = [];
         if (!empty($cari)) {
             $where[] = "(a.kode_aset LIKE ? OR a.nomor_inventaris LIKE ? OR a.nama_aset LIKE ? OR b.nama_barang LIKE ? OR im.nama LIKE ?)";
@@ -19366,6 +19466,11 @@ public function anyDisplayLaporanInventaris()
                 $params[] = '%' . $cari . '%';
             }
         }
+        $filter_klasifikasi = InventarisClassification::validFilter($_POST['filter_klasifikasi'] ?? '');
+        if ($filter_klasifikasi !== '') {
+            $where[] = 'a.klasifikasi_pencatatan = ?';
+            $params[] = $filter_klasifikasi;
+        }
         if (!empty($filter_unit)) {
             $where[] = "a.kode_unit = ?";
             $params[] = $filter_unit;
@@ -19536,7 +19641,7 @@ public function anyDisplayLaporanInventaris()
         $filter_jenis = trim((string)($_GET['filter_jenis'] ?? ''));
         $filter_harga = trim((string)($_GET['filter_harga'] ?? ''));
 
-        $where = ["a.status = 'Aktif'"];
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'"];
         $params = [];
         if ($cari !== '') {
             $where[] = "(a.kode_aset LIKE ? OR a.nomor_inventaris LIKE ? OR a.nama_aset LIKE ? OR b.nama_barang LIKE ? OR im.nama LIKE ?)";
@@ -19564,6 +19669,7 @@ public function anyDisplayLaporanInventaris()
 
         $sql = "
           SELECT COALESCE(a.asset_group_id,-a.id) group_key,
+                 CASE WHEN COUNT(DISTINCT a.klasifikasi_pencatatan)=1 THEN MAX(a.klasifikasi_pencatatan) ELSE 'CAMPURAN' END AS klasifikasi_pencatatan,
                  MIN(a.nomor_inventaris) nomor_awal, MAX(a.nomor_inventaris) nomor_akhir,
                  MAX(COALESCE(im.nama,b.nama_barang,a.nama_aset)) nama_barang,
                  MAX(a.merk_type) merk_type, MAX(a.satuan) satuan,
@@ -19628,7 +19734,7 @@ public function anyDisplayLaporanInventaris()
         $headers = [
           'No', 'Nama Barang', 'No Inventaris', 'Kondisi', 'Merk / Ukuran',
           'Jumlah', 'Satuan', 'Harga / Unit', 'Total Harga', 'Thn Beli',
-          'Asal', 'Unit', 'Produsen'
+          'Asal', 'Unit', 'Produsen', 'Klasifikasi'
         ];
         $bulan = [1=>'JANUARI',2=>'FEBRUARI',3=>'MARET',4=>'APRIL',5=>'MEI',6=>'JUNI',7=>'JULI',8=>'AGUSTUS',9=>'SEPTEMBER',10=>'OKTOBER',11=>'NOVEMBER',12=>'DESEMBER'];
         $periode = $bulan[(int)date('n')] . ' ' . date('Y');
@@ -19662,7 +19768,8 @@ public function anyDisplayLaporanInventaris()
               $row['tahun_beli'] ?? '',
               $row['sumber_perolehan'] ?? '',
               $row['nama_unit'] ?? '',
-              ''
+              '',
+              InventarisClassification::label($row['klasifikasi_pencatatan'] ?? null)
             ];
 
             $cells = '';
@@ -19693,9 +19800,9 @@ public function anyDisplayLaporanInventaris()
           . '<col min="1" max="1" width="6" customWidth="1"/><col min="2" max="2" width="32" customWidth="1"/>'
           . '<col min="3" max="3" width="28" customWidth="1"/><col min="4" max="5" width="22" customWidth="1"/>'
           . '<col min="6" max="7" width="12" customWidth="1"/><col min="8" max="9" width="18" customWidth="1"/>'
-          . '<col min="10" max="11" width="14" customWidth="1"/><col min="12" max="13" width="24" customWidth="1"/></cols>'
+          . '<col min="10" max="11" width="14" customWidth="1"/><col min="12" max="14" width="24" customWidth="1"/></cols>'
           . '<sheetData>' . implode('', $sheet_rows) . '</sheetData>'
-          . '<autoFilter ref="A4:M' . max(4, $last_row) . '"/><mergeCells count="2"><mergeCell ref="A1:M1"/><mergeCell ref="A2:M2"/></mergeCells>'
+          . '<autoFilter ref="A4:N' . max(4, $last_row) . '"/><mergeCells count="2"><mergeCell ref="A1:N1"/><mergeCell ref="A2:N2"/></mergeCells>'
           . '</worksheet>';
 
         $styles_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -19816,13 +19923,25 @@ public function anyDisplayLaporanInventaris()
             exit();
         }
 
+        $this->_initPenyusutan();
+        $riwayat = $this->db('rsns_custom_logistik_non_medis_aset_penyusutan')->where('kode_aset', $aset['kode_aset'])->oneArray();
+        if ($riwayat || (float)$aset['akumulasi_penyusutan'] != 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Rekonsiliasi penyusutan diperlukan sebelum mengisi harga.']);
+            exit();
+        }
+        $klasifikasi = InventarisClassification::fromPrice($harga);
         $note = 'Harga dilengkapi manual oleh ' . $this->core->getUserInfo('username', null, true) . ' pada ' . date('d/m/Y H:i') . '.';
-        $stmt = $this->db()->pdo()->prepare("UPDATE rsns_custom_logistik_non_medis_aset
-          SET harga_beli=?, nilai_buku=?, keterangan_inventaris=CONCAT_WS('\n',NULLIF(keterangan_inventaris,''),?)
-          WHERE id=? AND harga_beli<=0");
-        $stmt->execute([$harga, $harga, $note, $id]);
-        if ($stmt->rowCount() > 0) {
-            $this->_logAction('logistik_non_medis_aset', 'Isi harga aset ' . $aset['kode_aset'] . ': Rp ' . number_format($harga, 0, ',', '.'), 'U');
+        try {
+            $saved = $this->_updateInventarisClassified($aset, [
+                'harga_beli' => $harga, 'klasifikasi_pencatatan' => $klasifikasi,
+                'keterangan_inventaris' => trim(($aset['keterangan_inventaris'] ?? '') . "\n" . $note)
+            ]);
+        } catch (\Throwable $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            exit();
+        }
+        if ($saved) {
+            $this->_logAction('logistik_non_medis_aset', 'Isi harga aset ' . $aset['kode_aset'] . ': Rp ' . number_format($harga, 0, ',', '.') . ' | Klasifikasi: ' . $klasifikasi, 'U');
             echo json_encode(['status' => 'success', 'message' => 'Harga aset berhasil disimpan.']);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Harga gagal disimpan atau sudah diperbarui pengguna lain.']);
@@ -19856,6 +19975,7 @@ public function anyDisplayLaporanInventaris()
             $assets_in_cat = $this->db('rsns_custom_logistik_non_medis_aset')
                                 ->where('kib_jenis', $jenis)
                                 ->where('status', 'Aktif')
+                                ->where('klasifikasi_pencatatan', 'ASET')
                                 ->toArray();
 
             $total_count = count($assets_in_cat);
@@ -19969,7 +20089,7 @@ public function anyDisplayLaporanInventaris()
 
         // Exclude Tanah (KIB A) dan Konstruksi Dalam Pengerjaan (KIB F) — dua
         // golongan itu tidak disusutkan. Filter unit/kelompok bersifat opsional.
-        $where = ["a.status = 'Aktif'", "a.kib_jenis IN ('B','C','D','E')"];
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'", "a.kib_jenis IN ('B','C','D','E')"];
         $params = [];
         if ($filter_unit !== '') {
             $where[] = 'a.kode_unit = ?';
@@ -20250,6 +20370,7 @@ public function anyDisplayLaporanInventaris()
         // Fetch assets
         $assets = $this->db('rsns_custom_logistik_non_medis_aset')
                      ->where('status', 'Aktif')
+                     ->where('klasifikasi_pencatatan', 'ASET')
                      ->where('kib_jenis', 'IN', ['B', 'C', 'D', 'E'])
                      ->toArray();
 
@@ -20348,6 +20469,19 @@ public function anyDisplayLaporanInventaris()
         $pdo->beginTransaction();
 
         try {
+            // Revalidate and lock candidates before writing journals. Reject stale previews.
+            $lock = $pdo->prepare("SELECT klasifikasi_pencatatan, harga_beli, akumulasi_penyusutan, nilai_buku, status FROM rsns_custom_logistik_non_medis_aset WHERE id=? FOR UPDATE");
+            foreach ($calculated_assets as $item) {
+                $before = $item['asset'];
+                $lock->execute([$before['id']]);
+                $current = $lock->fetch(\PDO::FETCH_ASSOC);
+                if (!$current || $current['klasifikasi_pencatatan'] !== 'ASET' || $current['status'] !== 'Aktif'
+                    || (float)$current['harga_beli'] !== (float)$before['harga_beli']
+                    || (float)$current['akumulasi_penyusutan'] !== (float)$before['akumulasi_penyusutan']
+                    || (float)$current['nilai_buku'] !== (float)$before['nilai_buku']) {
+                    throw new \RuntimeException('Data inventaris berubah. Muat ulang sebelum memproses penyusutan.');
+                }
+            }
             // 1. Generate Journal Entry
             $no_jurnal = $this->core->setNoJurnal();
             $no_bukti = 'DEP-' . $periode_tahun . str_pad($periode_bulan, 2, '0', STR_PAD_LEFT);
@@ -25875,6 +26009,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
     public function anyGetLaporanAsetKpi()
     {
+        $this->_initAset();
         $start_date = $_POST['start_date'] ?? '';
         $end_date = $_POST['end_date'] ?? '';
         $kategori = $_POST['kategori'] ?? '';
@@ -25882,7 +26017,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
         $db = $this->db()->pdo();
 
-        $where = ["a.status = 'Aktif'"];
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'"];
         $params = [];
 
         if (!empty($start_date)) {
@@ -25918,7 +26053,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $kpi = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         // Aset Dihapuskan
-        $where_del = ["a.status = 'Dihapuskan'"];
+        $where_del = ["a.status = 'Dihapuskan'", "a.klasifikasi_pencatatan = 'ASET'"];
         $params_del = [];
         if (!empty($start_date)) {
             $where_del[] = "a.tanggal_perolehan >= :start_date";
@@ -25957,6 +26092,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
     public function anyGetLaporanAsetKib()
     {
+        $this->_initAset();
         $start_date = $_POST['start_date'] ?? '';
         $end_date = $_POST['end_date'] ?? '';
         $kategori = $_POST['kategori'] ?? '';
@@ -25965,7 +26101,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
         $db = $this->db()->pdo();
 
-        $where = ["a.status = 'Aktif'"];
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'"];
         $params = [];
 
         if (!empty($start_date)) {
@@ -26049,6 +26185,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
     public function anyGetLaporanAsetPenyusutan()
     {
+        $this->_initAset();
         $start_date = $_POST['start_date'] ?? '';
         $end_date = $_POST['end_date'] ?? '';
         $kategori = $_POST['kategori'] ?? '';
@@ -26056,7 +26193,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
         $db = $this->db()->pdo();
 
-        $where = ["a.status = 'Aktif'"];
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'"];
         $params = [];
 
         if (!empty($start_date)) {
@@ -26105,6 +26242,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
     public function anyGetLaporanAsetKondisi()
     {
+        $this->_initAset();
         $start_date = $_POST['start_date'] ?? '';
         $end_date = $_POST['end_date'] ?? '';
         $kategori = $_POST['kategori'] ?? '';
@@ -26112,7 +26250,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
         $db = $this->db()->pdo();
 
-        $where = ["a.status = 'Aktif'"];
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'"];
         $params = [];
 
         if (!empty($start_date)) {
@@ -26184,6 +26322,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
     public function anyGetLaporanAsetMasaManfaat()
     {
+        $this->_initAset();
         $start_date = $_POST['start_date'] ?? '';
         $end_date = $_POST['end_date'] ?? '';
         $kategori = $_POST['kategori'] ?? '';
@@ -26191,7 +26330,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
         $db = $this->db()->pdo();
 
-        $where = ["a.status = 'Aktif'"];
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'"];
         $params = [];
 
         if (!empty($start_date)) {
