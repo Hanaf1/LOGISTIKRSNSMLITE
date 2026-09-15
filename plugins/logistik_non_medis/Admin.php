@@ -408,6 +408,9 @@ class Admin extends AdminModule
         if (strpos($method, 'perencanaan') !== false || strpos($method, 'rencanapembelian') !== false) {
             return 'pengadaanperencanaan';
         }
+        if (strpos($method, 'realisasibelanja') !== false) {
+            return 'pengadaanperencanaan';
+        }
         if ($method === 'pr' || strpos($method, 'ajaxpr') !== false || strpos($method, 'pengadaanpr') !== false) {
             return 'pengadaanpr';
         }
@@ -449,6 +452,9 @@ class Admin extends AdminModule
         }
         if (strpos($method, 'gudangopname') !== false || strpos($method, 'printopname') !== false || strpos($method, 'printrekapopname') !== false) {
             return 'gudangopname';
+        }
+        if (strpos($method, 'gudangkomposisivip') !== false) {
+            return 'gudangproduksi';
         }
         if (strpos($method, 'gudangproduksi') !== false) {
             return 'gudangproduksi';
@@ -587,6 +593,7 @@ class Admin extends AdminModule
         'Konfigurasi Fonnte'  => 'konfigurasifonnte',
         'Konfigurasi WAHA'    => 'konfigurasiwaha',
         'Pengadaan Rutin'     => 'pengadaanperencanaan',
+        'Realisasi Belanja'   => 'realisasibelanja',
         'Pengadaan Non Rutin' => 'permintaannonrutin',
         'Manajemen Vendor'    => 'pengadaanvendor',
         'Purchase Order (PO)' => 'pengadaanpo',
@@ -602,6 +609,7 @@ class Admin extends AdminModule
         'Metode FIFO / FEFO'  => 'gudangmetode',
         'Barang Rusak'        => 'gudangrusak',
         'Produksi / Fotocopy' => 'gudangproduksi',
+        'Komposisi VIP Pack'  => 'gudangkomposisivip',
         'Mutasi Antar Gudang' => 'gudangmutasi',
         '--- DISTRIBUSI ---'  => '#',
         'Permintaan Barang (SPPB)' => 'distribusisppb',
@@ -645,7 +653,9 @@ class Admin extends AdminModule
             }
 
             if ($slug === 'manage' || in_array($slug, $permissions)
-                || ($slug === 'nonasetunit' && in_array('asetregistrasi', $permissions))) {
+                || ($slug === 'realisasibelanja' && in_array('pengadaanperencanaan', $permissions))
+                || ($slug === 'nonasetunit' && in_array('asetregistrasi', $permissions))
+                || ($slug === 'gudangkomposisivip' && in_array('gudangproduksi', $permissions))) {
                 $filtered[$title] = $slug;
             }
         }
@@ -1156,7 +1166,7 @@ class Admin extends AdminModule
         'gudangopnamev2' => 'Stok Opname V2',
         'gudangmetode' => 'Metode FIFO/FEFO',
         'gudangrusak' => 'Barang Rusak',
-        'gudangproduksi' => 'Produksi / Fotocopy',
+        'gudangproduksi' => 'Produksi / Fotocopy & Komposisi Paket',
         'gudangmutasi' => 'Mutasi Antar Gudang',
         'distribusisppb' => 'Permintaan Barang (SPPB)',
         'distribusinonrutin' => 'Permintaan Non Rutin',
@@ -1445,6 +1455,7 @@ class Admin extends AdminModule
         foreach ($all_perm_keys as $pk) {
             $perm_flags['perm_' . $pk] = in_array($pk, $permissions);
         }
+        $perm_flags['perm_gudangkomposisivip'] = in_array('gudangproduksi', $permissions);
         $perm_flags['perm_laporancostunit'] = in_array('laporandistribusi', $permissions);
         $perm_flags['perm_konfigurasifonnte'] = in_array('konfigurasifonnte', $permissions);
         $perm_flags['perm_konfigurasiwaha'] = in_array('konfigurasiwaha', $permissions);
@@ -3398,6 +3409,14 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         if (!$check_fragile) {
             $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_lokasi_gudang` ADD `is_fragile` tinyint(1) NOT NULL DEFAULT 0 AFTER `denah_digital` ");
         }
+
+        // Lokasi awal. Stok lama tidak dipindahkan otomatis; gunakan mutasi
+        // gudang agar kartu stok dan jejak audit tetap benar.
+        $seed = $this->db()->pdo()->prepare("INSERT IGNORE INTO rsns_custom_logistik_non_medis_lokasi_gudang
+          (kode_lokasi, nama_lokasi, kode_zona, tipe_penyimpanan, status)
+          VALUES (?, ?, ?, ?, 'Aktif')");
+        $seed->execute(['GUDANG-BHP-RUTIN', 'Gudang BHP Rutin', 'BHP', 'Persediaan BHP']);
+        $seed->execute(['GUDANG-ASET', 'Gudang Aset', 'ASET', 'Barang Inventaris / Aset']);
 
         $upload_dir = UPLOADS . '/logistik_non_medis/lokasi';
         if (!is_dir($upload_dir)) {
@@ -7189,11 +7208,68 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
     public function getRealisasibelanja()
     {
+        $this->_initPenerimaan();
+        $this->_initVendor();
         $this->_addHeaderFiles();
-        $username = $this->core->getUserInfo('username', null, true);
-        $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
-        $role = $userRoleData['role'] ?? 'unit';
-        return $this->draw('pengadaan.realisasi.html', ['role' => $role]);
+        return $this->draw('pengadaan.realisasi.html');
+    }
+
+    private function _getRealisasiBelanja(string $bulan, string $tahun): array
+    {
+        $bulan = preg_match('/^(0[1-9]|1[0-2])$/', $bulan) ? $bulan : date('m');
+        $tahun = preg_match('/^20[0-9]{2}$/', $tahun) ? $tahun : date('Y');
+        $awal = $tahun . '-' . $bulan . '-01';
+        $akhir = date('Y-m-t', strtotime($awal));
+        $stmt = $this->db()->pdo()->prepare("SELECT p.no_penerimaan, p.tgl_penerimaan, p.no_po,
+                 COALESCE(NULLIF(v.nama_vendor, ''), NULLIF(p.sumber_manual, ''), NULLIF(p.kode_vendor, ''), '-') AS nama_vendor,
+                 COALESCE(b.nama_barang, p.kode_item) AS nama_barang,
+                 COALESCE(NULLIF(b.kategori, ''), 'Lainnya') AS kategori,
+                 COALESCE(NULLIF(b.satuan_dasar, ''), '-') AS satuan,
+                 p.qty_terima, p.harga, (p.qty_terima * p.harga) AS total
+              FROM rsns_custom_logistik_non_medis_penerimaan p
+              LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = p.kode_item
+              LEFT JOIN rsns_custom_logistik_non_medis_vendor v ON v.kode_vendor = p.kode_vendor
+              WHERE p.status = 'Selesai' AND p.stok_diposting = 1 AND p.qty_terima > 0
+                AND p.tgl_penerimaan BETWEEN ? AND ?
+              ORDER BY p.tgl_penerimaan ASC, p.no_penerimaan ASC, p.id ASC");
+        $stmt->execute([$awal, $akhir]);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $kategori = [];
+        $total = 0.0;
+        foreach ($rows as &$row) {
+            $row['qty_terima'] = (float)$row['qty_terima'];
+            $row['harga'] = (float)$row['harga'];
+            $row['total'] = (float)$row['total'];
+            $total += $row['total'];
+            $key = $row['kategori'];
+            $kategori[$key] = ($kategori[$key] ?? 0) + $row['total'];
+        }
+        unset($row);
+        return ['bulan' => $bulan, 'tahun' => $tahun, 'rows' => $rows, 'kategori' => $kategori, 'total' => $total];
+    }
+
+    public function anyDisplayRealisasibelanja()
+    {
+        $this->_initPenerimaan();
+        $this->_initVendor();
+        $data = $this->_getRealisasiBelanja((string)($_POST['bulan'] ?? date('m')), (string)($_POST['tahun'] ?? date('Y')));
+        echo $this->draw('pengadaan.realisasi.display.html', $data);
+        exit();
+    }
+
+    public function getExportRealisasibelanja()
+    {
+        $this->_initPenerimaan();
+        $this->_initVendor();
+        $data = $this->_getRealisasiBelanja((string)($_GET['bulan'] ?? date('m')), (string)($_GET['tahun'] ?? date('Y')));
+        $rows = [];
+        foreach ($data['rows'] as $i => $row) {
+            $rows[] = [$i + 1, $row['tgl_penerimaan'], $row['no_penerimaan'], $row['no_po'], $row['nama_vendor'],
+              $row['kategori'], $row['nama_barang'], $row['satuan'], $row['qty_terima'], $row['harga'], $row['total']];
+        }
+        $this->_downloadSimpleXlsx('Realisasi Belanja BHP', 'Penerimaan selesai periode ' . $data['bulan'] . '/' . $data['tahun'],
+          'Realisasi', ['No','Tanggal','No. Penerimaan','No. PO','Vendor','Kategori','Barang','Satuan','Qty','Harga Dasar','Total'],
+          $rows, [6,14,20,18,28,20,35,12,12,16,18], 'realisasi-belanja');
     }
 
     private function _initPenerimaan()
@@ -7697,7 +7773,15 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $status = trim((string)($_POST['status'] ?? 'Draft'));
         $status = in_array($status, ['Draft', 'Menunggu Verifikasi', 'Selesai'], true) ? $status : 'Draft';
         $tipePenerimaan = strtoupper(trim((string)($_POST['tipe_penerimaan'] ?? 'PO'))) === 'MANUAL' ? 'MANUAL' : 'PO';
-        $kode_lokasi = trim((string)($_POST['kode_lokasi'] ?? '-')) ?: '-';
+        $kode_lokasi = trim((string)($_POST['kode_lokasi'] ?? ''));
+        if ($kode_lokasi === '') {
+            echo json_encode(['status' => 'error', 'message' => 'Lokasi penyimpanan wajib dipilih.']); exit();
+        }
+        $lokasiAktif = $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')
+          ->where('kode_lokasi', $kode_lokasi)->where('status', 'Aktif')->oneArray();
+        if (!$lokasiAktif) {
+            echo json_encode(['status' => 'error', 'message' => 'Lokasi penyimpanan tidak aktif atau tidak ditemukan.']); exit();
+        }
         if ($no_penerimaan === '') {
             echo json_encode(['status' => 'error', 'message' => 'Nomor penerimaan tidak valid.']); exit();
         }
@@ -9020,10 +9104,27 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
     public function getGudangProduksi()
     {
+        return $this->_renderGudangKomposisi(false);
+    }
+
+    public function getGudangKomposisiVip()
+    {
+        return $this->_renderGudangKomposisi(true);
+    }
+
+    private function _renderGudangKomposisi(bool $vipPack)
+    {
         $this->_initGudangProduksi();
         $this->_initStok();
         $this->_addHeaderFiles();
-        return $this->draw('gudang.produksi.html');
+        return $this->draw('gudang.produksi.html', [
+          'vip_pack' => $vipPack,
+          'judul_komposisi' => $vipPack ? 'Komposisi VIP Pack' : 'Resep Fotocopy & Pemakaian Kertas',
+          'hasil_label' => $vipPack ? 'Barang Paket VIP' : 'Barang Fotocopy',
+          'bahan_label' => $vipPack ? 'Isi Paket' : 'Kertas / Bahan',
+          'hasil_placeholder' => $vipPack ? 'Cari barang VIP Pack...' : 'Cari barang fotocopy...',
+          'bahan_placeholder' => $vipPack ? 'Cari tas, handuk, tisu, sikat gigi...' : 'Cari kertas / bahan...'
+        ]);
     }
 
     /**

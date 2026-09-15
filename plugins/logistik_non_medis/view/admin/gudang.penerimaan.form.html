@@ -16,7 +16,18 @@
     <form id="form-penerimaan-gudang" enctype="multipart/form-data">
       <input type="hidden" name="tipe_penerimaan" value="{$penerimaan.tipe_penerimaan}">
       <input type="hidden" name="kode_vendor" id="gudang-kode-vendor" value="{$penerimaan.kode_vendor}">
-      <input type="hidden" name="kode_lokasi" value="-">
+      <div class="row">
+        <div class="col-md-6"><div class="form-group"><label>Lokasi Penyimpanan <span class="text-danger">*</span></label>
+          <select name="kode_lokasi" class="form-control" required {if: $penerimaan.status == 'Selesai'}disabled{/if}>
+            <option value="">-- Pilih lokasi --</option>
+            {loop: $lokasi}
+            <option value="{$value.kode_lokasi}" {if: ($penerimaan.kode_lokasi == $value.kode_lokasi) || (empty($penerimaan.kode_lokasi) && $value.kode_lokasi == 'GUDANG-BHP-RUTIN')}selected{/if}>{$value.nama_lokasi}</option>
+            {/loop}
+          </select>
+          {if: $penerimaan.status == 'Selesai'}<input type="hidden" name="kode_lokasi" value="{$penerimaan.kode_lokasi}">{/if}
+          <small class="text-muted">BHP rutin masuk Gudang BHP Rutin. Barang inventaris/aset masuk Gudang Aset.</small>
+        </div></div>
+      </div>
       <div class="row">
         <div class="col-md-3"><div class="form-group"><label>No. Penerimaan</label><input type="text" name="no_penerimaan" class="form-control" value="{$penerimaan.no_penerimaan}" readonly></div></div>
         <div class="col-md-3"><div class="form-group"><label>Tanggal Diterima</label><input type="date" name="tgl_penerimaan" class="form-control" value="{$penerimaan.tgl_penerimaan}" required {if: $penerimaan.status == 'Selesai'}readonly{/if}></div></div>

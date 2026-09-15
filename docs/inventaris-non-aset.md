@@ -84,6 +84,29 @@ dalam transaksi. Jangan menimpa seluruh register atau memulihkan klasifikasi
 secara otomatis jika sudah ada penyusutan/perubahan baru; rekonsiliasi dulu.
 Ambil pula cadangan database standar sebelum deployment.
 
+## Gudang BHP, aset, VIP Pack, dan realisasi belanja
+
+Sistem menambahkan dua lokasi aktif saat menu lokasi atau penerimaan dibuka:
+`GUDANG-BHP-RUTIN` (**Gudang BHP Rutin**) dan `GUDANG-ASET` (**Gudang Aset**).
+Stok lama di `GUDANG-LOGISTIK` tidak dipindahkan otomatis. Pindahkan dengan
+Mutasi Antar Gudang agar kartu stok tetap mencatat asal, tujuan, dan waktu.
+Pada penerimaan baru, petugas wajib memilih lokasi: BHP rutin ke Gudang BHP
+Rutin dan barang inventaris/aset ke Gudang Aset.
+
+Menu **Komposisi VIP Pack** menggunakan resep komposisi yang sama dengan
+produksi. Buat dahulu barang hasil, misalnya `VIP-PACK`, pada master barang;
+kemudian masukkan isi per satu paket: tas, handuk, tisu, sikat gigi, dan
+seterusnya. Pengeluaran `n` VIP Pack melalui SPPB mengurangi setiap isi
+sebesar `n × komposisi`. VIP Pack tidak dibuat sebagai stok jadi dan tidak
+memiliki retur pasien karena seluruh isinya dibawa pulang.
+
+**Realisasi Belanja BHP** dapat dibuka dari tombol di Perencanaan Kebutuhan,
+dashboard Pengadaan, atau Barang Masuk Gudang. Laporan dan ekspor hanya
+mengambil baris penerimaan berstatus Selesai yang sudah memposting stok,
+menampilkan nomor penerimaan, vendor, nomor PO jika ada, qty/harga satuan
+dasar, total, dan rekap kategori. Draft, penolakan, dan penerimaan yang belum
+diposting tidak dihitung.
+
 ## Verifikasi
 
 ```powershell

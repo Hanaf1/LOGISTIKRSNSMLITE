@@ -166,7 +166,37 @@ try {
         'konfirmasi_harga_perolehan'=>'1', 'alasan_klasifikasi'=>'Validated acquisition invoice']);
     check($confirm['status'] === 'success', 'Validated classification failed: ' . json_encode($confirm));
     check($pdo->query("SELECT klasifikasi_pencatatan FROM rsns_custom_logistik_non_medis_aset WHERE kode_aset='IMPORTED'")->fetchColumn() === Policy::ASSET, 'Confirmation did not classify');
-    echo "PASS: boundaries, migration/backup/stale guard, history protection, inventory filter, non-asset menu/unit/export/permissions, capital KPI, preview/posting, batch registration, price completion and legacy price confirmation.\n";
+    invokePrivate($admin, '_initLokasi');
+    check((int)$pdo->query("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_lokasi_gudang WHERE kode_lokasi IN ('GUDANG-BHP-RUTIN','GUDANG-ASET') AND status='Aktif'")->fetchColumn() === 2, 'Default warehouse locations missing');
+    $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_master_barang (kode_item,nama_barang,kategori,satuan_dasar,jenis_item,tipe_barang,status) VALUES
+      ('VIP-PACK','VIP Pack','VIP','Paket','Rutin','Habis Pakai','Aktif'),
+      ('VIP-TAS','Tas','VIP','Pcs','Rutin','Habis Pakai','Aktif'),
+      ('VIP-HANDUK','Handuk','VIP','Pcs','Rutin','Habis Pakai','Aktif'),
+      ('VIP-TISU','Tisu','VIP','Pcs','Rutin','Habis Pakai','Aktif'),
+      ('VIP-SIKAT','Sikat Gigi','VIP','Pcs','Rutin','Habis Pakai','Aktif')");
+    foreach (['VIP-TAS','VIP-HANDUK','VIP-TISU','VIP-SIKAT'] as $bahan) {
+        $resep = route('postSaveResepGudangProduksi', ['kode_item_hasil'=>'VIP-PACK','kode_item_bahan'=>$bahan,'qty_bahan_per_hasil'=>1]);
+        check($resep['status'] === 'success', 'VIP composition cannot be saved');
+    }
+    $komponen = invokePrivate($admin, '_uraikanResepProduksi', 'VIP-PACK', 3.0);
+    check(count($komponen) === 4 && array_sum(array_column($komponen, 'qty')) === 12.0, 'VIP composition is not expanded per package');
+    check(invokePrivate($admin, '_getPermissionKeyForMethod', 'gudangkomposisivip') === 'gudangproduksi', 'VIP composition permission mismatch');
+    $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_vendor (kode_vendor,nama_vendor) VALUES ('V-TEST','Toko Uji')");
+    $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_penerimaan (no_penerimaan,tgl_penerimaan,no_po,kode_vendor,kode_item,qty_terima,harga,kode_lokasi,status,stok_diposting) VALUES
+      ('TERIMA-TEST','2026-09-11','PO-TEST','V-TEST','VIP-TISU',10,5000,'GUDANG-BHP-RUTIN','Selesai',1),
+      ('DRAFT-TEST','2026-09-12','PO-DRAFT','V-TEST','VIP-TAS',4,10000,'GUDANG-BHP-RUTIN','Draft',0)");
+    $realisasi = invokePrivate($admin, '_getRealisasiBelanja', '09', '2026');
+    check(count($realisasi['rows']) === 1 && $realisasi['rows'][0]['no_po'] === 'PO-TEST' && $realisasi['total'] === 50000.0, 'Realisasi must use completed posted receipts and PO');
+    $xlsx = route('getExportRealisasibelanja', ['bulan'=>'09','tahun'=>'2026'], true);
+    $exportFile = sys_get_temp_dir() . '/' . $database . '-realisasi.xlsx';
+    file_put_contents($exportFile, $xlsx);
+    $zip = new ZipArchive();
+    check($zip->open($exportFile) === true, 'Invalid realization export');
+    $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+    $zip->close(); unlink($exportFile);
+    check(strpos($sheet, '>PO-TEST<') !== false && strpos($sheet, '>PO-DRAFT<') === false, 'Realization export included unposted receipt');
+    check(invokePrivate($admin, '_getPermissionKeyForMethod', 'realisasibelanja') === 'pengadaanperencanaan', 'Realisasi permission mismatch');
+    echo "PASS: boundaries, classification migration, asset-only depreciation, Non-Aset Unit, default warehouses, VIP Pack composition, and receipt/PO realization reporting.\n";
 } finally {
     QueryWrapper::close();
     $server->exec("DROP DATABASE `{$database}`");

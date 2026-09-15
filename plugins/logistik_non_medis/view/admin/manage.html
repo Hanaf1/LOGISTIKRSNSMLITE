@@ -689,6 +689,28 @@
                         </a>
                     </div>
                 </li>
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','realisasibelanja'])?}" class="panel-body text-center">
+                            <div class="panel-thumb"><i class="fa fa-line-chart"></i><div class="desc">Dari penerimaan dan Purchase Order</div></div>
+                            <h4><b>Realisasi Belanja</b></h4>
+                        </a>
+                    </div>
+                </li>
+                {/if}
+
+                {if: $perm_gudangkomposisivip}
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','gudangkomposisivip'])?}" class="panel-body text-center">
+                            <div class="panel-thumb">
+                                <i class="fa fa-gift"></i>
+                                <div class="desc">Atur isi dan pengurangan stok VIP Pack</div>
+                            </div>
+                            <h4><b>Komposisi VIP Pack</b></h4>
+                        </a>
+                    </div>
+                </li>
                 {/if}
 
                 {if: $perm_asetkib}
