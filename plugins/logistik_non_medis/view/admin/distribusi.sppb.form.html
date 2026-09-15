@@ -597,6 +597,37 @@ $(document).ready(function() {
                 .html('<i class="fa fa-spinner fa-spin"></i> Sedang diproses...');
         }
         $btnSubmit.prop('disabled', true).css('opacity', '0.6');
+
+        // Rincian foto yang dikirim, dipakai untuk console dan log server bila penyimpanan gagal.
+        var sppbFiles = [];
+        var sppbTotalBytes = 0;
+        function formatBytesSppb(bytes) {
+            if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+            if (bytes >= 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return bytes + ' B';
+        }
+        $form.find('input[type=file]').each(function() {
+            var $row = $(this).closest('tr');
+            var baris = $row.length ? $row.index() + 1 : '-';
+            $.each(this.files || [], function(_, file) {
+                sppbFiles.push({ baris: baris, nama: file.name, tipe: file.type || '-', ukuran: formatBytesSppb(file.size) });
+                sppbTotalBytes += file.size;
+            });
+        });
+        function logSppbGagal(tahap, detail) {
+            if (!window.console) return;
+            console.groupCollapsed('%c[SPPB] Simpan gagal - ' + tahap, 'color:#c9302c;font-weight:bold');
+            console.log('Jenis / status :', jenisLabel, '/', $('#status-submit').val());
+            $.each(detail, function(key, value) {
+                console.log(key + ' :', value);
+            });
+            if (sppbFiles.length) {
+                console.log('Total foto :', sppbFiles.length + ' file, ' + formatBytesSppb(sppbTotalBytes));
+                if (console.table) console.table(sppbFiles);
+            }
+            console.groupEnd();
+        }
+
         var formData = new FormData(this);
         $.ajax({
             url: "{?=url(ADMIN.'/logistik_non_medis/savesppb')?}",
@@ -634,19 +665,92 @@ $(document).ready(function() {
                     }, 900);
                 } else {
                     var failMessage = res.message || ('Permintaan ' + jenisLabel + ' gagal ' + (isAjukan ? 'diajukan.' : 'disimpan sebagai draft.'));
+                    logSppbGagal('ditolak server', { log_id: res.log_id || '-', pesan: failMessage, respons: res });
+                    if (res.log_id) {
+                        failMessage += ' (Log #' + res.log_id + ')';
+                    }
                     if (typeof showSppbToast === 'function') {
                         showSppbToast('error', 'Permintaan ' + jenisLabel + ' gagal', failMessage, 6500);
                     } else {
                         alert(failMessage);
                     }
                 }
-        }).fail(function(xhr) {
-            var message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Koneksi atau proses upload gagal. Periksa data dan coba lagi.';
-            if (typeof showSppbToast === 'function') {
-                showSppbToast('error', 'Permintaan ' + jenisLabel + ' gagal', message, 6500);
+        }).fail(function(xhr, textStatus) {
+            var status = xhr.status;
+            var message;
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                message = xhr.responseJSON.message;
             } else {
-                alert(message);
+                var sebab;
+                if (status === 413) {
+                    sebab = 'Ukuran foto/data terlalu besar untuk server (batas upload Nginx/proxy). Kecilkan foto atau minta admin server menaikkan client_max_body_size.';
+                } else if (status === 500 || status === 502 || status === 503) {
+                    sebab = 'Server PHP mengalami error. Minta admin server memeriksa log error Nginx/PHP-FPM.';
+                } else if (status === 504 || textStatus === 'timeout') {
+                    sebab = 'Upload terlalu lama sehingga server menghentikannya (timeout).';
+                } else if (status === 0) {
+                    sebab = 'Koneksi terputus atau ditolak sebelum sampai ke server (jaringan/proxy/firewall).';
+                } else if (status === 200) {
+                    sebab = 'Server membalas dengan format tidak valid (kemungkinan warning/error PHP).';
+                } else {
+                    sebab = 'Server menolak permintaan.';
+                }
+                message = 'Upload gagal (HTTP ' + status + (xhr.statusText ? ' ' + xhr.statusText : '') + '). ' + sebab;
             }
+
+            var responsSingkat = (xhr.responseText || '').substring(0, 2000);
+            var logIdServer = xhr.responseJSON && xhr.responseJSON.log_id ? xhr.responseJSON.log_id : null;
+            logSppbGagal('HTTP ' + status, {
+                log_id: logIdServer || '(dikirim ke server)',
+                text_status: textStatus,
+                status_text: xhr.statusText,
+                pesan: message,
+                respons: responsSingkat
+            });
+
+            var tampilkanGagal = function(logId) {
+                var teks = message + (logId ? ' (Log #' + logId + ')' : '');
+                if (typeof showSppbToast === 'function') {
+                    showSppbToast('error', 'Permintaan ' + jenisLabel + ' gagal', teks, 9000);
+                } else {
+                    alert(teks);
+                }
+            };
+
+            // Fatal error PHP sudah dicatat oleh server sendiri.
+            if (logIdServer) {
+                tampilkanGagal(logIdServer);
+                return;
+            }
+
+            // Laporan kecil tanpa file, sehingga tetap sampai walau upload ditolak karena ukurannya.
+            $.ajax({
+                url: "{?=url(ADMIN.'/logistik_non_medis/logsppbclienterror')?}",
+                type: 'POST',
+                dataType: 'json',
+                timeout: 5000,
+                data: {
+                    http_status: status,
+                    text_status: textStatus,
+                    status_text: xhr.statusText,
+                    pesan: message,
+                    respons: responsSingkat,
+                    files: JSON.stringify(sppbFiles),
+                    total_bytes: sppbTotalBytes,
+                    halaman: window.location.href,
+                    no_sppb: $form.find('[name=no_sppb]').val() || '',
+                    kode_unit: $form.find('[name=kode_unit]').val() || '',
+                    jenis_permintaan: $form.find('[name=jenis_permintaan]').val() || '',
+                    status: $('#status-submit').val() || ''
+                }
+            }).done(function(logRes) {
+                var logId = logRes && logRes.log_id ? logRes.log_id : null;
+                if (window.console) console.info('[SPPB] Kegagalan tercatat di log server' + (logId ? ' #' + logId : '') + '.');
+                tampilkanGagal(logId);
+            }).fail(function() {
+                if (window.console) console.warn('[SPPB] Log kegagalan juga tidak dapat dikirim ke server.');
+                tampilkanGagal(null);
+            });
         }).always(function() {
             // Pada sukses, pertahankan popup dan tombol terkunci sampai reload
             // benar-benar mengganti halaman. Pada gagal, pulihkan form.

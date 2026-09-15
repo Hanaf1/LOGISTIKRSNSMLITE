@@ -12525,6 +12525,21 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
     public function postSaveSppb()
     {
         ob_start(); // Prevent PHP Notice/Warning from polluting JSON response
+        $this->_sppbSaveFatalGuard();
+
+        // post_max_size terlampaui: PHP membuang seluruh isi form tanpa memberi error apa pun.
+        $content_length = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+        if ($content_length > 0 && empty($_POST) && empty($_FILES)) {
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            echo json_encode($this->_logSppbSaveError(
+                'Ukuran data yang dikirim (' . $this->_formatBytesSppbLog($content_length) . ') melebihi batas post_max_size server (' . ini_get('post_max_size') . '). Kecilkan ukuran foto atau minta admin server menaikkan post_max_size.',
+                ['tahap' => 'post_max_size']
+            ));
+            exit();
+        }
+
         $no_sppb = $_POST['no_sppb'] ?? '';
         $kode_unit = $_POST['kode_unit'] ?? '';
         $status = $_POST['status'] ?? 'Diajukan';
@@ -12561,7 +12576,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 while (ob_get_level()) {
                     ob_end_clean();
                 }
-                echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak mengajukan permintaan untuk unit lain!']);
+                echo json_encode($this->_logSppbSaveError('Anda tidak memiliki hak mengajukan permintaan untuk unit lain!'));
                 exit();
             }
         }
@@ -12576,7 +12591,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             while (ob_get_level()) {
                 ob_end_clean();
             }
-            echo json_encode(['status' => 'error', 'message' => 'Data sudah diproses dan tidak dapat diubah!']);
+            echo json_encode($this->_logSppbSaveError('Data sudah diproses dan tidak dapat diubah!'));
             exit();
         }
 
@@ -12597,7 +12612,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 while (ob_get_level()) {
                     ob_end_clean();
                 }
-                echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak untuk mengubah permintaan unit lain!']);
+                echo json_encode($this->_logSppbSaveError('Anda tidak memiliki hak untuk mengubah permintaan unit lain!'));
                 exit();
             }
         }
@@ -12623,7 +12638,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 while (ob_get_level()) {
                     ob_end_clean();
                 }
-                echo json_encode(['status' => 'error', 'message' => 'Data non rutin wajib diisi: latar belakang/tujuan, sasaran kegunaan, rencana digunakan, diajukan oleh, dan minimal 1 penanggung jawab.']);
+                echo json_encode($this->_logSppbSaveError('Data non rutin wajib diisi: latar belakang/tujuan, sasaran kegunaan, rencana digunakan, diajukan oleh, dan minimal 1 penanggung jawab.'));
                 exit();
             }
         }
@@ -12632,7 +12647,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             while (ob_get_level()) {
                 ob_end_clean();
             }
-            echo json_encode(['status' => 'error', 'message' => 'Tanggal SPPB dan unit pengaju wajib diisi.']);
+            echo json_encode($this->_logSppbSaveError('Tanggal SPPB dan unit pengaju wajib diisi.'));
             exit();
         }
 
@@ -12641,7 +12656,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             while (ob_get_level()) {
                 ob_end_clean();
             }
-            echo json_encode(['status' => 'error', 'message' => 'Minimal satu barang wajib diisi.']);
+            echo json_encode($this->_logSppbSaveError('Minimal satu barang wajib diisi.'));
             exit();
         }
 
@@ -12687,7 +12702,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 $required_message = $jenis_permintaan === 'Non Rutin'
                   ? 'jumlah, satuan, dan keterangan item wajib diisi.'
                   : 'jumlah dan satuan wajib diisi.';
-                echo json_encode(['status' => 'error', 'message' => 'Baris ' . ($key + 1) . ': ' . $required_message]);
+                echo json_encode($this->_logSppbSaveError('Baris ' . ($key + 1) . ': ' . $required_message));
                 exit();
             }
 
@@ -12699,7 +12714,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                     while (ob_get_level()) {
                         ob_end_clean();
                     }
-                    echo json_encode(['status' => 'error', 'message' => 'Baris ' . ($key + 1) . ': barang atau nama usulan baru wajib diisi.']);
+                    echo json_encode($this->_logSppbSaveError('Baris ' . ($key + 1) . ': barang atau nama usulan baru wajib diisi.'));
                     exit();
                 }
                 if ($item_sumber === 'master') {
@@ -12713,7 +12728,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                         while (ob_get_level()) {
                             ob_end_clean();
                         }
-                        echo json_encode(['status' => 'error', 'message' => 'Baris ' . ($key + 1) . ': barang tidak ditemukan pada Master Inventaris.']);
+                        echo json_encode($this->_logSppbSaveError('Baris ' . ($key + 1) . ': barang tidak ditemukan pada Master Inventaris.'));
                         exit();
                     }
                     // Simpan nama sebagai snapshot agar tetap terbaca di seluruh alur persetujuan dan laporan.
@@ -12723,14 +12738,14 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                     while (ob_get_level()) {
                         ob_end_clean();
                     }
-                    echo json_encode(['status' => 'error', 'message' => 'Baris ' . ($key + 1) . ': spesifikasi dan estimasi harga wajib diisi dengan nilai lebih dari nol.']);
+                    echo json_encode($this->_logSppbSaveError('Baris ' . ($key + 1) . ': spesifikasi dan estimasi harga wajib diisi dengan nilai lebih dari nol.'));
                     exit();
                 }
             } elseif ($kode_item === '') {
                 while (ob_get_level()) {
                     ob_end_clean();
                 }
-                echo json_encode(['status' => 'error', 'message' => 'Baris ' . ($key + 1) . ': barang wajib dipilih.']);
+                echo json_encode($this->_logSppbSaveError('Baris ' . ($key + 1) . ': barang wajib dipilih.'));
                 exit();
             }
 
@@ -12744,7 +12759,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                     $satuan_dasar_snapshot = $uom['satuan_dasar'];
                 } catch (\Throwable $e) {
                     while (ob_get_level()) ob_end_clean();
-                    echo json_encode(['status' => 'error', 'message' => 'Baris ' . ($key + 1) . ': ' . $e->getMessage()]);
+                    echo json_encode($this->_logSppbSaveError('Baris ' . ($key + 1) . ': ' . $e->getMessage()));
                     exit();
                 }
             }
@@ -12788,14 +12803,14 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                     while (ob_get_level()) {
                         ob_end_clean();
                     }
-                    echo json_encode(['status' => 'error', 'message' => 'Baris ' . ($key + 1) . ': salah satu foto gagal diunggah.']);
+                    echo json_encode($this->_logSppbSaveError('Baris ' . ($key + 1) . ': salah satu foto gagal diunggah (' . $this->_uploadErrorLabelSppb($upload_error) . ').'));
                     exit();
                 }
                 if ((int)($file_sizes[$file_index] ?? 0) > 5 * 1024 * 1024) {
                     while (ob_get_level()) {
                         ob_end_clean();
                     }
-                    echo json_encode(['status' => 'error', 'message' => 'Baris ' . ($key + 1) . ': ukuran setiap foto maksimal 5 MB.']);
+                    echo json_encode($this->_logSppbSaveError('Baris ' . ($key + 1) . ': ukuran setiap foto maksimal 5 MB.'));
                     exit();
                 }
                 $tmp_name = $file_tmp_names[$file_index] ?? '';
@@ -12808,24 +12823,30 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                     while (ob_get_level()) {
                         ob_end_clean();
                     }
-                    echo json_encode(['status' => 'error', 'message' => 'Baris ' . ($key + 1) . ': foto harus berformat JPG, PNG, atau WebP.']);
+                    echo json_encode($this->_logSppbSaveError('Baris ' . ($key + 1) . ': foto harus berformat JPG, PNG, atau WebP.'));
                     exit();
                 }
-                $new_photos[] = ['tmp_name' => $tmp_name, 'extension' => $allowed_photo_mimes[$mime]];
+                $new_photos[] = [
+                  'tmp_name' => $tmp_name,
+                  'extension' => $allowed_photo_mimes[$mime],
+                  'nama_asli' => (string)$original_name,
+                  'ukuran' => (int)($file_sizes[$file_index] ?? 0),
+                  'mime' => $mime
+                ];
             }
 
             if ($jenis_permintaan === 'Non Rutin' && count($existing_photos) + count($new_photos) < 1) {
                 while (ob_get_level()) {
                     ob_end_clean();
                 }
-                echo json_encode(['status' => 'error', 'message' => 'Baris ' . ($key + 1) . ': minimal satu foto barang wajib diunggah.']);
+                echo json_encode($this->_logSppbSaveError('Baris ' . ($key + 1) . ': minimal satu foto barang wajib diunggah.'));
                 exit();
             }
             if (count($existing_photos) + count($new_photos) > 10) {
                 while (ob_get_level()) {
                     ob_end_clean();
                 }
-                echo json_encode(['status' => 'error', 'message' => 'Baris ' . ($key + 1) . ': maksimal 10 foto untuk satu barang.']);
+                echo json_encode($this->_logSppbSaveError('Baris ' . ($key + 1) . ': maksimal 10 foto untuk satu barang.'));
                 exit();
             }
 
@@ -12869,7 +12890,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 while (ob_get_level()) {
                     ob_end_clean();
                 }
-                echo json_encode(['status' => 'error', 'message' => 'Permintaan Rutin hanya dapat dilakukan 1 kali dalam seminggu (Senin - Minggu). Anda sudah mengajukan SPPB Rutin minggu ini (No: ' . $existing_rutin['no_sppb'] . '). Silakan ajukan Permintaan Non Rutin.']);
+                echo json_encode($this->_logSppbSaveError('Permintaan Rutin hanya dapat dilakukan 1 kali dalam seminggu (Senin - Minggu). Anda sudah mengajukan SPPB Rutin minggu ini (No: ' . $existing_rutin['no_sppb'] . '). Silakan ajukan Permintaan Non Rutin.'));
                 exit();
             }
         }
@@ -12912,7 +12933,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                             while (ob_get_level()) {
                                 ob_end_clean();
                             }
-                            echo json_encode(['status' => 'error', 'message' => "Kuota tidak mencukupi untuk item: $item_name. Sisa kuota saat ini: " . ($total_quota - $used)]);
+                            echo json_encode($this->_logSppbSaveError("Kuota tidak mencukupi untuk item: $item_name. Sisa kuota saat ini: " . ($total_quota - $used)));
                             exit();
                         }
                     }
@@ -12923,6 +12944,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $pdo = $this->db()->pdo();
         $uploaded_photo_paths = [];
         $success = 0;
+        $log_items = [];
 
         try {
             if (!is_dir($photo_upload_dir) && !mkdir($photo_upload_dir, 0755, true) && !is_dir($photo_upload_dir)) {
@@ -12948,6 +12970,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 }
 
                 $photo_names = $item['existing_photos'];
+                $foto_baru_log = [];
                 foreach ($item['new_photos'] as $new_photo) {
                     $safe_no_sppb = preg_replace('/[^A-Za-z0-9_-]/', '-', $no_sppb);
                     $photo_name = $safe_no_sppb . '-' . ($key + 1) . '-' . date('YmdHis') . '-' . substr(md5(uniqid('', true)), 0, 10) . '.' . $new_photo['extension'];
@@ -12957,6 +12980,12 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                     }
                     $uploaded_photo_paths[] = $destination;
                     $photo_names[] = $photo_name;
+                    $foto_baru_log[] = [
+                      'file_tersimpan' => $photo_name,
+                      'nama_asli' => $new_photo['nama_asli'] ?? null,
+                      'ukuran' => $this->_formatBytesSppbLog($new_photo['ukuran'] ?? 0),
+                      'mime' => $new_photo['mime'] ?? null
+                    ];
                 }
 
                 $keterangan_umum = trim((string)($_POST['keterangan_umum'] ?? ''));
@@ -13001,6 +13030,21 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 if (!$this->_saveSppbNormalized($data)) {
                     throw new \RuntimeException('Data barang pada baris ' . ($key + 1) . ' gagal disimpan.');
                 }
+                $log_items[] = [
+                  'baris' => $key + 1,
+                  'kode_item' => $kode_item,
+                  'sumber' => $item_sumber,
+                  'nama_barang' => $nama_barang_manual,
+                  'spesifikasi' => $spesifikasi_manual,
+                  'jumlah' => $item['jumlah'],
+                  'satuan' => $item['satuan'],
+                  'jumlah_dasar' => $item['jumlah_dasar'],
+                  'estimasi_harga' => $item['estimasi_harga'],
+                  'subtotal_estimasi' => (float)$item['jumlah'] * (float)$item['estimasi_harga'],
+                  'keterangan_item' => $item['keterangan_item'],
+                  'foto_lama' => array_values($item['existing_photos']),
+                  'foto_baru' => $foto_baru_log
+                ];
                 $success++;
             }
 
@@ -13017,7 +13061,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             while (ob_get_level()) {
                 ob_end_clean();
             }
-            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            echo json_encode($this->_logSppbSaveError($e->getMessage()));
             exit();
         }
 
@@ -13075,6 +13119,50 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 );
             }
 
+            if ($jenis_permintaan === 'Non Rutin') {
+                $unit_log = $this->db('rsns_custom_logistik_non_medis_unit')->where('kode_unit', $kode_unit)->oneArray();
+                $foto_baru_total = 0;
+                $foto_baru_bytes = 0;
+                foreach ($validated_items as $validated_item) {
+                    foreach ($validated_item['new_photos'] as $new_photo) {
+                        $foto_baru_total++;
+                        $foto_baru_bytes += (int)($new_photo['ukuran'] ?? 0);
+                    }
+                }
+                $this->_writeSppbLaravelLog('info', 'Simpan SPPB Non Rutin berhasil: ' . $no_sppb . ' (' . $status . ')', [
+                  'user' => [
+                    'username' => $user,
+                    'role' => $role,
+                    'kode_unit_user' => $user_kode_unit
+                  ],
+                  'sppb' => [
+                    'no_sppb' => $no_sppb,
+                    'mode' => $cek ? 'edit' : 'baru',
+                    'tgl_sppb' => $tgl_sppb,
+                    'kode_unit' => $kode_unit,
+                    'nama_unit' => $unit_log['nama_unit'] ?? null,
+                    'status_sebelumnya' => $cek['status'] ?? null,
+                    'status_dikirim_form' => $_POST['status'] ?? null,
+                    'status_kembali_setelah_ditolak' => $return_status_after_rejection ?: null,
+                    'status_akhir' => $status,
+                    'auto_approve_ka_unit' => !empty($auto_approved),
+                    'jumlah_item' => $success,
+                    'total_estimasi' => array_sum(array_column($log_items, 'subtotal_estimasi'))
+                  ],
+                  'data_non_rutin' => array_merge($nonrutin_meta, [
+                    'keterangan_umum' => trim((string)($_POST['keterangan_umum'] ?? ''))
+                  ]),
+                  'items' => $log_items,
+                  'upload' => [
+                    'folder' => $photo_upload_dir,
+                    'jumlah_foto_baru' => $foto_baru_total,
+                    'total_ukuran_foto_baru' => $this->_formatBytesSppbLog($foto_baru_bytes)
+                  ],
+                  'notifikasi' => $notification_result,
+                  'server' => $this->_sppbServerLimits()
+                ], $cek ? 'U' : 'I');
+            }
+
             while (ob_get_level()) {
                 ob_end_clean();
             }
@@ -13089,7 +13177,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             while (ob_get_level()) {
                 ob_end_clean();
             }
-            echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data.']);
+            echo json_encode($this->_logSppbSaveError('Gagal menyimpan data.'));
         }
         exit();
     }
@@ -13269,6 +13357,264 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $this->_deleteSppbNormalized(['id' => $id]);
 
         echo json_encode(['status' => 'success', 'message' => 'Item tambahan berhasil dihapus.']);
+        exit();
+    }
+
+    private function _formatBytesSppbLog($bytes): string
+    {
+        $bytes = (float)$bytes;
+        if ($bytes >= 1048576) {
+            return round($bytes / 1048576, 2) . ' MB';
+        }
+        if ($bytes >= 1024) {
+            return round($bytes / 1024, 1) . ' KB';
+        }
+        return (int)$bytes . ' B';
+    }
+
+    private function _uploadErrorLabelSppb(int $code): string
+    {
+        $labels = [
+          UPLOAD_ERR_OK => 'OK',
+          UPLOAD_ERR_INI_SIZE => 'Melebihi upload_max_filesize (' . ini_get('upload_max_filesize') . ')',
+          UPLOAD_ERR_FORM_SIZE => 'Melebihi MAX_FILE_SIZE form',
+          UPLOAD_ERR_PARTIAL => 'Terunggah sebagian (koneksi terputus)',
+          UPLOAD_ERR_NO_FILE => 'Tidak ada file',
+          UPLOAD_ERR_NO_TMP_DIR => 'Folder temp PHP tidak ada (upload_tmp_dir)',
+          UPLOAD_ERR_CANT_WRITE => 'Gagal menulis ke folder temp PHP',
+          UPLOAD_ERR_EXTENSION => 'Dihentikan oleh ekstensi PHP'
+        ];
+        return $labels[$code] ?? ('Kode ' . $code);
+    }
+
+    /** Ringkasan foto yang benar-benar diterima PHP, per baris barang. */
+    private function _sppbUploadSummary(): array
+    {
+        $files = $_FILES['foto_barang'] ?? null;
+        if (!is_array($files) || !isset($files['name'])) {
+            return [];
+        }
+        $ambil = function (string $field, $baris, $index) use ($files) {
+            $nilai = $files[$field][$baris] ?? null;
+            return is_array($nilai) ? ($nilai[$index] ?? null) : $nilai;
+        };
+
+        $ringkas = [];
+        foreach ((array)$files['name'] as $baris => $namaBaris) {
+            foreach ((array)$namaBaris as $index => $nama) {
+                $kode = (int)($ambil('error', $baris, $index) ?? UPLOAD_ERR_NO_FILE);
+                if ($kode === UPLOAD_ERR_NO_FILE) {
+                    continue;
+                }
+                $ringkas[] = [
+                  'baris' => (int)$baris + 1,
+                  'nama' => (string)$nama,
+                  'ukuran' => $this->_formatBytesSppbLog($ambil('size', $baris, $index) ?? 0),
+                  'error' => $this->_uploadErrorLabelSppb($kode)
+                ];
+            }
+        }
+        return $ringkas;
+    }
+
+    /** Batas upload dan kondisi folder di server, dicatat bersama setiap log SPPB Non Rutin. */
+    private function _sppbServerLimits(): array
+    {
+        $tmpDir = ini_get('upload_tmp_dir') ?: sys_get_temp_dir();
+        $uploadDir = UPLOADS . '/logistik_non_medis/sppb_items';
+        return [
+          'php' => PHP_VERSION,
+          'upload_max_filesize' => ini_get('upload_max_filesize'),
+          'post_max_size' => ini_get('post_max_size'),
+          'max_file_uploads' => ini_get('max_file_uploads'),
+          'memory_limit' => ini_get('memory_limit'),
+          'max_execution_time' => ini_get('max_execution_time'),
+          'fileinfo_aktif' => extension_loaded('fileinfo'),
+          'upload_tmp_dir' => $tmpDir,
+          'upload_tmp_dir_writable' => is_writable($tmpDir),
+          'folder_foto_ada' => is_dir($uploadDir),
+          'folder_foto_writable' => is_dir($uploadDir) ? is_writable($uploadDir) : is_writable(UPLOADS)
+        ];
+    }
+
+    /**
+     * Log detail hanya untuk SPPB Non Rutin. Bila isi form hilang (post_max_size terlampaui)
+     * atau laporan datang dari browser, jenisnya dikenali dari halaman asal permintaan.
+     */
+    private function _isSppbNonRutinRequest(): bool
+    {
+        $jenis = trim((string)($_POST['jenis_permintaan'] ?? ''));
+        if ($jenis !== '') {
+            return $jenis === 'Non Rutin';
+        }
+        $halaman = (string)($_POST['halaman'] ?? ($_SERVER['HTTP_REFERER'] ?? ''));
+        return stripos($halaman, 'nonrutin') !== false;
+    }
+
+    /**
+     * Menulis log bergaya Laravel ke mlite_tracksql (log_modul 'logistik_non_medis_sppb_nonrutin'):
+     * [waktu] env.LEVEL: pesan {konteks JSON}. Konteks request (URL, IP, durasi, memori) selalu disertakan.
+     */
+    private function _writeSppbLaravelLog(string $level, string $message, array $context, string $status): ?int
+    {
+        try {
+            $username = (string)$this->core->getUserInfo('username', null, true);
+            $ip = $_SERVER['REMOTE_ADDR'] ?? 'Localhost';
+            $hostRow = $this->db('rsns_custom_hostsname_pc')->where('ip', $ip)->oneArray();
+            $hostname = $hostRow['hostname'] ?? 'Unknown';
+            $contentLength = isset($_SERVER['CONTENT_LENGTH']) ? (int)$_SERVER['CONTENT_LENGTH'] : 0;
+
+            $context = array_merge([
+              'request' => [
+                'method' => $_SERVER['REQUEST_METHOD'] ?? null,
+                'url' => $_SERVER['REQUEST_URI'] ?? null,
+                'referer' => $_SERVER['HTTP_REFERER'] ?? null,
+                'ip' => $ip,
+                'hostname' => $hostname,
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
+                'content_length' => $this->_formatBytesSppbLog($contentLength),
+                'durasi_ms' => isset($_SERVER['REQUEST_TIME_FLOAT'])
+                  ? (int)round((microtime(true) - (float)$_SERVER['REQUEST_TIME_FLOAT']) * 1000)
+                  : null,
+                'memori_puncak' => $this->_formatBytesSppbLog(memory_get_peak_usage(true))
+              ]
+            ], $context);
+
+            $flags = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR;
+            $prefix = '[' . date('Y-m-d H:i:s') . '] ' . (DEV_MODE ? 'local' : 'production') . '.' . strtoupper($level) . ': ' . $message . ' ';
+            $logData = $prefix . json_encode($context, $flags);
+            // Kolom log_data bertipe TEXT (maks. 65.535 byte).
+            if (strlen($logData) > 64000) {
+                unset($context['respons']);
+                $logData = $prefix . json_encode($context, $flags);
+                if (strlen($logData) > 64000) {
+                    $logData = substr($logData, 0, 63900) . "\n... [log dipotong karena melebihi batas kolom]";
+                }
+            }
+
+            $this->db('mlite_tracksql')->save([
+              'log_id' => null,
+              'log_modul' => 'logistik_non_medis_sppb_nonrutin',
+              'log_waktu' => date('Y-m-d H:i:s'),
+              'log_location' => $hostname . ' | ' . $ip,
+              'log_data' => $logData,
+              'log_status' => $status,
+              'log_username' => $username !== '' ? $username : null
+            ]);
+            return (int)$this->db()->pdo()->lastInsertId();
+        } catch (\Throwable $e) {
+            // Pencatatan log tidak boleh menggagalkan proses simpan.
+            return null;
+        }
+    }
+
+    /**
+     * Respons error simpan SPPB. Untuk Non Rutin, kegagalan dicatat detail (level ERROR) termasuk
+     * fatal error PHP dan kegagalan yang hanya terlihat di browser (413/502/504).
+     */
+    private function _logSppbSaveError(string $message, array $extra = []): array
+    {
+        $response = ['status' => 'error', 'message' => $message];
+        if (!$this->_isSppbNonRutinRequest()) {
+            return $response;
+        }
+        try {
+            $username = (string)$this->core->getUserInfo('username', null, true);
+            $roleRow = $username !== ''
+              ? ($this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray() ?: [])
+              : [];
+            $potong = function ($value, int $length) {
+                $value = trim((string)$value);
+                return $value === '' ? null : substr($value, 0, $length);
+            };
+            $contentLength = array_key_exists('content_length', $extra)
+              ? $extra['content_length']
+              : (isset($_SERVER['CONTENT_LENGTH']) ? (int)$_SERVER['CONTENT_LENGTH'] : null);
+
+            $logId = $this->_writeSppbLaravelLog('error', 'Simpan SPPB Non Rutin gagal: ' . $message, [
+              'kegagalan' => [
+                'sumber' => $extra['sumber'] ?? 'server',
+                'tahap' => $extra['tahap'] ?? 'validasi',
+                'http_status' => $extra['http_status'] ?? null,
+                'pesan' => $message
+              ],
+              'user' => [
+                'username' => $username !== '' ? $username : null,
+                'role' => $roleRow['role'] ?? null,
+                'kode_unit_user' => $roleRow['kode_unit'] ?? null
+              ],
+              'sppb' => [
+                'no_sppb' => $potong($_POST['no_sppb'] ?? '', 50),
+                'tgl_sppb' => $potong($_POST['tgl_sppb'] ?? '', 20),
+                'kode_unit' => $potong($_POST['kode_unit'] ?? '', 50),
+                'jenis_permintaan' => $potong($_POST['jenis_permintaan'] ?? '', 20),
+                'status_dikirim_form' => $potong($_POST['status'] ?? '', 50),
+                'jumlah_baris_barang' => is_array($_POST['jumlah'] ?? null) ? count($_POST['jumlah']) : null,
+                'ukuran_kiriman' => $contentLength !== null ? $this->_formatBytesSppbLog($contentLength) : null
+              ],
+              'upload' => $extra['detail_upload'] ?? $this->_sppbUploadSummary(),
+              'server' => array_merge($this->_sppbServerLimits(), $extra['detail_server'] ?? []),
+              'respons' => isset($extra['respons']) ? $potong($extra['respons'], 4000) : null
+            ], 'E');
+            if ($logId) {
+                $response['log_id'] = $logId;
+            }
+        } catch (\Throwable $e) {
+            // Pencatatan log tidak boleh menggagalkan respons ke pengguna.
+        }
+        return $response;
+    }
+
+    /** Fatal error PHP (mis. fungsi tidak ada, memori habis) tetap dicatat dan dibalas sebagai JSON. */
+    private function _sppbSaveFatalGuard()
+    {
+        register_shutdown_function(function () {
+            $error = error_get_last();
+            if (!$error || !in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+                return;
+            }
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            $response = $this->_logSppbSaveError(
+                'Kesalahan server saat menyimpan permintaan: ' . $error['message'] . ' (' . basename((string)$error['file']) . ':' . $error['line'] . ')',
+                ['sumber' => 'fatal', 'http_status' => 500, 'tahap' => 'fatal']
+            );
+            if (!headers_sent()) {
+                http_response_code(500);
+                header('Content-Type: application/json');
+            }
+            echo json_encode($response);
+        });
+    }
+
+    /** Laporan dari browser untuk kegagalan yang tidak pernah sampai ke PHP (413, 502, 504, koneksi putus). */
+    public function postLogSppbClientError()
+    {
+        header('Content-Type: application/json');
+        $status = (int)($_POST['http_status'] ?? 0);
+        $pesan = trim((string)($_POST['pesan'] ?? ''));
+        if ($pesan === '') {
+            $pesan = 'Simpan SPPB gagal di browser (HTTP ' . $status . ').';
+        }
+        $files = json_decode((string)($_POST['files'] ?? '[]'), true);
+
+        $result = $this->_logSppbSaveError(substr($pesan, 0, 1000), [
+          'sumber' => 'client',
+          'http_status' => $status,
+          'tahap' => 'browser',
+          'content_length' => isset($_POST['total_bytes']) ? (int)$_POST['total_bytes'] : null,
+          'detail_upload' => is_array($files) ? array_slice($files, 0, 50) : [],
+          'detail_server' => [
+            'text_status' => substr((string)($_POST['text_status'] ?? ''), 0, 50),
+            'status_text' => substr((string)($_POST['status_text'] ?? ''), 0, 100),
+            'halaman' => substr((string)($_POST['halaman'] ?? ''), 0, 255),
+            'catatan' => 'Batas upload di atas adalah konfigurasi PHP server penerima log.'
+          ],
+          'respons' => (string)($_POST['respons'] ?? '')
+        ]);
+
+        echo json_encode(['status' => 'success', 'log_id' => $result['log_id'] ?? null]);
         exit();
     }
 
