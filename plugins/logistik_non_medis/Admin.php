@@ -372,6 +372,9 @@ class Admin extends AdminModule
     private function _getPermissionKeyForMethod(string $method)
     {
         $method = strtolower($method);
+        if (strpos($method, 'nonasetunit') !== false) {
+            return 'asetregistrasi';
+        }
         if (strpos($method, 'ajaxmasterbarang') !== false || strpos($method, 'ajaxbarangselect2') !== false) {
             return null; // Semua role butuh akses pencarian barang
         }
@@ -612,6 +615,7 @@ class Admin extends AdminModule
         'Kuota & Alokasi Unit' => 'distribusikuota',
         '--- ASET ---'        => '#',
         'Registrasi Aset'     => 'asetregistrasi',
+        'Non-Aset Unit'       => 'nonasetunit',
         'Kartu Inventaris (KIB)' => 'asetkib',
         'Penyusutan Aset'     => 'asetpenyusutan',
         'Pemeliharaan Aset'   => 'asetpemeliharaan',
@@ -640,7 +644,8 @@ class Admin extends AdminModule
                 continue;
             }
 
-            if ($slug === 'manage' || in_array($slug, $permissions)) {
+            if ($slug === 'manage' || in_array($slug, $permissions)
+                || ($slug === 'nonasetunit' && in_array('asetregistrasi', $permissions))) {
                 $filtered[$title] = $slug;
             }
         }
@@ -1162,7 +1167,7 @@ class Admin extends AdminModule
         'distribusitracking' => 'Tracking Pengiriman',
         'distribusiretur' => 'Retur Barang dari Unit',
         'distribusikuota' => 'Kuota & Alokasi Unit',
-        'asetregistrasi' => 'Registrasi Aset',
+        'asetregistrasi' => 'Registrasi Aset & Non-Aset Unit',
         'asetkib' => 'Kartu Inventaris (KIB)',
         'asetpenyusutan' => 'Penyusutan Aset',
         'asetpemeliharaan' => 'Pemeliharaan Aset',
@@ -19426,6 +19431,29 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
 
     public function getLaporanInventaris()
     {
+        return $this->_renderInventarisUnit(false);
+    }
+
+    public function getNonAsetUnit()
+    {
+        return $this->_renderInventarisUnit(true);
+    }
+
+    public function anyDisplayNonAsetUnit()
+    {
+        // Enforce on the server, even if a caller tampers with the filter.
+        $_POST['filter_klasifikasi'] = InventarisClassification::NON_ASSET;
+        $this->anyDisplayLaporanInventaris();
+    }
+
+    public function getExportNonAsetUnit()
+    {
+        $_GET['filter_klasifikasi'] = InventarisClassification::NON_ASSET;
+        $this->getExportAset();
+    }
+
+    private function _renderInventarisUnit(bool $nonAset)
+    {
         $this->_initAset();
         $this->_initUnit();
         $this->_addHeaderFiles();
@@ -19436,7 +19464,14 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           ->toArray();
         $kelompok = $this->db('rsns_custom_logistik_non_medis_inventaris_kelompok')->asc('kode_kategori')->asc('kode_kelompok')->toArray();
         $jenis = $this->db('rsns_custom_logistik_non_medis_inventaris_jenis')->asc('kode_kategori')->asc('kode_kelompok')->asc('kode_jenis')->toArray();
-        return $this->draw('laporan.inventaris.html', ['units' => $units, 'kelompok' => $kelompok, 'jenis' => $jenis]);
+        return $this->draw('laporan.inventaris.html', [
+            'units' => $units, 'kelompok' => $kelompok, 'jenis' => $jenis,
+            'non_aset_unit' => $nonAset,
+            'judul_inventaris' => $nonAset ? 'Non-Aset Unit' : 'Laporan Inventaris',
+            'route_inventaris' => $nonAset ? 'nonasetunit' : 'laporaninventaris',
+            'route_display_inventaris' => $nonAset ? 'displaynonasetunit' : 'displaylaporaninventaris',
+            'route_export_inventaris' => $nonAset ? 'exportnonasetunit' : 'laporaninventarisexportxlsx'
+        ]);
     }
 
     

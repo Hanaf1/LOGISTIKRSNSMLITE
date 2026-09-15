@@ -22,6 +22,13 @@ dan perhitungan penyusutan hanya mengambil `ASET`. Riwayat penyusutan lama
 tetap tersimpan. Daftar pemeliharaan dan penghapusan tetap dapat digunakan
 untuk semua barang tahan lama.
 
+Menu **Non-Aset Unit** tersedia di navigasi dan bagian Aset pada dashboard.
+Hak aksesnya mengikuti Registrasi Aset (ditampilkan sebagai "Registrasi Aset
+& Non-Aset Unit" di pengaturan hak akses). Daftar dan ekspor XLSX khusus menu
+ini dikunci di server ke Inventaris Non-Aset, dengan filter unit, pencarian,
+kelompok, jenis, dan ketersediaan harga. Filter unit adalah penyaring daftar,
+bukan pemberian hak akses baru kepada role unit.
+
 Penyusutan tetap mengecualikan tanah dan konstruksi dalam pengerjaan serta
 memakai syarat masa manfaat/residu yang sudah berlaku. Pemrosesan memeriksa
 ulang dan mengunci data sebelum membentuk jurnal.

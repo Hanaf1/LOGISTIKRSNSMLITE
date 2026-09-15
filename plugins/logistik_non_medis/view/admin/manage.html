@@ -677,6 +677,20 @@
                 </li>
                 {/if}
 
+                {if: $perm_asetregistrasi}
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','nonasetunit'])?}" class="panel-body text-center">
+                            <div class="panel-thumb">
+                                <i class="fa fa-cubes"></i>
+                                <div class="desc">Inventaris Non-Aset per Unit</div>
+                            </div>
+                            <h4><b>Non-Aset Unit</b></h4>
+                        </a>
+                    </div>
+                </li>
+                {/if}
+
                 {if: $perm_asetkib}
                 <li class="module">
                     <div class="panel panel-default">

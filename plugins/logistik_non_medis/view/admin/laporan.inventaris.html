@@ -5,13 +5,16 @@
         <div class="custom-breadcrumb" style="display:inline-flex;align-items:center;background:#f8f9fa;border:1px solid #e1e4e8;border-radius:6px;padding:6px 15px;font-size:13px;margin-bottom:15px;box-shadow:0 1px 2px rgba(0,0,0,.05);">
           <a href="{?=url([ADMIN,'logistik_non_medis','manage'])?}" style="color:#4a4a4a;text-decoration:none;"><i class="fa fa-home"></i></a>
           <i class="fa fa-chevron-right" style="margin:0 10px;color:#aaa;font-size:11px;"></i>
-          <a href="{?=url([ADMIN,'logistik_non_medis','laporaninventaris'])?}" style="color:#4a4a4a;text-decoration:none;">Aset</a>
+          <a href="{?=url([ADMIN,'logistik_non_medis',$route_inventaris])?}" style="color:#4a4a4a;text-decoration:none;">Inventaris</a>
           <i class="fa fa-chevron-right" style="margin:0 10px;color:#aaa;font-size:11px;"></i>
-          <span style="color:#337ab7;font-weight:600;">Laporan Inventaris</span>
+          <span style="color:#337ab7;font-weight:600;">{$judul_inventaris}</span>
         </div>
-        <h3 class="panel-title"><i class="fa fa-folder-open"></i> Laporan Inventaris</h3>
+        <h3 class="panel-title"><i class="fa fa-folder-open"></i> {$judul_inventaris}</h3>
       </div>
       <div class="panel-body">
+        {if: $non_aset_unit}
+        <div class="alert alert-info">Barang tahan lama yang dicatat sebagai Inventaris Non-Aset. Pilih unit untuk melihat penempatannya. Barang ini tidak masuk penyusutan.</div>
+        {/if}
         <div class="well well-sm" style="margin-bottom:15px;">
           <form id="form-filter-kib" onsubmit="return false;">
             <div class="row">
@@ -61,12 +64,17 @@
             <div class="row" style="margin-top:10px;">
               <div class="col-md-4">
                 <label for="filter_klasifikasi">Klasifikasi Pencatatan</label>
+                {if: $non_aset_unit}
+                <input type="hidden" id="filter_klasifikasi" value="INVENTARIS_NON_ASET">
+                <p class="form-control-static">Inventaris Non-Aset</p>
+                {else}
                 <select id="filter_klasifikasi" class="form-control">
                   <option value="">Semua Inventaris</option>
                   <option value="ASET">Aset</option>
                   <option value="INVENTARIS_NON_ASET">Inventaris Non-Aset</option>
                   <option value="BELUM_DITENTUKAN">Belum Ditentukan</option>
                 </select>
+                {/if}
               </div>
               <div class="col-md-12 text-right">
                 <button type="button" class="btn btn-success btn-export-kib-xlsx">
@@ -127,7 +135,7 @@ $(function() {
   });
 
   $('.btn-reset-filter').on('click', function() {
-    $('#filter_klasifikasi').val('');
+    $('#filter_klasifikasi').val('{if: $non_aset_unit}INVENTARIS_NON_ASET{/if}');
     $('#form-filter-kib')[0].reset();
     filterJenisOptionsByKelompok('');
     $('#filter_unit').val('').trigger('change');
@@ -137,7 +145,7 @@ $(function() {
   });
 
   $('.btn-export-kib-xlsx').on('click', function() {
-    var exportUrl = '{?=url([ADMIN,"logistik_non_medis","laporaninventarisexportxlsx"])?}';
+    var exportUrl = '{?=url([ADMIN,"logistik_non_medis",$route_export_inventaris])?}';
     var separator = exportUrl.indexOf('?') === -1 ? '?' : '&';
     window.location.href = exportUrl + separator + $.param(getKibFilters());
   });
@@ -208,7 +216,7 @@ function loadKib(page) {
   current_page = page || 1;
   if (kibRequest && kibRequest.readyState !== 4) kibRequest.abort();
   kibRequest = $.ajax({
-    url: '{?=url([ADMIN,"logistik_non_medis","displaykib"])?}',
+    url: '{?=url([ADMIN,"logistik_non_medis",$route_display_inventaris])?}',
     type: 'POST',
     timeout: 15000,
     data: $.extend({halaman: current_page}, getKibFilters()),

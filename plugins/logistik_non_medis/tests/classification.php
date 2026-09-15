@@ -50,6 +50,7 @@ if (!is_dir(UPLOADS)) mkdir(UPLOADS, 0700, true);
 if ($child) {
     QueryWrapper::connect($serverDsn . ';dbname=' . $database, $user, $password, ['error_mode'=>PDO::ERRMODE_EXCEPTION]);
     $_POST = json_decode($argv[3] ?? '{}', true);
+    $_GET = $_POST;
     $admin = new ClassificationTestAdmin();
     $admin->$child();
     exit;
@@ -104,7 +105,7 @@ try {
     } catch (RuntimeException $e) { $failed = true; }
     check($failed, 'Depreciated asset reclassified without reconciliation');
 
-    function route($method, array $post = []) {
+    function route($method, array $post = [], bool $raw = false) {
         global $database;
         $pipes = [];
         $process = proc_open([PHP_BINARY, __FILE__, $method, $database, json_encode($post)], [1=>['pipe','w'],2=>['pipe','w']], $pipes);
@@ -112,6 +113,7 @@ try {
         fclose($pipes[1]); fclose($pipes[2]);
         $status = proc_close($process);
         check($status === 0 && $err === '', 'Route failed: ' . $method . ' ' . $err);
+        if ($raw) return $out;
         $json = json_decode($out, true);
         check(is_array($json), 'Invalid JSON from ' . $method . ': ' . $out);
         return $json;
@@ -122,6 +124,22 @@ try {
     check($list['jumlah'] === 1, 'Register filter failed');
     $inventory = route('anyDisplayLaporanInventaris', ['filter_klasifikasi'=>Policy::NON_ASSET]);
     check($inventory['jumlah_data'] === 1, 'Unit inventory filter failed');
+    $nonAsset = route('anyDisplayNonAsetUnit', ['filter_klasifikasi'=>Policy::ASSET, 'filter_unit'=>'01']);
+    check($nonAsset['jumlah_data'] === 1 && $nonAsset['asets'][0]['kode_aset'] === 'LOW', 'Non-asset menu accepts overridden classification');
+    $otherUnit = route('anyDisplayNonAsetUnit', ['filter_unit'=>'99']);
+    check($otherUnit['jumlah_data'] === 0, 'Non-asset unit filter failed');
+    foreach (['nonasetunit','displaynonasetunit','exportnonasetunit'] as $method) {
+        check(invokePrivate($admin, '_getPermissionKeyForMethod', $method) === 'asetregistrasi', 'Non-asset route permission mismatch');
+    }
+    $xlsx = route('getExportNonAsetUnit', ['filter_klasifikasi'=>Policy::ASSET, 'filter_unit'=>'01'], true);
+    $exportFile = sys_get_temp_dir() . '/' . $database . '.xlsx';
+    file_put_contents($exportFile, $xlsx);
+    $zip = new ZipArchive();
+    check($zip->open($exportFile) === true, 'Invalid non-asset export');
+    $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+    $zip->close();
+    unlink($exportFile);
+    check(strpos($sheet, '>LOW<') !== false && strpos($sheet, '>HIGH<') === false, 'Export includes assets instead of non-assets');
     $pdo->exec("INSERT INTO mlite_rekening VALUES ('EXP'),('ACC')");
     $pdo->exec("UPDATE mlite_settings SET value='EXP' WHERE field='depr_rek_beban_B'");
     $pdo->exec("UPDATE mlite_settings SET value='ACC' WHERE field='depr_rek_akum_B'");
@@ -148,7 +166,7 @@ try {
         'konfirmasi_harga_perolehan'=>'1', 'alasan_klasifikasi'=>'Validated acquisition invoice']);
     check($confirm['status'] === 'success', 'Validated classification failed: ' . json_encode($confirm));
     check($pdo->query("SELECT klasifikasi_pencatatan FROM rsns_custom_logistik_non_medis_aset WHERE kode_aset='IMPORTED'")->fetchColumn() === Policy::ASSET, 'Confirmation did not classify');
-    echo "PASS: boundaries, migration/backup/stale guard, history protection, inventory filter, capital KPI, preview/posting, batch registration, price completion and legacy price confirmation.\n";
+    echo "PASS: boundaries, migration/backup/stale guard, history protection, inventory filter, non-asset menu/unit/export/permissions, capital KPI, preview/posting, batch registration, price completion and legacy price confirmation.\n";
 } finally {
     QueryWrapper::close();
     $server->exec("DROP DATABASE `{$database}`");
