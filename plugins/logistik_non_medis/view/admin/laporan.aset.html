@@ -654,6 +654,74 @@ $(document).ready(function() {
 
     // Chart.js instance state
     var chartKondisi = null;
+    var reportPageSize = 25;
+    var reportPages = {};
+
+    // Semua tab laporan memakai pagination di sisi tampilan. Ringkasan dan
+    // grafik tetap memakai seluruh data, sedangkan tabel hanya menampilkan
+    // 25 baris per halaman agar halaman laporan tetap ringan dibaca.
+    function renderReportPage(key, rows, tbodySelector, printSelector, colspan, renderRow, page) {
+        rows = rows || [];
+        var totalRows = rows.length;
+        var totalPages = Math.max(1, Math.ceil(totalRows / reportPageSize));
+        page = Math.min(Math.max(parseInt(page, 10) || 1, 1), totalPages);
+        reportPages[key] = {
+            rows: rows,
+            tbodySelector: tbodySelector,
+            printSelector: printSelector,
+            colspan: colspan,
+            renderRow: renderRow,
+            page: page
+        };
+
+        var start = (page - 1) * reportPageSize;
+        var visibleRows = rows.slice(start, start + reportPageSize);
+        var html = '';
+        if (!totalRows) {
+            html = '<tr><td colspan="' + colspan + '" class="text-center text-muted">Tidak ditemukan data.</td></tr>';
+        } else {
+            $.each(visibleRows, function(i, row) {
+                html += renderRow(row, start + i + 1);
+            });
+        }
+        $(tbodySelector).html(html);
+
+        var pagerId = 'pagination-laporan-' + key;
+        var $pager = $('#' + pagerId);
+        if (!$pager.length) {
+            $pager = $('<div/>', { id: pagerId, 'class': 'laporan-aset-pagination text-right', style: 'margin-top: 10px;' });
+            $(printSelector).after($pager);
+        }
+        if (totalRows <= reportPageSize) {
+            $pager.html(totalRows ? '<small class="text-muted">Menampilkan 1–' + totalRows + ' dari ' + totalRows + ' data</small>' : '');
+            return;
+        }
+
+        var nav = '<small class="text-muted" style="margin-right:10px;">Menampilkan ' + (start + 1) + '–' + Math.min(start + reportPageSize, totalRows) + ' dari ' + totalRows + ' data</small>' +
+            '<ul class="pagination pagination-sm" style="margin:0; vertical-align:middle;">';
+        nav += page > 1 ? '<li><a href="#" data-report="' + key + '" data-page="' + (page - 1) + '">&laquo;</a></li>' : '<li class="disabled"><span>&laquo;</span></li>';
+        var first = Math.max(1, page - 2), last = Math.min(totalPages, page + 2);
+        for (var p = first; p <= last; p++) {
+            nav += p === page ? '<li class="active"><span>' + p + '</span></li>' : '<li><a href="#" data-report="' + key + '" data-page="' + p + '">' + p + '</a></li>';
+        }
+        nav += page < totalPages ? '<li><a href="#" data-report="' + key + '" data-page="' + (page + 1) + '">&raquo;</a></li>' : '<li class="disabled"><span>&raquo;</span></li>';
+        $pager.html(nav + '</ul>');
+    }
+
+    function paginateRenderedRows(key, totalRows, tbodySelector, printSelector, colspan) {
+        var rows = totalRows ? $(tbodySelector).children('tr').map(function() {
+            return this.outerHTML;
+        }).get() : [];
+        renderReportPage(key, rows, tbodySelector, printSelector, colspan, function(row) {
+            return row;
+        }, 1);
+    }
+
+    $(document).off('click.laporanAsetPagination', '.laporan-aset-pagination a[data-page]').on('click.laporanAsetPagination', '.laporan-aset-pagination a[data-page]', function(e) {
+        e.preventDefault();
+        var state = reportPages[$(this).data('report')];
+        if (state) renderReportPage($(this).data('report'), state.rows, state.tbodySelector, state.printSelector, state.colspan, state.renderRow, $(this).data('page'));
+    });
 
     // Autoload first view
     updateGlobalKPIs();
@@ -808,6 +876,7 @@ $(document).ready(function() {
                 });
             }
             $('#tbody-laporan-kib').html(trHtml);
+            paginateRenderedRows('kib', data.details.length, '#tbody-laporan-kib', '#print-laporan-kib', 8);
         });
     }
 
@@ -842,6 +911,7 @@ $(document).ready(function() {
                 });
             }
             $('#tbody-laporan-penyusutan').html(trHtml);
+            paginateRenderedRows('penyusutan', data.data.length, '#tbody-laporan-penyusutan', '#print-laporan-penyusutan', 9);
         });
     }
 
@@ -893,6 +963,7 @@ $(document).ready(function() {
                 });
             }
             $('#tbody-laporan-kondisi').html(trHtml);
+            paginateRenderedRows('kondisi', data.details.length, '#tbody-laporan-kondisi', '#print-laporan-kondisi', 7);
         });
     }
 
@@ -977,6 +1048,7 @@ $(document).ready(function() {
                 });
             }
             $('#tbody-laporan-masamanfaat').html(trHtml);
+            paginateRenderedRows('masamanfaat', data.data.length, '#tbody-laporan-masamanfaat', '#print-laporan-masamanfaat', 9);
         });
     }
 
@@ -1032,6 +1104,7 @@ $(document).ready(function() {
                 });
             }
             $('#tbody-laporan-pemeliharaan').html(trHtml);
+            paginateRenderedRows('pemeliharaan', data.data.length, '#tbody-laporan-pemeliharaan', '#print-laporan-pemeliharaan', 9);
         });
     }
 
@@ -1075,6 +1148,7 @@ $(document).ready(function() {
                 });
             }
             $('#tbody-laporan-penghapusan').html(trHtml);
+            paginateRenderedRows('penghapusan', data.data.length, '#tbody-laporan-penghapusan', '#print-laporan-penghapusan', 11);
         });
     }
 

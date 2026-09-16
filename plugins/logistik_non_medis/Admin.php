@@ -26298,7 +26298,20 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
     public function getLaporanAset()
     {
         $this->_addHeaderFiles();
-        $unit = $this->db('rsns_custom_logistik_non_medis_unit')->toArray();
+        // Kode unit aset lama banyak berasal dari master inventaris, bukan
+        // tabel unit logistik. Bangun pilihan dari register aset agar nilai
+        // yang dipilih selalu sama dengan a.kode_unit pada laporan.
+        $unit_stmt = $this->db()->pdo()->query("SELECT DISTINCT
+            a.kode_unit,
+            COALESCE(NULLIF(iu.nama, ''), u.nama_unit, a.kode_unit) AS nama_unit
+          FROM rsns_custom_logistik_non_medis_aset a
+          LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = a.kode_unit
+          LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master iu
+            ON iu.jenis_master='UNIT' AND iu.kode_kategori='' AND iu.kode=a.kode_unit
+          WHERE a.status='Aktif' AND a.klasifikasi_pencatatan='ASET'
+            AND a.kode_unit IS NOT NULL AND a.kode_unit <> ''
+          ORDER BY nama_unit ASC, a.kode_unit ASC");
+        $unit = $unit_stmt->fetchAll(\PDO::FETCH_ASSOC);
         $kategori = $this->db('rsns_custom_logistik_non_medis_kategori')->toArray();
         return $this->draw('laporan.aset.html', [
           'unit' => $unit,
