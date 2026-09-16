@@ -170,7 +170,7 @@ try {
     check($confirm['status'] === 'success', 'Validated classification failed: ' . json_encode($confirm));
     check($pdo->query("SELECT klasifikasi_pencatatan FROM rsns_custom_logistik_non_medis_aset WHERE kode_aset='IMPORTED'")->fetchColumn() === Policy::ASSET, 'Confirmation did not classify');
     invokePrivate($admin, '_initLokasi');
-    check((int)$pdo->query("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_lokasi_gudang WHERE kode_lokasi IN ('GUDANG-BHP-RUTIN','GUDANG-ASET') AND status='Aktif'")->fetchColumn() === 2, 'Default warehouse locations missing');
+    check((int)$pdo->query("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_lokasi_gudang WHERE kode_lokasi IN ('GUDANG-LOGISTIK','GUDANG-ASET') AND status='Aktif'")->fetchColumn() === 2, 'Default warehouse locations missing');
     $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_master_barang (kode_item,nama_barang,kategori,satuan_dasar,jenis_item,tipe_barang,status) VALUES
       ('VIP-PACK','VIP Pack','VIP','Paket','Rutin','Habis Pakai','Aktif'),
       ('VIP-TAS','Tas','VIP','Pcs','Rutin','Habis Pakai','Aktif'),
@@ -186,8 +186,8 @@ try {
     check(invokePrivate($admin, '_getPermissionKeyForMethod', 'gudangkomposisivip') === 'gudangproduksi', 'VIP composition permission mismatch');
     $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_vendor (kode_vendor,nama_vendor) VALUES ('V-TEST','Toko Uji')");
     $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_penerimaan (no_penerimaan,tgl_penerimaan,no_po,kode_vendor,kode_item,qty_terima,harga,kode_lokasi,status,stok_diposting) VALUES
-      ('TERIMA-TEST','2026-09-11','PO-TEST','V-TEST','VIP-TISU',10,5000,'GUDANG-BHP-RUTIN','Selesai',1),
-      ('DRAFT-TEST','2026-09-12','PO-DRAFT','V-TEST','VIP-TAS',4,10000,'GUDANG-BHP-RUTIN','Draft',0)");
+      ('TERIMA-TEST','2026-09-11','PO-TEST','V-TEST','VIP-TISU',10,5000,'GUDANG-LOGISTIK','Selesai',1),
+      ('DRAFT-TEST','2026-09-12','PO-DRAFT','V-TEST','VIP-TAS',4,10000,'GUDANG-LOGISTIK','Draft',0)");
     $realisasi = invokePrivate($admin, '_getRealisasiBelanja', '09', '2026');
     check(count($realisasi['rows']) === 1 && $realisasi['rows'][0]['no_po'] === 'PO-TEST' && $realisasi['total'] === 50000.0, 'Realisasi must use completed posted receipts and PO');
     $xlsx = route('getExportRealisasibelanja', ['bulan'=>'09','tahun'=>'2026'], true);

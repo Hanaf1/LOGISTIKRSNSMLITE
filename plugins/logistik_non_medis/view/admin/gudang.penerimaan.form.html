@@ -21,11 +21,11 @@
           <select name="kode_lokasi" class="form-control" required {if: $penerimaan.status == 'Selesai'}disabled{/if}>
             <option value="">-- Pilih lokasi --</option>
             {loop: $lokasi}
-            <option value="{$value.kode_lokasi}" {if: ($penerimaan.kode_lokasi == $value.kode_lokasi) || (empty($penerimaan.kode_lokasi) && $value.kode_lokasi == 'GUDANG-BHP-RUTIN')}selected{/if}>{$value.nama_lokasi}</option>
+            <option value="{$value.kode_lokasi}" {if: ($penerimaan.kode_lokasi == $value.kode_lokasi) || (empty($penerimaan.kode_lokasi) && $value.kode_lokasi == 'GUDANG-LOGISTIK')}selected{/if}>{$value.nama_lokasi}</option>
             {/loop}
           </select>
           {if: $penerimaan.status == 'Selesai'}<input type="hidden" name="kode_lokasi" value="{$penerimaan.kode_lokasi}">{/if}
-          <small class="text-muted">BHP rutin masuk Gudang BHP Rutin. Barang inventaris/aset masuk Gudang Aset.</small>
+          <small class="text-muted">BHP masuk Gudang BHP. Barang inventaris/aset masuk Gudang Aset.</small>
         </div></div>
       </div>
       <div class="row">

@@ -3420,13 +3420,15 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
             $this->db()->pdo()->exec("ALTER TABLE `rsns_custom_logistik_non_medis_lokasi_gudang` ADD `is_fragile` tinyint(1) NOT NULL DEFAULT 0 AFTER `denah_digital` ");
         }
 
-        // Lokasi awal. Stok lama tidak dipindahkan otomatis; gunakan mutasi
-        // gudang agar kartu stok dan jejak audit tetap benar.
+        // Lokasi awal untuk persediaan BHP dan aset.
         $seed = $this->db()->pdo()->prepare("INSERT IGNORE INTO rsns_custom_logistik_non_medis_lokasi_gudang
           (kode_lokasi, nama_lokasi, kode_zona, tipe_penyimpanan, status)
           VALUES (?, ?, ?, ?, 'Aktif')");
-        $seed->execute(['GUDANG-BHP-RUTIN', 'Gudang BHP Rutin', 'BHP', 'Persediaan BHP']);
+        $seed->execute(['GUDANG-LOGISTIK', 'Gudang BHP', 'BHP', 'Persediaan BHP']);
         $seed->execute(['GUDANG-ASET', 'Gudang Aset', 'ASET', 'Barang Inventaris / Aset']);
+        $this->db()->pdo()->prepare("UPDATE rsns_custom_logistik_non_medis_lokasi_gudang
+            SET nama_lokasi='Gudang BHP', kode_zona='BHP', tipe_penyimpanan='Persediaan BHP', status='Aktif'
+            WHERE kode_lokasi='GUDANG-LOGISTIK'")->execute();
 
         $upload_dir = UPLOADS . '/logistik_non_medis/lokasi';
         if (!is_dir($upload_dir)) {
