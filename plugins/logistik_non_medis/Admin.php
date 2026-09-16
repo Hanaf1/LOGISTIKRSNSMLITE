@@ -3485,7 +3485,14 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         $rows_paged = array_slice($rows, $_offset, $perpage);
         $pdo = $this->db()->pdo();
         $assetCount = $pdo->prepare("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_aset WHERE status='Aktif' AND kode_lokasi=?");
-        $bhpCount = $pdo->prepare("SELECT COUNT(DISTINCT kode_item), COALESCE(SUM(stok), 0) FROM rsns_custom_logistik_non_medis_stok_batch WHERE kode_lokasi=? AND stok>0");
+        // Samakan definisi item BHP dengan halaman Pengelolaan Stok: hanya
+        // barang yang masih ada di master dan bukan kategori yang disaring.
+        $bhpCount = $pdo->prepare("SELECT COUNT(DISTINCT b.kode_item), COALESCE(SUM(sb.stok), 0)
+            FROM rsns_custom_logistik_non_medis_master_barang b
+            LEFT JOIN rsns_custom_logistik_non_medis_kategori k ON b.kode_kategori=k.kode_kategori
+            JOIN rsns_custom_logistik_non_medis_stok_batch sb ON b.kode_item=sb.kode_item
+            WHERE sb.kode_lokasi=? AND b.kode_item != 'BRG-BARU'
+              AND (k.nama_kategori IS NULL OR (LOWER(k.nama_kategori) NOT LIKE '%fc%' AND LOWER(k.nama_kategori) NOT LIKE '%fotocopy%'))");
         foreach ($rows_paged as &$row) {
             $assetCount->execute([$row['kode_lokasi']]);
             $row['total_aset'] = (int) $assetCount->fetchColumn();
