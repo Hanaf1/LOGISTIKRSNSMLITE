@@ -968,7 +968,19 @@ $(document).ready(function() {
     }
 
     function renderKondisiChart(summary) {
-        var ctx = document.getElementById('chart-kondisi-aset').getContext('2d');
+        var canvas = document.getElementById('chart-kondisi-aset');
+        // Laporan tetap bisa dipakai di jaringan tanpa CDN. Jangan biarkan
+        // grafik yang opsional menghentikan tabel kondisi aset.
+        if (!canvas || typeof window.Chart === 'undefined') {
+            if (canvas) {
+                var $body = $(canvas).closest('.panel-body');
+                $body.find('.chart-kondisi-unavailable').remove();
+                $body.append('<p class="text-muted text-center chart-kondisi-unavailable" style="margin-top:10px;">Grafik tidak tersedia saat ini.</p>');
+            }
+            return;
+        }
+        $(canvas).closest('.panel-body').find('.chart-kondisi-unavailable').remove();
+        var ctx = canvas.getContext('2d');
         
         if (chartKondisi !== null) {
             chartKondisi.destroy();

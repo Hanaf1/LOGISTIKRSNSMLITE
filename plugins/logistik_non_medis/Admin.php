@@ -16827,6 +16827,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $this->core->addJS(url('assets/jscripts/moment-with-locales.js'));
         $this->core->addJS(url('assets/jscripts/bootstrap-datetimepicker.js'));
         $this->core->addJS('https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js');
+        $this->core->addJS('https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js');
         $this->core->addJS(url([ADMIN, 'logistik_non_medis', 'javascript']), 'footer');
     }
 
