@@ -26451,10 +26451,12 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $query_detail = "SELECT 
                           a.*, 
                           b.nama_barang, 
-                          u.nama_unit 
+                          COALESCE(NULLIF(iu.nama, ''), u.nama_unit, a.kode_unit, '-') AS nama_unit
                         FROM rsns_custom_logistik_non_medis_aset a
                         LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON a.kode_item = b.kode_item
                         LEFT JOIN rsns_custom_logistik_non_medis_unit u ON a.kode_unit = u.kode_unit
+                        LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master iu
+                          ON iu.jenis_master='UNIT' AND iu.kode_kategori='' AND iu.kode=a.kode_unit
                         $where_detail_str
                         ORDER BY a.kib_jenis ASC, a.kode_aset ASC";
 
@@ -26511,10 +26513,12 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                   a.akumulasi_penyusutan,
                   a.nilai_buku,
                   a.tgl_penyusutan_terakhir,
-                  u.nama_unit
+                  COALESCE(NULLIF(iu.nama, ''), u.nama_unit, a.kode_unit, '-') AS nama_unit
                 FROM rsns_custom_logistik_non_medis_aset a
                 LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON a.kode_item = b.kode_item
                 LEFT JOIN rsns_custom_logistik_non_medis_unit u ON a.kode_unit = u.kode_unit
+                LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master iu
+                  ON iu.jenis_master='UNIT' AND iu.kode_kategori='' AND iu.kode=a.kode_unit
                 $where_str
                 ORDER BY a.kode_aset ASC";
 
@@ -26586,11 +26590,13 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                           a.nama_aset, 
                           a.status_kondisi, 
                           a.pic,
-                          u.nama_unit,
+                          COALESCE(NULLIF(iu.nama, ''), u.nama_unit, a.kode_unit, '-') AS nama_unit,
                           l.nama_lokasi
                         FROM rsns_custom_logistik_non_medis_aset a
                         LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON a.kode_item = b.kode_item
                         LEFT JOIN rsns_custom_logistik_non_medis_unit u ON a.kode_unit = u.kode_unit
+                        LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master iu
+                          ON iu.jenis_master='UNIT' AND iu.kode_kategori='' AND iu.kode=a.kode_unit
                         LEFT JOIN rsns_custom_logistik_non_medis_lokasi_gudang l ON a.kode_lokasi = l.kode_lokasi
                         $where_str
                         ORDER BY a.status_kondisi DESC, a.kode_aset ASC";
@@ -26642,12 +26648,15 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                   a.kode_aset, 
                   a.nama_aset, 
                   a.tanggal_perolehan, 
+                  a.tahun_beli,
                   a.masa_manfaat_tahun,
                   a.nilai_buku,
-                  u.nama_unit
+                  COALESCE(NULLIF(iu.nama, ''), u.nama_unit, a.kode_unit, '-') AS nama_unit
                 FROM rsns_custom_logistik_non_medis_aset a
                 LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON a.kode_item = b.kode_item
                 LEFT JOIN rsns_custom_logistik_non_medis_unit u ON a.kode_unit = u.kode_unit
+                LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master iu
+                  ON iu.jenis_master='UNIT' AND iu.kode_kategori='' AND iu.kode=a.kode_unit
                 $where_str
                 ORDER BY a.tanggal_perolehan ASC";
 
@@ -26657,14 +26666,18 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
         $processed = [];
         foreach ($rows as $r) {
-            $perolehan = $r['tanggal_perolehan'];
+            $tahun_perolehan = (int)($r['tahun_beli'] ?? 0);
+            if ($tahun_perolehan < 1900 || $tahun_perolehan > 2100) {
+                $tahun_perolehan = !empty($r['tanggal_perolehan']) && $r['tanggal_perolehan'] !== '0000-00-00'
+                    ? (int)substr($r['tanggal_perolehan'], 0, 4) : 0;
+            }
             $masa_manfaat = (int)$r['masa_manfaat_tahun'];
 
-            if (empty($perolehan) || $perolehan == '0000-00-00') {
+            if ($tahun_perolehan === 0) {
                 $usia_tahun = 0;
                 $sisa_manfaat = $masa_manfaat;
             } else {
-                $tgl_perolehan = new \DateTime($perolehan);
+                $tgl_perolehan = new \DateTime($tahun_perolehan . '-01-01');
                 $tgl_sekarang = new \DateTime();
                 $interval = $tgl_perolehan->diff($tgl_sekarang);
                 $usia_tahun = $interval->y + ($interval->m / 12) + ($interval->d / 365);
@@ -26674,7 +26687,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             $processed[] = [
               'kode_aset' => $r['kode_aset'],
               'nama_aset' => $r['nama_aset'],
-              'tanggal_perolehan' => $r['tanggal_perolehan'],
+              'tahun_perolehan' => $tahun_perolehan,
               'masa_manfaat_tahun' => $masa_manfaat,
               'nilai_buku' => (double)$r['nilai_buku'],
               'nama_unit' => $r['nama_unit'],

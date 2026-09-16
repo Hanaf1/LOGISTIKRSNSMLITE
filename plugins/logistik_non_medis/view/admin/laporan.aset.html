@@ -130,11 +130,11 @@
             <div class="row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eaecf4;">
                 <div class="col-md-6">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label style="font-size: 10px; font-weight: bold; text-transform: uppercase;">Rentang Tanggal Perolehan Aset</label>
+                        <label style="font-size: 10px; font-weight: bold; text-transform: uppercase;">Rentang Tahun Perolehan Aset</label>
                         <div class="input-group">
-                            <input type="date" id="global-tgl-awal" class="form-control" value="2000-01-01">
+                            <input type="number" id="global-tahun-awal" class="form-control" min="1900" max="2100" value="2000" placeholder="Tahun awal">
                             <span class="input-group-addon">s/d</span>
-                            <input type="date" id="global-tgl-akhir" class="form-control" value="{?=date('Y-m-d')?}">
+                            <input type="number" id="global-tahun-akhir" class="form-control" min="1900" max="2100" value="{?=date('Y')?}" placeholder="Tahun akhir">
                         </div>
                     </div>
                 </div>
@@ -234,7 +234,7 @@
                                         <th>Unit Kerja</th>
                                         <th class="text-center" style="width: 80px;">KIB</th>
                                         <th>Keterangan Detail Spesifikasi KIB</th>
-                                        <th class="text-center" style="width: 120px;">Tgl Perolehan</th>
+                                        <th class="text-center" style="width: 120px;">Tahun Perolehan</th>
                                         <th class="text-right" style="width: 150px;">Harga Beli</th>
                                     </tr>
                                 </thead>
@@ -379,7 +379,7 @@
                                         <th>Kode Aset</th>
                                         <th>Nama Aset</th>
                                         <th>Unit Kerja</th>
-                                        <th class="text-center" style="width: 110px;">Tgl Perolehan</th>
+                                        <th class="text-center" style="width: 110px;">Tahun Perolehan</th>
                                         <th class="text-center" style="width: 90px;">Usia Aset</th>
                                         <th class="text-center" style="width: 100px;">Masa Manfaat</th>
                                         <th class="text-center" style="width: 130px;">Sisa Masa Manfaat</th>
@@ -694,9 +694,11 @@ $(document).ready(function() {
 
     // Helper functions to retrieve global filters
     function getFilters() {
+        var tahunAwal = $('#global-tahun-awal').val();
+        var tahunAkhir = $('#global-tahun-akhir').val();
         return {
-            start_date: $('#global-tgl-awal').val(),
-            end_date: $('#global-tgl-akhir').val(),
+            start_date: tahunAwal ? tahunAwal + '-01-01' : '',
+            end_date: tahunAkhir ? tahunAkhir + '-12-31' : '',
             unit: $('#global-unit').val(),
             kategori: $('#global-kategori').val()
         };
@@ -790,7 +792,7 @@ $(document).ready(function() {
                     } else if (row.kib_jenis === 'F') {
                         detailDesc = `Proyek: ${row.kib_proyek_bangunan || '-'} | Rencana Selesai: ${row.kib_tgl_rencana_selesai || '-'} | Progress: ${row.kib_progress_persen}%`;
                     }
-                    var tgl = row.tanggal_perolehan && row.tanggal_perolehan !== '0000-00-00' ? row.tanggal_perolehan : '-';
+                    var tahun = row.tahun_beli || (row.tanggal_perolehan && row.tanggal_perolehan !== '0000-00-00' ? row.tanggal_perolehan.substring(0, 4) : '-');
                     trHtml += `
                         <tr>
                             <td class="text-center">${i + 1}</td>
@@ -799,7 +801,7 @@ $(document).ready(function() {
                             <td>${row.nama_unit || '-'}</td>
                             <td class="text-center"><span class="label label-${kibColors[row.kib_jenis] || 'default'}">KIB ${row.kib_jenis}</span></td>
                             <td style="font-size: 11px;">${detailDesc}</td>
-                            <td class="text-center">${tgl}</td>
+                            <td class="text-center">${tahun}</td>
                             <td class="text-right" style="font-weight: bold;">Rp. ${row.harga_beli.toLocaleString('id-ID')}</td>
                         </tr>
                     `;
@@ -956,14 +958,14 @@ $(document).ready(function() {
                         sisaLabel = sisa + ' Thn (Kritis)';
                     }
 
-                    var tgl = row.tanggal_perolehan && row.tanggal_perolehan !== '0000-00-00' ? row.tanggal_perolehan : '-';
+                    var tahun = row.tahun_perolehan || '-';
                     trHtml += `
                         <tr>
                             <td class="text-center">${i + 1}</td>
                             <td><strong>${row.kode_aset}</strong></td>
                             <td>${row.nama_aset}</td>
                             <td>${row.nama_unit || '-'}</td>
-                            <td class="text-center">${tgl}</td>
+                            <td class="text-center">${tahun}</td>
                             <td class="text-center">${row.usia_tahun} Thn</td>
                             <td class="text-center">${row.masa_manfaat_tahun} Thn</td>
                             <td class="text-center">
