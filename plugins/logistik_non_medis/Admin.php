@@ -26307,11 +26307,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $params = [];
 
         if (!empty($start_date)) {
-            $where[] = "a.tanggal_perolehan >= :start_date";
+            $where[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-01-01')) >= :start_date";
             $params[':start_date'] = $start_date;
         }
         if (!empty($end_date)) {
-            $where[] = "a.tanggal_perolehan <= :end_date";
+            $where[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-12-31')) <= :end_date";
             $params[':end_date'] = $end_date;
         }
         if (!empty($unit)) {
@@ -26342,11 +26342,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $where_del = ["a.status = 'Dihapuskan'", "a.klasifikasi_pencatatan = 'ASET'"];
         $params_del = [];
         if (!empty($start_date)) {
-            $where_del[] = "a.tanggal_perolehan >= :start_date";
+            $where_del[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-01-01')) >= :start_date";
             $params_del[':start_date'] = $start_date;
         }
         if (!empty($end_date)) {
-            $where_del[] = "a.tanggal_perolehan <= :end_date";
+            $where_del[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-12-31')) <= :end_date";
             $params_del[':end_date'] = $end_date;
         }
         if (!empty($unit)) {
@@ -26391,11 +26391,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $params = [];
 
         if (!empty($start_date)) {
-            $where[] = "a.tanggal_perolehan >= :start_date";
+            $where[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-01-01')) >= :start_date";
             $params[':start_date'] = $start_date;
         }
         if (!empty($end_date)) {
-            $where[] = "a.tanggal_perolehan <= :end_date";
+            $where[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-12-31')) <= :end_date";
             $params[':end_date'] = $end_date;
         }
         if (!empty($unit)) {
@@ -26438,7 +26438,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             }
         }
 
-        $where_detail = ["a.status = 'Aktif'"];
+        $where_detail = $where;
         $params_detail = $params;
 
         if (!empty($kib_jenis_filter)) {
@@ -26483,11 +26483,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $params = [];
 
         if (!empty($start_date)) {
-            $where[] = "a.tanggal_perolehan >= :start_date";
+            $where[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-01-01')) >= :start_date";
             $params[':start_date'] = $start_date;
         }
         if (!empty($end_date)) {
-            $where[] = "a.tanggal_perolehan <= :end_date";
+            $where[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-12-31')) <= :end_date";
             $params[':end_date'] = $end_date;
         }
         if (!empty($unit)) {
@@ -26540,11 +26540,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $params = [];
 
         if (!empty($start_date)) {
-            $where[] = "a.tanggal_perolehan >= :start_date";
+            $where[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-01-01')) >= :start_date";
             $params[':start_date'] = $start_date;
         }
         if (!empty($end_date)) {
-            $where[] = "a.tanggal_perolehan <= :end_date";
+            $where[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-12-31')) <= :end_date";
             $params[':end_date'] = $end_date;
         }
         if (!empty($unit)) {
@@ -26620,11 +26620,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $params = [];
 
         if (!empty($start_date)) {
-            $where[] = "a.tanggal_perolehan >= :start_date";
+            $where[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-01-01')) >= :start_date";
             $params[':start_date'] = $start_date;
         }
         if (!empty($end_date)) {
-            $where[] = "a.tanggal_perolehan <= :end_date";
+            $where[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-12-31')) <= :end_date";
             $params[':end_date'] = $end_date;
         }
         if (!empty($unit)) {
