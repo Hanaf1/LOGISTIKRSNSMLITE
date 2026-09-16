@@ -10,6 +10,14 @@
             <span class="label label-default">{$value.slot}</span>
         </td>
         <td>{$value.kapasitas} {$value.satuan_kapasitas}</td>
+        <td>
+            <a class="btn btn-info btn-xs" href="{?=url([ADMIN,'logistik_non_medis','asetregistrasi'])?}&filter_lokasi={$value.kode_lokasi}" title="Lihat inventaris pada lokasi ini">
+                <i class="fa fa-cubes"></i> Aset: {$value.total_aset}
+            </a>
+            <a class="btn btn-default btn-xs" href="{?=url([ADMIN,'logistik_non_medis','gudangstok'])?}&kode_lokasi={$value.kode_lokasi}" title="Lihat stok BHP pada lokasi ini" style="margin-top:4px;">
+                <i class="fa fa-archive"></i> BHP: {$value.total_bhp_item} item / {?=number_format((float)$value['total_bhp_qty'], 0, ',', '.')?}
+            </a>
+        </td>
         <td><span class="text-primary"><i class="fa fa-cube"></i> {$value.tipe_penyimpanan}</span></td>
         <td>
             {if: !empty($value.suhu_min) || !empty($value.suhu_max)}
@@ -45,7 +53,7 @@
     {/loop}
 {else}
     <tr>
-        <td colspan="8" class="text-center">Data tidak ditemukan.</td>
+        <td colspan="9" class="text-center">Data tidak ditemukan.</td>
     </tr>
 {/if}
 

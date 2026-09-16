@@ -221,6 +221,7 @@
 
 <script>
 $(document).ready(function() {
+    var lokasiAwal = '{$kode_lokasi_awal}';
     var $kategoriFilter = $('#kategori-filter-stok');
 
     // The admin theme initializes Selectator on every <select>. Remove that
@@ -292,6 +293,7 @@ $(document).ready(function() {
         $.post("{?=url([ADMIN, 'logistik_non_medis', 'displaygudangstok'])?}", {
             halaman: halaman,
             cari: cari,
+            lokasi: lokasiAwal,
             kategori: kategori
         }, function(data) {
             $('#display-stok').html(data);

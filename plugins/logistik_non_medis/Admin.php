@@ -3008,6 +3008,18 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         $jml_halaman = ceil($jumlah_data / $perpage);
 
         $rows_paged = array_slice($rows, $_offset, $perpage);
+        $pdo = $this->db()->pdo();
+        $assetCount = $pdo->prepare("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_aset WHERE status='Aktif' AND kode_lokasi=?");
+        $bhpCount = $pdo->prepare("SELECT COUNT(DISTINCT kode_item), COALESCE(SUM(stok),0) FROM rsns_custom_logistik_non_medis_stok_batch WHERE kode_lokasi=? AND stok>0");
+        foreach ($rows_paged as &$row) {
+            $assetCount->execute([$row['kode_lokasi']]);
+            $row['total_aset'] = (int)$assetCount->fetchColumn();
+            $bhpCount->execute([$row['kode_lokasi']]);
+            [$row['total_bhp_item'], $row['total_bhp_qty']] = $bhpCount->fetch(\PDO::FETCH_NUM);
+            $row['total_bhp_item'] = (int)$row['total_bhp_item'];
+            $row['total_bhp_qty'] = (float)$row['total_bhp_qty'];
+        }
+        unset($row);
 
         // Fetch parent names
         foreach ($rows_paged as &$rp) {
@@ -8862,7 +8874,8 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $this->_initStok();
         $this->_addHeaderFiles();
         $kategori = $this->db('rsns_custom_logistik_non_medis_kategori')->toArray();
-        return $this->draw('gudang.stok.html', ['kategori' => $kategori]);
+        return $this->draw('gudang.stok.html', ['kategori' => $kategori,
+          'kode_lokasi_awal' => trim((string)($_GET['kode_lokasi'] ?? ''))]);
     }
 
     public function anyDisplayGudangStok()
