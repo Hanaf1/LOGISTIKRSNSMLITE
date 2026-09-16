@@ -317,6 +317,17 @@
                 </li>
                 {/if}
 
+                {if: $perm_masterlokasi}
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','masterlokasi'])?}" class="panel-body text-center">
+                            <div class="panel-thumb"><i class="fa fa-map-marker"></i><div class="desc">Gudang, ruang, dan lokasi penyimpanan</div></div>
+                            <h4><b>Lokasi Gudang</b></h4>
+                        </a>
+                    </div>
+                </li>
+                {/if}
+
                 {if: $perm_mastersatuan}
                 <li class="module">
                     <div class="panel panel-default">
@@ -418,17 +429,6 @@
                         <a href="{?=url([ADMIN,'logistik_non_medis','realisasibelanja'])?}" class="panel-body text-center">
                             <div class="panel-thumb"><i class="fa fa-line-chart"></i><div class="desc">Dari penerimaan dan Purchase Order</div></div>
                             <h4><b>Realisasi Belanja</b></h4>
-                        </a>
-                    </div>
-                </li>
-                {/if}
-
-                {if: $perm_masterlokasi}
-                <li class="module">
-                    <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','masterlokasi'])?}" class="panel-body text-center">
-                            <div class="panel-thumb"><i class="fa fa-map-marker"></i><div class="desc">Gudang, ruang, dan lokasi penyimpanan</div></div>
-                            <h4><b>Lokasi Gudang</b></h4>
                         </a>
                     </div>
                 </li>
