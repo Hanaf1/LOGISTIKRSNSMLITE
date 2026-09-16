@@ -31,7 +31,7 @@ function invokePrivate($admin, $name, ...$args) {
     $method->setAccessible(true);
     return $method->invokeArgs($admin, $args);
 }
-foreach ([[999999,Policy::NON_ASSET],[1000001,Policy::ASSET],[1000000,Policy::UNKNOWN],
+foreach ([[999999,Policy::NON_ASSET],[1000001,Policy::ASSET],[1000000,Policy::ASSET],
     [0,Policy::UNKNOWN],[-1,Policy::UNKNOWN],[null,Policy::UNKNOWN],[INF,Policy::UNKNOWN],
     [350000,Policy::NON_ASSET]] as [$price,$expected]) {
     check(Policy::fromPrice($price) === $expected, 'Price boundary classification failed');
@@ -86,11 +86,12 @@ try {
     $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_aset_penyusutan (kode_aset,periode,tanggal_proses,user_proses) VALUES ('LEGACY-HISTORY','2025-01',NOW(),'test')");
     $plan = Migration::propose(Migration::snapshot($pdo));
     $backup = sys_get_temp_dir() . '/' . $database . '.json';
-    check(Migration::apply($pdo, $plan, $backup) === 3, 'Migration should classify all valid per-unit prices without depreciation history');
+    check(Migration::apply($pdo, $plan, $backup) === 4, 'Migration should classify all valid per-unit prices without depreciation history');
     check(is_file($backup), 'Backup missing');
     $byCode = [];
     foreach (Migration::snapshot($pdo) as $r) $byCode[$r['kode_aset']] = $r;
     check($byCode['LOW']['klasifikasi_pencatatan'] === Policy::NON_ASSET, 'Low-price inventory lost');
+    check($byCode['EXACT']['klasifikasi_pencatatan'] === Policy::ASSET, 'Threshold-price inventory was not classified as asset');
     check($byCode['IMPORTED']['klasifikasi_pencatatan'] === Policy::ASSET, 'Imported actual acquisition price was not classified');
     check($byCode['LEGACY-HISTORY']['klasifikasi_pencatatan'] === Policy::UNKNOWN, 'History must require reconciliation');
     $reconciliationPlan = Migration::propose(Migration::snapshot($pdo), true);
@@ -100,7 +101,7 @@ try {
     try { Migration::apply($pdo, $plan, $backup . '.stale'); } catch (RuntimeException $e) { $failed = true; }
     check($failed, 'Stale migration accepted');
     $preview = invokePrivate($admin, '_hitungDataPenyusutan', '2026-09', '', '');
-    check(count($preview['data']) === 3, 'Preview included non-asset, unknown, or land');
+    check(count($preview['data']) === 4, 'Preview did not include every depreciable asset');
     check($byCode['DEPRECIATED']['klasifikasi_pencatatan'] === Policy::ASSET, 'Book value changed classification');
     $failed = false;
     try {

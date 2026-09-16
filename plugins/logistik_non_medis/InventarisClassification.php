@@ -11,7 +11,7 @@ final class InventarisClassification
 
     public static function fromPrice($price): string
     {
-        if (!is_numeric($price) || !is_finite((float)$price) || $price <= 0 || (float)$price === 1000000.0) {
+        if (!is_numeric($price) || !is_finite((float)$price) || $price <= 0) {
             return self::UNKNOWN;
         }
         return $price < 1000000 ? self::NON_ASSET : self::ASSET;

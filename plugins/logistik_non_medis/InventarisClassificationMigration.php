@@ -32,7 +32,7 @@ final class InventarisClassificationMigration
                     if (!$reconcileHistory) {
                         $reason = 'Perlu rekonsiliasi riwayat penyusutan';
                     } elseif ($candidate === InventarisClassification::UNKNOWN) {
-                        $reason = 'Harga belum valid atau tepat Rp1.000.000';
+                        $reason = 'Harga belum valid';
                     } else {
                         $after = $candidate;
                         $reason = 'Klasifikasi sesuai harga; riwayat penyusutan dipertahankan untuk rekonsiliasi';
@@ -40,7 +40,7 @@ final class InventarisClassificationMigration
                 } elseif ((float)($row['harga_referensi_import'] ?? 0) > 0) {
                     $reason = 'Validasi harga referensi impor melalui form registrasi';
                 } elseif ($candidate === InventarisClassification::UNKNOWN) {
-                    $reason = 'Harga belum valid atau tepat Rp1.000.000';
+                    $reason = 'Harga belum valid';
                 } else {
                     $after = $candidate;
                     $reason = 'Harga perolehan per unit, tanpa riwayat penyusutan';
