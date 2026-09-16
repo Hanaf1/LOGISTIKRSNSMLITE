@@ -375,6 +375,9 @@ class Admin extends AdminModule
         if (strpos($method, 'nonasetunit') !== false) {
             return 'asetregistrasi';
         }
+        if (strpos($method, 'inventarisnonaset') !== false || strpos($method, 'asetformpage') !== false) {
+            return 'asetregistrasi';
+        }
         if (strpos($method, 'ajaxmasterbarang') !== false || strpos($method, 'ajaxbarangselect2') !== false) {
             return null; // Semua role butuh akses pencarian barang
         }
@@ -621,15 +624,16 @@ class Admin extends AdminModule
         'Tracking Pengiriman' => 'distribusitracking',
         'Retur Barang dari Unit' => 'distribusiretur',
         'Kuota & Alokasi Unit' => 'distribusikuota',
-        '--- ASET ---'        => '#',
-        'Registrasi Aset'     => 'asetregistrasi',
-        'Non-Aset Unit'       => 'nonasetunit',
-        'Kartu Inventaris (KIB)' => 'asetkib',
+        '--- INVENTARIS ---'  => '#',
+        'Registrasi Inventaris' => 'asetregistrasi',
+        'Inventaris'          => 'asetregistrasi',
+        'Aset'                => 'asetkib',
+        'Inventaris Non-Aset' => 'inventarisnonaset',
         'Penyusutan Aset'     => 'asetpenyusutan',
         'Pemeliharaan Aset'   => 'asetpemeliharaan',
         'Mutasi Aset'         => 'asetmutasi',
         'Penghapusan Aset'    => 'asetpenghapusan',
-        'Sensus & Verifikasi Aset' => 'asetsensus',
+        'Sensus & Verifikasi Inventaris' => 'asetsensus',
         '--- LAPORAN & AUDIT ---' => '#',
         'Laporan Stok & Mutasi' => 'laporanstokmutasi',
         'Laporan Pengadaan'    => 'laporanpengadaan',
@@ -1177,13 +1181,13 @@ class Admin extends AdminModule
         'distribusitracking' => 'Tracking Pengiriman',
         'distribusiretur' => 'Retur Barang dari Unit',
         'distribusikuota' => 'Kuota & Alokasi Unit',
-        'asetregistrasi' => 'Registrasi Aset & Non-Aset Unit',
-        'asetkib' => 'Kartu Inventaris (KIB)',
+        'asetregistrasi' => 'Registrasi & Daftar Inventaris',
+        'asetkib' => 'Aset',
         'asetpenyusutan' => 'Penyusutan Aset',
         'asetpemeliharaan' => 'Pemeliharaan Aset',
         'asetmutasi' => 'Mutasi Aset',
         'asetpenghapusan' => 'Penghapusan Aset',
-        'asetsensus' => 'Sensus & Verifikasi Aset',
+        'asetsensus' => 'Sensus & Verifikasi Inventaris',
         'laporanstokmutasi' => 'Laporan Stok & Mutasi',
         'laporanpengadaan' => 'Laporan Pengadaan',
         'rekapnonrutin' => 'Rekap Cetak Non Rutin',
@@ -17986,8 +17990,16 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           'units' => $units,
           'kelompok' => $kelompok,
           'jenis' => $jenis,
-          'ringkasan' => $ringkasan
+          'ringkasan' => $ringkasan,
+          'initial_klasifikasi' => InventarisClassification::validFilter($_GET['filter_klasifikasi'] ?? '')
         ]);
+    }
+
+    /** Daftar inventaris dengan klasifikasi yang dikunci dari menu Non-Aset. */
+    public function getInventarisNonAset()
+    {
+        $_GET['filter_klasifikasi'] = InventarisClassification::NON_ASSET;
+        return $this->getAsetRegistrasi();
     }
 
     public function getLaporanInventarisExportXlsx()
@@ -19347,9 +19359,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         $perpage = 25;
         $_offset = ($halaman - 1) * $perpage;
 
-        // Data lama yang belum diklasifikasikan tetap terlihat pada register/KIB
-        // agar tidak tampak hilang. Penyusutan tetap hanya memproses ASET.
-        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan IN ('ASET', 'BELUM_DITENTUKAN')"];
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'"];
         $params = [];
         if (!empty($cari)) {
             $where[] = "(a.kode_aset LIKE ? OR a.nomor_inventaris LIKE ? OR a.nama_aset LIKE ? OR b.nama_barang LIKE ? OR im.nama LIKE ?)";
@@ -19779,7 +19789,7 @@ public function anyDisplayLaporanInventaris()
         $filter_jenis = trim((string)($_GET['filter_jenis'] ?? ''));
         $filter_harga = trim((string)($_GET['filter_harga'] ?? ''));
 
-        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan IN ('ASET', 'BELUM_DITENTUKAN')"];
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'"];
         $params = [];
         if ($cari !== '') {
             $where[] = "(a.kode_aset LIKE ? OR a.nomor_inventaris LIKE ? OR a.nama_aset LIKE ? OR b.nama_barang LIKE ? OR im.nama LIKE ?)";
@@ -20057,7 +20067,7 @@ public function anyDisplayLaporanInventaris()
             exit();
         }
         if ((double)$aset['harga_beli'] > 0) {
-            echo json_encode(['status' => 'error', 'message' => 'Harga aset sudah terisi. Gunakan menu Registrasi Aset untuk mengubahnya.']);
+            echo json_encode(['status' => 'error', 'message' => 'Harga inventaris sudah terisi. Gunakan menu Inventaris untuk mengubahnya.']);
             exit();
         }
 
@@ -20113,7 +20123,7 @@ public function anyDisplayLaporanInventaris()
             $assets_in_cat = $this->db('rsns_custom_logistik_non_medis_aset')
                                 ->where('kib_jenis', $jenis)
                                 ->where('status', 'Aktif')
-                                ->where('klasifikasi_pencatatan', 'IN', ['ASET', 'BELUM_DITENTUKAN'])
+                                ->where('klasifikasi_pencatatan', 'ASET')
                                 ->toArray();
 
             $total_count = count($assets_in_cat);

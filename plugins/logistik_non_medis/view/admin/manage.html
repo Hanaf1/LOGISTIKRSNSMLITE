@@ -251,7 +251,7 @@
 {if: $has_pengadaan}<li role="presentation" class="{?=($first_active_tab=='pengadaan')?'active':''?}"><a href="#pengadaan" aria-controls="pengadaan" role="tab" data-toggle="tab"><i class="fa fa-shopping-cart"></i> Pengadaan</a></li>{/if}
 {if: $has_gudang}<li role="presentation" class="{?=($first_active_tab=='manajemen-gudang')?'active':''?}"><a href="#manajemen-gudang" aria-controls="manajemen-gudang" role="tab" data-toggle="tab"><i class="fa fa-home"></i> Manajemen Gudang</a></li>{/if}
 {if: $has_distribusi}<li role="presentation" class="{?=($first_active_tab=='distribusi')?'active':''?}"><a href="#distribusi" aria-controls="distribusi" role="tab" data-toggle="tab"><i class="fa fa-share-alt"></i> Distribusi</a></li>{/if}
-{if: $has_aset}<li role="presentation" class="{?=($first_active_tab=='aset')?'active':''?}"><a href="#aset" aria-controls="aset" role="tab" data-toggle="tab"><i class="fa fa-cubes"></i> Aset</a></li>{/if}
+{if: $has_aset}<li role="presentation" class="{?=($first_active_tab=='aset')?'active':''?}"><a href="#aset" aria-controls="aset" role="tab" data-toggle="tab"><i class="fa fa-cubes"></i> Inventaris</a></li>{/if}
 {if: $has_laporan}<li role="presentation" class="{?=($first_active_tab=='laporan-audit')?'active':''?}"><a href="#laporan-audit" aria-controls="laporan-audit" role="tab" data-toggle="tab"><i class="fa fa-line-chart"></i> Laporan &amp; Audit</a></li>{/if}
 </ul>
 <div class="tab-content">
@@ -678,19 +678,19 @@
 <div role="tabpanel" class="tab-pane {?=($first_active_tab=='aset')?'active':''?}" id="aset">
     <div class="row">
         <div class="col-md-12">
-            <h4 style="display:none;"><i class="fa fa-cubes"></i> Aset</h4>
+            <h4 style="display:none;"><i class="fa fa-cubes"></i> Inventaris</h4>
             <hr style="margin-top: 5px; margin-bottom: 15px;">
             <ul class="modules" style="padding:0;margin:0;">
 
                 {if: $perm_asetregistrasi}
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','asetregistrasi'])?}" class="panel-body text-center">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','asetformpage'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-plus-circle"></i>
-                                <div class="desc">Registrasi &amp; Pencatatan Aset</div>
+                                <div class="desc">Input inventaris baru</div>
                             </div>
-                            <h4><b>Registrasi Aset</b></h4>
+                            <h4><b>Registrasi Inventaris</b></h4>
                         </a>
                     </div>
                 </li>
@@ -699,12 +699,17 @@
                 {if: $perm_asetregistrasi}
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','nonasetunit'])?}" class="panel-body text-center">
-                            <div class="panel-thumb">
-                                <i class="fa fa-cubes"></i>
-                                <div class="desc">Inventaris Non-Aset per Unit</div>
-                            </div>
-                            <h4><b>Non-Aset Unit</b></h4>
+                        <a href="{?=url([ADMIN,'logistik_non_medis','asetregistrasi'])?}" class="panel-body text-center">
+                            <div class="panel-thumb"><i class="fa fa-list"></i><div class="desc">Semua inventaris dengan filter klasifikasi</div></div>
+                            <h4><b>Inventaris</b></h4>
+                        </a>
+                    </div>
+                </li>
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','inventarisnonaset'])?}" class="panel-body text-center">
+                            <div class="panel-thumb"><i class="fa fa-cubes"></i><div class="desc">Daftar inventaris non-aset per unit</div></div>
+                            <h4><b>Non-Aset</b></h4>
                         </a>
                     </div>
                 </li>
@@ -716,9 +721,9 @@
                         <a href="{?=url([ADMIN,'logistik_non_medis','asetkib'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-map-o"></i>
-                                <div class="desc">Kartu Inventaris Barang</div>
+                                <div class="desc">Daftar inventaris yang tercatat sebagai aset</div>
                             </div>
-                            <h4><b>KIB</b></h4>
+                            <h4><b>Aset</b></h4>
                         </a>
                     </div>
                 </li>
@@ -786,7 +791,7 @@
                         <a href="{?=url([ADMIN,'logistik_non_medis','asetsensus'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-qrcode"></i>
-                                <div class="desc">Sensus &amp; Stock Opname Aset</div>
+                                <div class="desc">Sensus &amp; Stock Opname Semua Inventaris</div>
                             </div>
                             <h4><b>Sensus &amp; Verifikasi</b></h4>
                         </a>
