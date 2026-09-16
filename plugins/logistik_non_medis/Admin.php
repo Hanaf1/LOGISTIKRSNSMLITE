@@ -19331,6 +19331,12 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         ];
         $terpakai = [];
         foreach ($relasi as $table => $label) {
+            // Aset penampungan masih berada di Gudang Aset. Catatan mutasi
+            // penempatan awalnya dipertahankan sebagai audit, tetapi tidak
+            // menghalangi pembatalan salah input dari menu Stok Aset Gudang.
+            if ($label === 'mutasi' && ($existing['kode_lokasi'] ?? '') === 'GUDANG-ASET') {
+                continue;
+            }
             $stmt = $this->db()->pdo()->prepare("SELECT COUNT(*) FROM `$table` WHERE `kode_aset` = ?");
             $stmt->execute([$existing['kode_aset']]);
             if ((int)$stmt->fetchColumn() > 0) {
