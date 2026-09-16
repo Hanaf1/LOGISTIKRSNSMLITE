@@ -93,7 +93,9 @@ $(document).ready(function () {
     // Penanda global khusus aksi yang mengubah data. Endpoint baca (form/list/detail)
     // tetap ringan agar indikator tidak berkedip ketika pengguna mencari data.
     var logistikBusyCount = 0;
-    var logistikReadEndpoint = /(display|form|detail|ajax|search|lookup|preview|filter|load|generate)/i;
+    // Endpoint getlaporan hanya mengambil data untuk tab laporan. Jangan
+    // perlakukan sebagai simpan/hapus karena akan memunculkan overlay global.
+    var logistikReadEndpoint = /(display|form|detail|ajax|search|lookup|preview|filter|load|generate|getlaporan)/i;
 
     function isLogistikMutationRequest(settings) {
         var method = String(settings.type || settings.method || 'GET').toUpperCase();
