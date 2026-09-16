@@ -19351,6 +19351,31 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
             exit();
         }
 
+        // Mode development untuk penampungan Gudang Aset: hapus data uji
+        // secara permanen, termasuk mutasi penempatan awalnya.
+        if (($existing['kode_lokasi'] ?? '') === 'GUDANG-ASET') {
+            $pdo = $this->db()->pdo();
+            try {
+                $pdo->beginTransaction();
+                $stmtMutasi = $pdo->prepare('DELETE FROM rsns_custom_logistik_non_medis_aset_mutasi WHERE kode_aset=?');
+                $stmtMutasi->execute([$existing['kode_aset']]);
+                $stmtAset = $pdo->prepare('DELETE FROM rsns_custom_logistik_non_medis_aset WHERE id=? AND status=\'Aktif\'');
+                $stmtAset->execute([$id]);
+                if ($stmtAset->rowCount() !== 1) {
+                    throw new \RuntimeException('Data aset tidak lagi aktif.');
+                }
+                $pdo->commit();
+                $this->_logAction('logistik_non_medis_aset', 'Hapus permanen mode development dari Gudang Aset: ' . $existing['kode_aset'] . ' | ' . $existing['nama_aset'] . ' | Alasan: ' . $alasan, 'D');
+                echo json_encode(['status' => 'success', 'message' => 'Aset dan riwayat mutasinya dihapus permanen dari Gudang Aset.']);
+            } catch (\Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                echo json_encode(['status' => 'error', 'message' => 'Penghapusan permanen gagal: ' . $e->getMessage()]);
+            }
+            exit();
+        }
+
         $query = $this->db('rsns_custom_logistik_non_medis_aset')
                     ->where('id', $id)
                     ->where('status', 'Aktif')
