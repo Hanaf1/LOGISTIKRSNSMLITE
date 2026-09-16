@@ -1494,7 +1494,9 @@ class Admin extends AdminModule
         $dash_nonrutin_selesai = 0;
 
         $dash_cost_bulan = 0;
+        $dash_total_register = 0;
         $dash_total_aset = 0;
+        $dash_total_nonaset = 0;
         $dash_total_po = 0;
 
         $pdo = $this->db()->pdo();
@@ -1584,13 +1586,20 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
             InventarisClassification::ensureSchema($pdo);
-            $dash_total_aset = (int) $pdo->query("
-            SELECT COUNT(*)
-            FROM rsns_custom_logistik_non_medis_aset
-            WHERE status = 'Aktif' AND klasifikasi_pencatatan IN ('ASET', 'BELUM_DITENTUKAN')
-        ")->fetchColumn();
+            $ringkasanInventaris = $pdo->query("
+                SELECT COUNT(*) AS total_register,
+                       SUM(klasifikasi_pencatatan='ASET') AS total_aset,
+                       SUM(klasifikasi_pencatatan='INVENTARIS_NON_ASET') AS total_nonaset
+                FROM rsns_custom_logistik_non_medis_aset
+                WHERE status = 'Aktif'
+            ")->fetch(\PDO::FETCH_ASSOC) ?: [];
+            $dash_total_register = (int) ($ringkasanInventaris['total_register'] ?? 0);
+            $dash_total_aset = (int) ($ringkasanInventaris['total_aset'] ?? 0);
+            $dash_total_nonaset = (int) ($ringkasanInventaris['total_nonaset'] ?? 0);
         } catch (\Exception $e) {
+            $dash_total_register = 0;
             $dash_total_aset = 0;
+            $dash_total_nonaset = 0;
         }
         try {
             $pdo->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_po` (
@@ -1695,7 +1704,9 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         'dash_rutin_selesai' => $dash_rutin_selesai,
         'dash_rutin_periode' => $dash_rutin_periode ?? '',
         'dash_cost_bulan' => $dash_cost_bulan,
+        'dash_total_register' => $dash_total_register,
         'dash_total_aset' => $dash_total_aset,
+        'dash_total_nonaset' => $dash_total_nonaset,
         'dash_total_nonrutin' => $dash_total_nonrutin,
         'dash_nonrutin_proses' => $dash_nonrutin_proses,
         'dash_nonrutin_selesai' => $dash_nonrutin_selesai,

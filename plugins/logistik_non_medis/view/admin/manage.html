@@ -204,9 +204,9 @@
     {if: $perm_asetregistrasi}
     <a class="dash-card purple" href="{?=url([ADMIN,'logistik_non_medis','asetregistrasi'])?}">
         <div class="dash-icon"><i class="fa fa-cubes"></i></div>
-        <div class="dash-value">{?=$dash_total_aset?}</div>
+        <div class="dash-value">{?=$dash_total_register?}</div>
         <div class="dash-label">Total Register Aktif</div>
-        <div class="dash-sub">Aset dan data yang belum diklasifikasi</div>
+        <div class="dash-sub">Aset: {?=$dash_total_aset?} &bull; Non-Aset: {?=$dash_total_nonaset?}</div>
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
     {/if}
