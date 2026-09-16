@@ -1,11 +1,6 @@
 <div class="row">
     <div class="col-md-12">
-        
-        <!-- Dashboard KPI Summary Header -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="panel panel-primary panel-kpi">
-                    <div class="panel-heading">
+
                 <style>
                     .custom-breadcrumb {
                         display: inline-flex;
@@ -46,6 +41,11 @@
                     <span class="active">Aset</span>
                 </div>
 
+        <!-- Dashboard KPI Summary Header -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="panel panel-primary panel-kpi">
+                    <div class="panel-heading">
                         <h5 class="panel-title" style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
                             <i class="fa fa-cubes"></i> Total Aset Aktif
                         </h5>
@@ -67,27 +67,39 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="panel panel-success panel-kpi">
                     <div class="panel-heading">
                         <h5 class="panel-title" style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <i class="fa fa-line-chart"></i> Akumulasi Penyusutan
+                            <i class="fa fa-check-circle"></i> Kondisi Baik
                         </h5>
                     </div>
                     <div class="panel-body text-center">
-                        <h2 style="margin: 5px 0; font-weight: bold;" class="text-success" id="kpi-total-akumulasi">Rp. 0</h2>
+                        <h2 style="margin: 5px 0; font-weight: bold;" class="text-success" id="kpi-kondisi-baik">0</h2>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="panel panel-warning panel-kpi">
                     <div class="panel-heading">
                         <h5 class="panel-title" style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <i class="fa fa-trash-o"></i> Aset Dihapuskan
+                            <i class="fa fa-wrench"></i> Rusak Ringan
                         </h5>
                     </div>
                     <div class="panel-body text-center">
-                        <h2 style="margin: 5px 0; font-weight: bold;" class="text-warning" id="kpi-total-dihapus">0</h2>
+                        <h2 style="margin: 5px 0; font-weight: bold;" class="text-warning" id="kpi-kondisi-rusak-ringan">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="panel panel-danger panel-kpi">
+                    <div class="panel-heading">
+                        <h5 class="panel-title" style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fa fa-times-circle"></i> Rusak Berat
+                        </h5>
+                    </div>
+                    <div class="panel-body text-center">
+                        <h2 style="margin: 5px 0; font-weight: bold;" class="text-danger" id="kpi-kondisi-rusak-berat">0</h2>
                     </div>
                 </div>
             </div>
@@ -779,8 +791,9 @@ $(document).ready(function() {
             var data = JSON.parse(response);
             $('#kpi-total-unit').text(data.total_unit.toLocaleString('id-ID') + ' Unit');
             $('#kpi-total-nilai').text('Rp. ' + data.total_nilai.toLocaleString('id-ID'));
-            $('#kpi-total-akumulasi').text('Rp. ' + data.total_akumulasi.toLocaleString('id-ID'));
-            $('#kpi-total-dihapus').text(data.total_dihapus.toLocaleString('id-ID') + ' Unit');
+            $('#kpi-kondisi-baik').text(data.kondisi_baik.toLocaleString('id-ID') + ' Unit');
+            $('#kpi-kondisi-rusak-ringan').text(data.kondisi_rusak_ringan.toLocaleString('id-ID') + ' Unit');
+            $('#kpi-kondisi-rusak-berat').text(data.kondisi_rusak_berat.toLocaleString('id-ID') + ' Unit');
         });
     }
 

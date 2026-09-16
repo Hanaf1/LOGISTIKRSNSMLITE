@@ -67,13 +67,16 @@
             <thead>
                 <tr style="background-color: #fafafa; border-bottom: 2px solid #ddd;">
                     <th width="3%" class="text-center">No</th>
-                    <th width="10%">Kode Aset</th>
-                    <th width="23%">Nama Aset</th>
-                    <th width="12%">Unit Penugasan</th>
-                    <th width="5%" class="text-center">KIB</th>
+                    <th width="9%">Kode Aset</th>
+                    <th width="17%">Nama Aset</th>
+                    <th width="10%">Unit Penugasan</th>
+                    <th width="4%" class="text-center">KIB</th>
+                    <th width="6%" class="text-center">Tahun Perolehan</th>
+                    <th width="5%" class="text-center">Usia Aset</th>
+                    <th width="5%" class="text-center">Manfaat (Thn)</th>
+                    <th width="9%" class="text-center">Sisa Masa Manfaat</th>
                     <th width="8%" class="text-right">Harga Beli</th>
-                    <th width="8%" class="text-right">Nilai Residu</th>
-                    <th width="6%" class="text-center">Manfaat (Thn)</th>
+                    <th width="7%" class="text-right">Nilai Residu</th>
                     <th width="8%" class="text-right" style="color: #c0392b; font-weight: bold; background-color: #fdf2f2;">Penyusutan</th>
                     <th width="9%" class="text-right">Akumulasi</th>
                     <th width="8%" class="text-right" style="color: #27ae60; font-weight: bold; background-color: #f4faf4;">Nilai Buku</th>
@@ -87,9 +90,20 @@
                     <td style="vertical-align: middle; font-weight: 500;">{$value.nama_aset}</td>
                     <td style="vertical-align: middle;">{$value.nama_unit}</td>
                     <td class="text-center" style="vertical-align: middle;"><span class="label label-info" style="font-size: 10px; padding: 2px 6px;">KIB {$value.kib_jenis}</span></td>
+                    <td class="text-center" style="vertical-align: middle;">{if: $value.tahun_perolehan > 0}{$value.tahun_perolehan}{else}<span class="text-muted">-</span>{/if}</td>
+                    <td class="text-center" style="vertical-align: middle;">{$value.usia_tahun} Thn</td>
+                    <td class="text-center" style="vertical-align: middle;"><strong>{$value.masa_manfaat} Thn</strong></td>
+                    <td class="text-center" style="vertical-align: middle;">
+                        {if: $value.sisa_manfaat <= 0}
+                        <span class="label label-danger" style="font-size: 10px; padding: 2px 6px;">EXPIRED (Habis)</span>
+                        {elseif: $value.sisa_manfaat <= 1}
+                        <span class="label label-warning" style="font-size: 10px; padding: 2px 6px;">{$value.sisa_manfaat} Thn (Kritis)</span>
+                        {else}
+                        <span class="label label-success" style="font-size: 10px; padding: 2px 6px;">{$value.sisa_manfaat} Thn</span>
+                        {/if}
+                    </td>
                     <td class="text-right" style="vertical-align: middle;">Rp. {?=number_format($value.harga_beli, 0, ',', '.')?}</td>
                     <td class="text-right" style="vertical-align: middle;">Rp. {?=number_format($value.nilai_residu, 0, ',', '.')?}</td>
-                    <td class="text-center" style="vertical-align: middle;"><strong>{$value.masa_manfaat} Thn</strong></td>
                     <td class="text-right" style="vertical-align: middle; color: #c0392b; font-weight: bold; background-color: #fdf2f2;">Rp. {?=number_format($value.biaya_penyusutan, 0, ',', '.')?}</td>
                     <td class="text-right" style="vertical-align: middle;">Rp. {?=number_format($value.akumulasi_penyusutan, 0, ',', '.')?}</td>
                     <td class="text-right" style="vertical-align: middle; color: #27ae60; font-weight: bold; background-color: #f4faf4;">Rp. {?=number_format($value.nilai_buku, 0, ',', '.')?}</td>

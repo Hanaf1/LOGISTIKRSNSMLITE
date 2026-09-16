@@ -20379,6 +20379,43 @@ public function anyDisplayLaporanInventaris()
      * yang eligible sendiri, tidak lewat fungsi ini — supaya proses posting
      * bulanan tidak pernah terpotong oleh filter yang sedang aktif di layar.
      */
+    /**
+     * Tahun perolehan, usia, masa manfaat, dan sisa masa manfaat satu aset.
+     * Dipakai bersama oleh simulasi penyusutan dan laporan sisa masa manfaat
+     * supaya keduanya tidak pernah menampilkan umur berbeda untuk aset yang sama.
+     *
+     * tahun_beli dipakai lebih dulu karena sebagian besar aset hasil impor hanya
+     * punya tahun, tanggal_perolehan-nya kosong.
+     */
+    private function _hitungUsiaMasaManfaat(array $aset, array $settings): array
+    {
+        $tahun_perolehan = (int) ($aset['tahun_beli'] ?? 0);
+        if ($tahun_perolehan < 1900 || $tahun_perolehan > 2100) {
+            $tahun_perolehan = !empty($aset['tanggal_perolehan']) && $aset['tanggal_perolehan'] !== '0000-00-00'
+                ? (int) substr($aset['tanggal_perolehan'], 0, 4) : 0;
+        }
+
+        $masa_manfaat = (int) ($aset['masa_manfaat_tahun'] ?? 0);
+        if ($masa_manfaat <= 0 && !empty($aset['kib_jenis'])) {
+            $masa_manfaat = (int) ($settings['depr_manfaat_' . $aset['kib_jenis']] ?? 0);
+        }
+
+        if ($tahun_perolehan === 0) {
+            $usia_tahun = 0;
+            $sisa_manfaat = $masa_manfaat;
+        } else {
+            $interval = (new \DateTime($tahun_perolehan . '-01-01'))->diff(new \DateTime());
+            $usia_tahun = $interval->y + ($interval->m / 12) + ($interval->d / 365);
+            $sisa_manfaat = $masa_manfaat - $usia_tahun;
+        }
+
+        return [
+          'tahun_perolehan' => $tahun_perolehan,
+          'masa_manfaat' => $masa_manfaat,
+          'usia_tahun' => round($usia_tahun, 2),
+          'sisa_manfaat' => round($sisa_manfaat, 2)
+        ];
+    }
     private function _hitungDataPenyusutan(string $periode, string $filter_unit, string $filter_kelompok): array
     {
         $settings_array = $this->db('mlite_settings')->where('module', 'logistik_non_medis')->toArray();
@@ -20450,11 +20487,9 @@ public function anyDisplayLaporanInventaris()
         foreach ($assets as $asset) {
             $kib = $asset['kib_jenis'];
 
-            // 1. Determine Useful Life (Masa Manfaat)
-            $manfaat_tahun = (int) ($asset['masa_manfaat_tahun'] ?? 0);
-            if ($manfaat_tahun <= 0) {
-                $manfaat_tahun = (int) ($settings["depr_manfaat_{$kib}"] ?? 0);
-            }
+            // 1. Determine Useful Life (Masa Manfaat), usia, dan sisa masa manfaat
+            $umur = $this->_hitungUsiaMasaManfaat($asset, $settings);
+            $manfaat_tahun = $umur['masa_manfaat'];
 
             if ($manfaat_tahun <= 0) {
                 continue;
@@ -20511,6 +20546,9 @@ public function anyDisplayLaporanInventaris()
               'kib_jenis' => $asset['kib_jenis'],
               'nama_unit' => $units[$asset['kode_unit']] ?? '-',
               'tanggal_perolehan' => $asset['tanggal_perolehan'],
+              'tahun_perolehan' => $umur['tahun_perolehan'],
+              'usia_tahun' => $umur['usia_tahun'],
+              'sisa_manfaat' => $umur['sisa_manfaat'],
               'harga_beli' => $asset['harga_beli'],
               'nilai_residu' => $nilai_residu,
               'masa_manfaat' => $manfaat_tahun,
@@ -20623,6 +20661,9 @@ public function anyDisplayLaporanInventaris()
               $r['nama_aset'],
               $r['nama_unit'],
               'KIB ' . $r['kib_jenis'],
+              $r['tahun_perolehan'] > 0 ? $r['tahun_perolehan'] : '-',
+              $r['usia_tahun'] . ' Thn',
+              $r['sisa_manfaat'] <= 0 ? 'EXPIRED (Habis)' : $r['sisa_manfaat'] . ' Thn',
               (float)$r['harga_beli'],
               (float)$r['nilai_residu'],
               (int)$r['masa_manfaat'],
@@ -20636,9 +20677,9 @@ public function anyDisplayLaporanInventaris()
             'LAPORAN PENYUSUTAN ASET - Periode ' . date('F Y', strtotime($periode . '-01')),
             'Unit: ' . $nama_unit_filter . ' | Jenis Barang: ' . $nama_kelompok_filter . ' | Status: ' . $status_label,
             'Penyusutan Aset',
-            ['No', 'Kode Aset', 'Nama Aset', 'Unit', 'KIB', 'Harga Beli', 'Nilai Residu', 'Manfaat (Thn)', 'Penyusutan', 'Akumulasi', 'Nilai Buku'],
+            ['No', 'Kode Aset', 'Nama Aset', 'Unit', 'KIB', 'Tahun Perolehan', 'Usia Aset', 'Sisa Masa Manfaat', 'Harga Beli', 'Nilai Residu', 'Manfaat (Thn)', 'Penyusutan', 'Akumulasi', 'Nilai Buku'],
             $rows,
-            [5, 18, 32, 20, 8, 16, 16, 12, 16, 16, 16],
+            [5, 18, 32, 20, 8, 14, 12, 18, 16, 16, 12, 16, 16, 16],
             'Penyusutan_Aset_' . $periode
         );
     }
@@ -23755,19 +23796,27 @@ public function anyDisplayLaporanInventaris()
     {
         $this->_initAsetSensus();
         $nama_sensus = trim((string)($_GET['nama_sensus'] ?? ''));
-        $items = $this->db('rsns_custom_logistik_non_medis_aset_sensus')->where('nama_sensus', $nama_sensus)->asc('kode_aset')->toArray();
+        $filter_unit = trim((string)($_GET['filter_unit'] ?? ''));
+        $query = $this->db('rsns_custom_logistik_non_medis_aset_sensus')->where('nama_sensus', $nama_sensus);
+        if ($filter_unit !== '') {
+            $query = $query->where('sistem_kode_unit', $filter_unit);
+        }
+        $items = $query->asc('kode_aset')->toArray();
         if ($nama_sensus === '' || empty($items)) { echo 'Data sensus tidak ditemukan.'; exit(); }
         $belum = count(array_filter($items, function ($row) { return ($row['status_sensus_item'] ?? '') === 'Belum Sensus'; }));
         if ($belum > 0) { echo '<div style="font-family:Arial;padding:30px"><h3>Kertas kerja belum dapat dicetak</h3><p>Masih ada ' . $belum . ' aset yang belum ditandai Ada atau Tidak Ada.</p><button onclick="history.back()">Kembali</button></div>'; exit(); }
         $meta = $items[0];
-        $nama_unit = $this->_namaUnitAset((string)($meta['kode_unit_sensus'] ?: $meta['sistem_kode_unit']));
+        // Saat dicetak per unit, kop dan kolom tanda tangan mengikuti unit yang
+        // disaring, bukan unit milik baris pertama seluruh periode.
+        $kode_unit_cetak = $filter_unit !== '' ? $filter_unit : ($meta['kode_unit_sensus'] ?: $meta['sistem_kode_unit']);
+        $nama_unit = $this->_namaUnitAset((string)$kode_unit_cetak);
         foreach ($items as &$row) {
             $aset = $this->db('rsns_custom_logistik_non_medis_aset')->where('kode_aset', $row['kode_aset'])->oneArray();
             $row['nama_aset'] = $aset['nama_aset'] ?? 'Aset Tidak Dikenal';
             $row['serial_number'] = $aset['serial_number'] ?? '-';
             $row['keberadaan'] = $row['status_sensus_item'] === 'Tidak Ditemukan' ? 'Tidak Ada' : 'Ada';
         }
-        echo $this->draw('aset.sensus.kertas_kerja.print.html', ['meta'=>$meta, 'items'=>$items, 'nama_unit'=>$nama_unit, 'logo'=>$this->settings->get('settings.logo')]);
+        echo $this->draw('aset.sensus.kertas_kerja.print.html', ['meta'=>$meta, 'items'=>$items, 'nama_unit'=>$nama_unit, 'per_unit'=>$filter_unit !== '', 'logo'=>$this->settings->get('settings.logo')]);
         exit();
     }
 
@@ -26358,7 +26407,10 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                   COUNT(a.id) as total_unit, 
                   SUM(a.harga_beli) as total_nilai,
                   SUM(a.akumulasi_penyusutan) as total_akumulasi,
-                  SUM(a.nilai_buku) as total_buku
+                  SUM(a.nilai_buku) as total_buku,
+                  SUM(a.status_kondisi = 'Baik') as kondisi_baik,
+                  SUM(a.status_kondisi = 'Rusak Ringan') as kondisi_rusak_ringan,
+                  SUM(a.status_kondisi = 'Rusak Berat') as kondisi_rusak_berat
                 FROM rsns_custom_logistik_non_medis_aset a
                 LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON a.kode_item = b.kode_item
                 $where_str";
@@ -26367,40 +26419,14 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $stmt->execute($params);
         $kpi = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-        // Aset Dihapuskan
-        $where_del = ["a.status = 'Dihapuskan'", "a.klasifikasi_pencatatan = 'ASET'"];
-        $params_del = [];
-        if (!empty($start_date)) {
-            $where_del[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-01-01')) >= :start_date";
-            $params_del[':start_date'] = $start_date;
-        }
-        if (!empty($end_date)) {
-            $where_del[] = "COALESCE(NULLIF(CAST(a.tanggal_perolehan AS CHAR), '0000-00-00'), CONCAT(NULLIF(a.tahun_beli, 0), '-12-31')) <= :end_date";
-            $params_del[':end_date'] = $end_date;
-        }
-        if (!empty($unit)) {
-            $where_del[] = "a.kode_unit = :unit";
-            $params_del[':unit'] = $unit;
-        }
-        if (!empty($kategori)) {
-            $where_del[] = "b.kategori = :kategori";
-            $params_del[':kategori'] = $kategori;
-        }
-        $where_del_str = "WHERE " . implode(" AND ", $where_del);
-
-        $query_del = "SELECT COUNT(a.id) as total FROM rsns_custom_logistik_non_medis_aset a
-                    LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON a.kode_item = b.kode_item
-                    $where_del_str";
-        $stmt_del = $db->prepare($query_del);
-        $stmt_del->execute($params_del);
-        $total_dihapus = $stmt_del->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0;
-
         echo json_encode([
           'total_unit' => (int)($kpi['total_unit'] ?? 0),
           'total_nilai' => (double)($kpi['total_nilai'] ?? 0),
           'total_akumulasi' => (double)($kpi['total_akumulasi'] ?? 0),
           'total_buku' => (double)($kpi['total_buku'] ?? 0),
-          'total_dihapus' => (int)$total_dihapus
+          'kondisi_baik' => (int)($kpi['kondisi_baik'] ?? 0),
+          'kondisi_rusak_ringan' => (int)($kpi['kondisi_rusak_ringan'] ?? 0),
+          'kondisi_rusak_berat' => (int)($kpi['kondisi_rusak_berat'] ?? 0)
         ]);
         exit();
     }
@@ -26702,36 +26728,17 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
         $processed = [];
         foreach ($rows as $r) {
-            $tahun_perolehan = (int)($r['tahun_beli'] ?? 0);
-            if ($tahun_perolehan < 1900 || $tahun_perolehan > 2100) {
-                $tahun_perolehan = !empty($r['tanggal_perolehan']) && $r['tanggal_perolehan'] !== '0000-00-00'
-                    ? (int)substr($r['tanggal_perolehan'], 0, 4) : 0;
-            }
-            $masa_manfaat = (int)$r['masa_manfaat_tahun'];
-            if ($masa_manfaat <= 0 && !empty($r['kib_jenis'])) {
-                $masa_manfaat = (int)($settings['depr_manfaat_' . $r['kib_jenis']] ?? 0);
-            }
-
-            if ($tahun_perolehan === 0) {
-                $usia_tahun = 0;
-                $sisa_manfaat = $masa_manfaat;
-            } else {
-                $tgl_perolehan = new \DateTime($tahun_perolehan . '-01-01');
-                $tgl_sekarang = new \DateTime();
-                $interval = $tgl_perolehan->diff($tgl_sekarang);
-                $usia_tahun = $interval->y + ($interval->m / 12) + ($interval->d / 365);
-                $sisa_manfaat = $masa_manfaat - $usia_tahun;
-            }
+            $umur = $this->_hitungUsiaMasaManfaat($r, $settings);
 
             $processed[] = [
               'kode_aset' => $r['kode_aset'],
               'nama_aset' => $r['nama_aset'],
-              'tahun_perolehan' => $tahun_perolehan,
-              'masa_manfaat_tahun' => $masa_manfaat,
+              'tahun_perolehan' => $umur['tahun_perolehan'],
+              'masa_manfaat_tahun' => $umur['masa_manfaat'],
               'nilai_buku' => (double)$r['nilai_buku'],
               'nama_unit' => $r['nama_unit'],
-              'usia_tahun' => round($usia_tahun, 2),
-              'sisa_manfaat' => round($sisa_manfaat, 2)
+              'usia_tahun' => $umur['usia_tahun'],
+              'sisa_manfaat' => $umur['sisa_manfaat']
             ];
         }
 

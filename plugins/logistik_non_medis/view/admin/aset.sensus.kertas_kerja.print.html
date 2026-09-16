@@ -3,11 +3,11 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#222;margin:24px}.toolbar
 </style></head><body>
 <div class="toolbar"><button onclick="window.print()">Cetak / Simpan PDF</button></div>
 <div class="kop">{if: !empty($logo)}<img src="{$logo}" alt="Logo">{/if}<div><h2>RS NUR HIDAYAH BANTUL</h2><div>Kertas Kerja Pemeriksaan Fisik Aset per Unit</div></div></div>
-<div class="title">KERTAS KERJA SENSUS ASET</div>
+<div class="title">KERTAS KERJA SENSUS ASET{if: !empty($per_unit)}<br><span style="font-size:12px;font-weight:normal">Unit: {$nama_unit}</span>{/if}</div>
 <table class="meta"><tr><td width="130"><b>Periode</b></td><td>: {$meta.nama_sensus}</td><td width="100"><b>Unit/Ruangan</b></td><td>: {$nama_unit}</td></tr><tr><td><b>Tanggal</b></td><td>: {$meta.tanggal_mulai} s.d. {$meta.tanggal_selesai}</td><td><b>Petugas</b></td><td>: {$meta.petugas_scan ?: '-'}</td></tr></table>
 <table class="data"><thead><tr><th width="28">No</th><th>Kode Aset</th><th>Nama Aset</th><th>Nomor Seri</th><th>Kondisi</th><th>Keberadaan</th><th>Catatan/Keterangan</th></tr></thead><tbody>
 {loop: $items as $key => $item}<tr><td style="text-align:center">{?=$key+1?}</td><td>{$item.kode_aset}</td><td>{$item.nama_aset}</td><td>{$item.serial_number}</td><td>{$item.fisik_status_kondisi ?: '-'}</td><td class="{if: $item.keberadaan == 'Ada'}ada{else}tidak{/if}">{$item.keberadaan}</td><td>{$item.catatan_temuan ?: '-'}</td></tr>{/loop}
 </tbody></table>
 <div class="notes"><b>Catatan tambahan/penambahan di unit:</b><br>{$meta.catatan_tambahan ?: 'Tidak ada catatan tambahan.'}</div>
-<div class="sign"><div>Petugas Sensus<div class="space"></div>( {$meta.petugas_scan ?: '........................'} )</div><div>Kepala Unit<div class="space"></div>( ........................ )</div><div>Logistik/Aset<div class="space"></div>( ........................ )</div></div>
+<div class="sign"><div>Petugas Sensus<div class="space"></div>( {$meta.petugas_scan ?: '........................'} )</div><div>Petugas Unit {$nama_unit}<div class="space"></div>( ........................ )</div><div>Logistik/Aset<div class="space"></div>( ........................ )</div></div>
 </body></html>

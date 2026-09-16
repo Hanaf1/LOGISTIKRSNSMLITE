@@ -74,6 +74,7 @@
                     <li><a href="#tab-hilang" data-toggle="tab"><i class="fa fa-ghost text-danger"></i> Inventaris Hilang</a></li>
                     <li><a href="#tab-penyesuaian" data-toggle="tab"><i class="fa fa-sliders-h text-primary"></i> Penyesuaian Data</a></li>
                     <li><a href="#tab-sertifikasi" data-toggle="tab"><i class="fa fa-certificate text-warning"></i> Sertifikasi & BAHS</a></li>
+                    <li><a href="#tab-riwayat" data-toggle="tab"><i class="fa fa-history"></i> Riwayat Sensus</a></li>
                 </ul>
 
                 <!-- Tab Panes -->
@@ -119,10 +120,19 @@
                     <div class="tab-pane" id="tab-kertas-kerja">
                         <div class="filter-well">
                             <div class="row">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <label>Pilih Periode Sensus</label>
                                         <select class="form-control" id="selectPeriodeFilter" onchange="loadKertasKerja(1)"></select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label>Filter Unit / Ruangan</label>
+                                        <select class="form-control" id="selectUnitFilter" onchange="loadKertasKerja(1)">
+                                            <option value="">-- Semua Unit --</option>
+                                            {loop: $units as $unit}<option value="{$unit.kode_unit}">{$unit.nama_unit}</option>{/loop}
+                                        </select>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
@@ -139,7 +149,7 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-5">
+                                <div class="col-md-3">
                                     <div class="form-group" style="margin-bottom: 0;">
                                         <label>Cari Kode / Nama Aset / Temuan</label>
                                         <div class="input-group">
@@ -305,6 +315,28 @@
                     </div>
 
                     <!-- TAB 6: SERTIFIKASI & BAHS -->
+                    <div class="tab-pane" id="tab-riwayat">
+                        <h4 style="margin-bottom: 15px; font-weight: bold;">Riwayat Periode Sensus</h4>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="tableRiwayatSensus">
+                                <thead>
+                                    <tr>
+                                        <th>Periode</th>
+                                        <th style="width:110px;">Mulai</th>
+                                        <th style="width:110px;">Selesai</th>
+                                        <th style="width:100px;">Total Aset</th>
+                                        <th style="width:160px;">Progress</th>
+                                        <th style="width:110px;">Status</th>
+                                        <th class="text-center" style="width:200px;">Dokumen</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic content via loadPeriodeSensus() -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div class="tab-pane" id="tab-sertifikasi">
                         <h4 style="margin-bottom: 20px; font-weight: bold;">Digital Certification & Berita Acara Hasil Sensus</h4>
                         
@@ -498,6 +530,7 @@ function loadPeriodeSensus() {
             periodeSensusMap = {};
             var html = '';
             var selectHtml = '';
+            var riwayatHtml = '';
             
             data.data.forEach(function(row) {
                 var progressColor = row.progress_percent > 80 ? 'progress-bar-success' : (row.progress_percent > 40 ? 'progress-bar-primary' : 'progress-bar-warning');
@@ -525,20 +558,35 @@ function loadPeriodeSensus() {
 
                 selectHtml += '<option value="' + row.nama_sensus + '">' + row.nama_sensus + '</option>';
                 periodeSensusMap[row.nama_sensus] = row;
+
+                var namaAman = row.nama_sensus.replace(/'/g, "\'");
+                riwayatHtml += '<tr>';
+                riwayatHtml += '<td style="font-weight:500;">' + row.nama_sensus + '</td>';
+                riwayatHtml += '<td>' + row.tanggal_mulai + '</td>';
+                riwayatHtml += '<td>' + row.tanggal_selesai + '</td>';
+                riwayatHtml += '<td>' + row.total_aset + ' Item</td>';
+                riwayatHtml += '<td><div class="progress" style="margin-bottom:0; height:12px; border-radius:6px; background:#f0f2f5;">';
+                riwayatHtml += '  <div class="progress-bar ' + progressColor + '" style="width:' + row.progress_percent + '%; font-size:9px; line-height:12px;">' + row.progress_percent + '%</div>';
+                riwayatHtml += '</div></td>';
+                riwayatHtml += '<td><span class="label ' + badgeColor + '" style="border-radius:4px; padding:4px 8px;">' + row.status_sensus_periode + '</span></td>';
+                riwayatHtml += '<td class="text-center">';
+                riwayatHtml += '  <button class="btn btn-xs btn-default" onclick="bukaPeriodeDiKertasKerja(\'' + namaAman + '\')"><i class="fa fa-folder-open"></i> Buka</button> ';
+                riwayatHtml += '  <button class="btn btn-xs btn-success" onclick="cetakDokumenRiwayat(\'' + namaAman + '\')"><i class="fa fa-print"></i> BAHS</button>';
+                riwayatHtml += '</td>';
+                riwayatHtml += '</tr>';
             });
 
             if (data.data.length === 0) {
                 html = '<tr><td colspan="7" class="text-center" style="padding:30px; color:#999;"><i class="fa fa-folder-open" style="font-size:32px; margin-bottom:10px;"></i><br>Belum ada periode sensus. Klik "Buat Periode Baru" untuk memulai.</td></tr>';
                 selectHtml = '<option value="">-- Belum Ada Periode --</option>';
+                riwayatHtml = '<tr><td colspan="7" class="text-center" style="padding:30px; color:#999;">Belum ada riwayat sensus.</td></tr>';
             }
 
             $('#tablePeriode tbody').html(html);
+            $('#tableRiwayatSensus tbody').html(riwayatHtml);
             $('#selectPeriodeFilter').html(selectHtml);
             if (periodeTerpilih && periodeSensusMap[periodeTerpilih]) {
                 $('#selectPeriodeFilter').val(periodeTerpilih);
-            }
-            if ($.fn.select2) {
-                $('#selectPeriodeFilter').select2();
             }
             $('#selectPeriodeFilter').trigger('change');
 
@@ -568,6 +616,7 @@ function loadKertasKerja(halaman) {
     $.post('{?=url("admin/logistik_non_medis/displayasetsensus")?}', {
         nama_sensus: sensus,
         status_item: status,
+        filter_unit: $('#selectUnitFilter').val() || '',
         cari: cari,
         halaman: halaman
     }, function(res) {
@@ -868,6 +917,34 @@ function eksekusiPenyesuaianMassal() {
             loadKertasKerja(1);
         });
     }
+}
+
+// Action: dari tab Riwayat, lompat ke Kertas Kerja pada periode terpilih.
+function bukaPeriodeDiKertasKerja(namaSensus) {
+    $('#selectPeriodeFilter').val(namaSensus);
+    $('a[href="#tab-kertas-kerja"]').tab('show');
+    loadKertasKerja(1);
+}
+
+// Action: cetak BAHS langsung dari baris riwayat.
+function cetakDokumenRiwayat(namaSensus) {
+    window.open('{?=url("admin/logistik_non_medis/cetakbahs")?}&nama_sensus=' + encodeURIComponent(namaSensus), '_blank');
+}
+
+// Action: Print kertas kerja. Filter unit ikut dibawa supaya lembar cetaknya
+// per unit, lengkap dengan kolom tanda tangan petugas unit bersangkutan.
+function cetakKertasKerjaSensus() {
+    var sensus = $('#selectPeriodeFilter').val();
+    if(!sensus) {
+        alert('Pilih periode sensus terlebih dahulu!');
+        return;
+    }
+    var url = '{?=url("admin/logistik_non_medis/cetakkertaskerjasensus")?}&nama_sensus=' + encodeURIComponent(sensus);
+    var unit = $('#selectUnitFilter').val();
+    if (unit) {
+        url += '&filter_unit=' + encodeURIComponent(unit);
+    }
+    window.open(url, '_blank');
 }
 
 // Action: Print BAHS PDF Laporan
