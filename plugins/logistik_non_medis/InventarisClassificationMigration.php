@@ -18,7 +18,7 @@ final class InventarisClassificationMigration
             ->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    public static function propose(array $rows): array
+    public static function propose(array $rows, bool $reconcileHistory = false): array
     {
         $items = [];
         $summary = [];
@@ -29,9 +29,16 @@ final class InventarisClassificationMigration
             if ($before === InventarisClassification::UNKNOWN) {
                 $candidate = InventarisClassification::fromPrice($row['harga_beli'] ?? null);
                 if (!empty($row['has_depreciation_history']) || (float)($row['akumulasi_penyusutan'] ?? 0) != 0) {
-                    $reason = 'Perlu rekonsiliasi riwayat penyusutan';
-                } elseif (stripos($row['user_input'] ?? '', 'import') !== false) {
-                    $reason = 'Validasi harga perolehan hasil impor melalui form registrasi';
+                    if (!$reconcileHistory) {
+                        $reason = 'Perlu rekonsiliasi riwayat penyusutan';
+                    } elseif ($candidate === InventarisClassification::UNKNOWN) {
+                        $reason = 'Harga belum valid atau tepat Rp1.000.000';
+                    } else {
+                        $after = $candidate;
+                        $reason = 'Klasifikasi sesuai harga; riwayat penyusutan dipertahankan untuk rekonsiliasi';
+                    }
+                } elseif ((float)($row['harga_referensi_import'] ?? 0) > 0) {
+                    $reason = 'Validasi harga referensi impor melalui form registrasi';
                 } elseif ($candidate === InventarisClassification::UNKNOWN) {
                     $reason = 'Harga belum valid atau tepat Rp1.000.000';
                 } else {
@@ -48,14 +55,15 @@ final class InventarisClassificationMigration
         return ['snapshot_hash' => hash('sha256', json_encode($rows)), 'summary' => $summary, 'items' => $items];
     }
 
-    public static function apply(\PDO $pdo, array $reviewed, string $backupPath): int
+    public static function apply(\PDO $pdo, array $reviewed, string $backupPath, bool $reconcileHistory = false): int
     {
         // DDL must run before this method, outside the transaction.
         $pdo->beginTransaction();
         try {
             $rows = self::snapshot($pdo, true);
-            $plan = self::propose($rows);
-            if (($reviewed['snapshot_hash'] ?? '') !== $plan['snapshot_hash'] || ($reviewed['items'] ?? []) !== $plan['items']) {
+            $plan = self::propose($rows, $reconcileHistory);
+            if (($reviewed['snapshot_hash'] ?? '') !== $plan['snapshot_hash']
+                || self::itemsSignature($reviewed['items'] ?? []) !== self::itemsSignature($plan['items'])) {
                 throw new \RuntimeException('Data/preview berubah. Buat dan tinjau preview baru.');
             }
             $backup = json_encode(['created_at' => date(DATE_ATOM), 'rows' => $rows, 'plan' => $plan], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
@@ -82,5 +90,22 @@ final class InventarisClassificationMigration
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
         }
+    }
+
+    /** JSON mengubah angka hasil PDO menjadi int/float; samakan bentuknya sebelum verifikasi. */
+    private static function itemsSignature(array $items): string
+    {
+        $normalized = [];
+        foreach ($items as $item) {
+            $normalized[] = [
+                'id' => (string)($item['id'] ?? ''),
+                'kode_aset' => (string)($item['kode_aset'] ?? ''),
+                'harga_beli' => (string)($item['harga_beli'] ?? ''),
+                'before' => (string)($item['before'] ?? ''),
+                'after' => (string)($item['after'] ?? ''),
+                'reason' => (string)($item['reason'] ?? ''),
+            ];
+        }
+        return hash('sha256', json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
     }
 }

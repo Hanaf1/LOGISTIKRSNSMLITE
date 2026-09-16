@@ -86,18 +86,21 @@ try {
     $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_aset_penyusutan (kode_aset,periode,tanggal_proses,user_proses) VALUES ('LEGACY-HISTORY','2025-01',NOW(),'test')");
     $plan = Migration::propose(Migration::snapshot($pdo));
     $backup = sys_get_temp_dir() . '/' . $database . '.json';
-    check(Migration::apply($pdo, $plan, $backup) === 2, 'Migration should classify only two reviewed candidates');
+    check(Migration::apply($pdo, $plan, $backup) === 3, 'Migration should classify all valid per-unit prices without depreciation history');
     check(is_file($backup), 'Backup missing');
     $byCode = [];
     foreach (Migration::snapshot($pdo) as $r) $byCode[$r['kode_aset']] = $r;
     check($byCode['LOW']['klasifikasi_pencatatan'] === Policy::NON_ASSET, 'Low-price inventory lost');
-    check($byCode['IMPORTED']['klasifikasi_pencatatan'] === Policy::UNKNOWN, 'Import must remain unreviewed');
+    check($byCode['IMPORTED']['klasifikasi_pencatatan'] === Policy::ASSET, 'Imported actual acquisition price was not classified');
     check($byCode['LEGACY-HISTORY']['klasifikasi_pencatatan'] === Policy::UNKNOWN, 'History must require reconciliation');
+    $reconciliationPlan = Migration::propose(Migration::snapshot($pdo), true);
+    $reconciliationItem = array_values(array_filter($reconciliationPlan['items'], function ($item) { return $item['kode_aset'] === 'LEGACY-HISTORY'; }))[0];
+    check($reconciliationItem['after'] === Policy::NON_ASSET, 'Reconciliation plan did not classify historical low-price inventory');
     $failed = false;
     try { Migration::apply($pdo, $plan, $backup . '.stale'); } catch (RuntimeException $e) { $failed = true; }
     check($failed, 'Stale migration accepted');
     $preview = invokePrivate($admin, '_hitungDataPenyusutan', '2026-09', '', '');
-    check(count($preview['data']) === 2, 'Preview included non-asset, unknown, or land');
+    check(count($preview['data']) === 3, 'Preview included non-asset, unknown, or land');
     check($byCode['DEPRECIATED']['klasifikasi_pencatatan'] === Policy::ASSET, 'Book value changed classification');
     $failed = false;
     try {
@@ -119,7 +122,7 @@ try {
         return $json;
     }
     $kpi = route('anyGetLaporanAsetKpi');
-    check($kpi['total_unit'] === 3 && (float)$kpi['total_nilai'] === 6200000.0, 'Capital KPI includes non-assets');
+    check($kpi['total_unit'] === 4 && (float)$kpi['total_nilai'] === 8200000.0, 'Capital KPI includes non-assets');
     $list = route('anyDisplayAsetRegistrasi', ['filter_klasifikasi'=>Policy::NON_ASSET]);
     check($list['jumlah'] === 1, 'Register filter failed');
     $inventory = route('anyDisplayLaporanInventaris', ['filter_klasifikasi'=>Policy::NON_ASSET]);
@@ -146,7 +149,7 @@ try {
     $result = route('postProsesPenyusutan', ['bulan'=>'09','tahun'=>'2026']);
     check($result['status'] === 'success', 'Depreciation posting failed: ' . json_encode($result));
     $posted = $pdo->query("SELECT kode_aset FROM rsns_custom_logistik_non_medis_aset_penyusutan WHERE periode='2026-09' ORDER BY kode_aset")->fetchAll(PDO::FETCH_COLUMN);
-    check($posted === ['DEPRECIATED','HIGH'], 'Posting included non-asset or unreviewed inventory');
+    check($posted === ['DEPRECIATED','HIGH','IMPORTED'], 'Posting included non-asset or unreviewed inventory');
     check((int)$pdo->query("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_aset_penyusutan WHERE periode='2025-01'")->fetchColumn() === 1, 'Historical depreciation was modified');
     $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_inventaris_master (jenis_master,kode,kode_inventaris,kode_kategori,nama,kode_kelompok,kode_jenis,kode_barang) VALUES
         ('UNIT','01','01','','Test Unit',NULL,NULL,NULL), ('BARANG','010100',NULL,'2','Test Chair','01','01','00')");
@@ -160,7 +163,7 @@ try {
     $edit = route('postSaveAsetRegistrasi', ['id'=>$byCode['IMPORTED']['id'], 'kode_unit'=>'01', 'kode_item'=>'010100',
         'kode_kategori_aset'=>'2', 'nama_aset'=>'IMPORTED', 'harga_beli'=>'2000000']);
     check($edit['status'] === 'success', 'Metadata edit failed: ' . json_encode($edit));
-    check($pdo->query("SELECT klasifikasi_pencatatan FROM rsns_custom_logistik_non_medis_aset WHERE kode_aset='IMPORTED'")->fetchColumn() === Policy::UNKNOWN, 'Metadata edit classified legacy price');
+    check($pdo->query("SELECT klasifikasi_pencatatan FROM rsns_custom_logistik_non_medis_aset WHERE kode_aset='IMPORTED'")->fetchColumn() === Policy::ASSET, 'Metadata edit changed a classified acquisition price');
     $confirm = route('postSaveAsetRegistrasi', ['id'=>$byCode['IMPORTED']['id'], 'kode_unit'=>'01', 'kode_item'=>'010100',
         'kode_kategori_aset'=>'2', 'nama_aset'=>'IMPORTED', 'harga_beli'=>'2000000',
         'konfirmasi_harga_perolehan'=>'1', 'alasan_klasifikasi'=>'Validated acquisition invoice']);
