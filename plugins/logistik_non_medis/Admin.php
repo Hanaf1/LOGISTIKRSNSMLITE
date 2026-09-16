@@ -26313,7 +26313,9 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             AND a.kode_unit IS NOT NULL AND a.kode_unit <> ''
           ORDER BY nama_unit ASC, a.kode_unit ASC");
         $unit = $unit_stmt->fetchAll(\PDO::FETCH_ASSOC);
-        $kategori = $this->db('rsns_custom_logistik_non_medis_kategori')->toArray();
+        $kategori = $this->db()->pdo()->query("SELECT nama_kategori AS kategori
+          FROM rsns_custom_logistik_non_medis_kategori
+          ORDER BY nama_kategori ASC")->fetchAll(\PDO::FETCH_ASSOC);
         return $this->draw('laporan.aset.html', [
           'unit' => $unit,
           'kategori' => $kategori
