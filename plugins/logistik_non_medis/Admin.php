@@ -18499,10 +18499,10 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         $pdo = $this->db()->pdo();
         $pdo->prepare("INSERT IGNORE INTO rsns_custom_logistik_non_medis_inventaris_master
             (jenis_master, kode, kode_inventaris, kode_kategori, nama, status, tgl_input)
-            VALUES ('UNIT', 'GL', 'GL', '', 'Gudang Logistik', 'Aktif', NOW())")->execute();
+            VALUES ('UNIT', '88', '88', '', 'Logistik', 'Aktif', NOW())")->execute();
         $pdo->prepare("INSERT IGNORE INTO rsns_custom_logistik_non_medis_unit
             (kode_unit, nama_unit, parent_id, lokasi_detail, status)
-            VALUES ('GL', 'Gudang Logistik', 0, 'Penampungan aset sementara', 'Aktif')")->execute();
+            VALUES ('88', 'Gudang Logistik', 0, 'Penampungan aset sementara', 'Aktif')")->execute();
     }
 
     public function anyGenerateKodeAset()
@@ -18576,7 +18576,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         if ($gudang_aset) {
             $this->_ensureGudangLogistikUnit();
         }
-        $kode_unit = $gudang_aset ? 'GL' : ($_POST['kode_unit'] ?? '');
+        $kode_unit = $gudang_aset ? '88' : ($_POST['kode_unit'] ?? '');
 
         if (empty($kode_unit)) {
             echo json_encode(['status' => 'error', 'message' => 'Unit wajib dipilih!']);
