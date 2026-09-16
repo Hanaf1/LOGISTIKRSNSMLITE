@@ -423,6 +423,17 @@
                 </li>
                 {/if}
 
+                {if: $perm_masterlokasi}
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','masterlokasi'])?}" class="panel-body text-center">
+                            <div class="panel-thumb"><i class="fa fa-map-marker"></i><div class="desc">Gudang, ruang, dan lokasi penyimpanan</div></div>
+                            <h4><b>Lokasi Gudang</b></h4>
+                        </a>
+                    </div>
+                </li>
+                {/if}
+
                 {if: $perm_distribusinonrutin}
                 <li class="module">
                     <div class="panel panel-default">
@@ -586,6 +597,17 @@
                                 <div class="desc">Mutasi Antar Gudang</div>
                             </div>
                             <h4><b>Mutasi</b></h4>
+                        </a>
+                    </div>
+                </li>
+                {/if}
+
+                {if: $perm_stokasetgudang}
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','stokasetgudang'])?}" class="panel-body text-center">
+                            <div class="panel-thumb"><i class="fa fa-cubes"></i><div class="desc">Aset yang tersimpan di Gudang Aset Logistik</div></div>
+                            <h4><b>Stok Aset Gudang</b></h4>
                         </a>
                     </div>
                 </li>

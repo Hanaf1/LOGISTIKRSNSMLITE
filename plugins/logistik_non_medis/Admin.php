@@ -378,6 +378,9 @@ class Admin extends AdminModule
         if (strpos($method, 'inventarisnonaset') !== false || strpos($method, 'asetformpage') !== false) {
             return 'asetregistrasi';
         }
+        if (strpos($method, 'stokasetgudang') !== false) {
+            return 'gudangstok';
+        }
         if (strpos($method, 'ajaxmasterbarang') !== false || strpos($method, 'ajaxbarangselect2') !== false) {
             return null; // Semua role butuh akses pencarian barang
         }
@@ -607,6 +610,7 @@ class Admin extends AdminModule
         'Barang Masuk'        => 'gudangpenerimaan',
         'Manajemen Lokasi'    => 'gudanglokasi',
         'Pengelolaan Stok'    => 'gudangstok',
+        'Stok Aset Gudang'    => 'stokasetgudang',
         'Stock Opname'        => 'gudangopname',
         'Stok Opname V2'      => 'gudangopnamev2',
         'Metode FIFO / FEFO'  => 'gudangmetode',
@@ -1166,6 +1170,7 @@ class Admin extends AdminModule
         'gudangpenerimaan' => 'Barang Masuk Gudang',
         'gudanglokasi' => 'Manajemen Lokasi',
         'gudangstok' => 'Pengelolaan Stok',
+        'stokasetgudang' => 'Stok Aset Gudang',
         'gudangopname' => 'Stock Opname',
         'gudangopnamev2' => 'Stok Opname V2',
         'gudangmetode' => 'Metode FIFO/FEFO',
@@ -1420,7 +1425,7 @@ class Admin extends AdminModule
 
         $has_master = count(array_intersect(['masterbarang', 'mastervendor', 'masterunit', 'masterlokasi', 'mastersatuan', 'masterkategori', 'masterrekanan', 'mastercoa', 'masterinventaris', 'konfigurasifonnte', 'konfigurasiwaha'], $permissions)) > 0;
         $has_pengadaan = count(array_intersect(['pengadaanperencanaan', 'pengadaanpr', 'pengadaanvendor', 'pengadaanpo', 'pengadaanekatalog', 'pengadaanpenerimaan', 'pengadaankontrak'], $permissions)) > 0;
-        $has_gudang = count(array_intersect(['gudangpenerimaan', 'gudanglokasi', 'gudangstok', 'gudangpenyesuaian', 'gudangopname', 'gudangopnamev2', 'gudangmetode', 'gudangrusak', 'gudangproduksi', 'gudangmutasi'], $permissions)) > 0;
+        $has_gudang = count(array_intersect(['gudangpenerimaan', 'gudanglokasi', 'gudangstok', 'stokasetgudang', 'gudangpenyesuaian', 'gudangopname', 'gudangopnamev2', 'gudangmetode', 'gudangrusak', 'gudangproduksi', 'gudangmutasi'], $permissions)) > 0;
         $has_distribusi = count(array_intersect(['distribusisppb', 'distribusinonrutin', 'distribusimendesak', 'distribusiverifikasi', 'distribusipacking', 'distribusiserahterima', 'distribusitracking', 'distribusiretur', 'distribusikuota'], $permissions)) > 0;
         $has_aset = count(array_intersect(['asetregistrasi', 'asetkib', 'asetpenyusutan', 'asetpemeliharaan', 'asetmutasi', 'asetpenghapusan', 'asetsensus'], $permissions)) > 0;
         $has_laporan = count(array_intersect(['laporanstokmutasi', 'laporanpengadaan', 'rekapnonrutin', 'laporandistribusi', 'laporanaset', 'laporandashboardkpi', 'laporaneksporcetak', 'laporaninventaris', 'laporaninventaris'], $permissions)) > 0;
@@ -1447,7 +1452,7 @@ class Admin extends AdminModule
         'masterbarang', 'mastervendor', 'masterunit', 'masterlokasi', 'mastersatuan',
         'masterkategori', 'masterrekanan', 'mastercoa', 'masterinventaris', 'konfigurasifonnte', 'konfigurasiwaha',
         'pengadaanperencanaan', 'pengadaanpr', 'pengadaanvendor', 'pengadaanpo', 'pengadaankontrak',
-        'gudangpenerimaan', 'gudanglokasi', 'gudangstok', 'gudangopname', 'gudangopnamev2',
+        'gudangpenerimaan', 'gudanglokasi', 'gudangstok', 'stokasetgudang', 'gudangopname', 'gudangopnamev2',
         'gudangmetode', 'gudangrusak', 'gudangmutasi', 'gudangpenyesuaian', 'gudangproduksi',
         'distribusisppb', 'distribusinonrutin', 'distribusimendesak', 'distribusiverifikasi', 'distribusipacking',
         'distribusiserahterima', 'distribusitracking', 'distribusiretur', 'distribusikuota',
@@ -1459,6 +1464,7 @@ class Admin extends AdminModule
         foreach ($all_perm_keys as $pk) {
             $perm_flags['perm_' . $pk] = in_array($pk, $permissions);
         }
+        $perm_flags['perm_stokasetgudang'] = in_array('stokasetgudang', $permissions) || in_array('gudangstok', $permissions);
         $perm_flags['perm_gudangkomposisivip'] = in_array('gudangproduksi', $permissions);
         $perm_flags['perm_laporancostunit'] = in_array('laporandistribusi', $permissions);
         $perm_flags['perm_konfigurasifonnte'] = in_array('konfigurasifonnte', $permissions);
@@ -6837,6 +6843,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
     {
         $this->_initPemenuhanNonRutin();
         $this->_initAset();
+        $this->_initLokasi();
         $this->_initStok();
         $no_sppb = trim((string)($_POST['no_sppb'] ?? ''));
         $items = $this->db('rsns_custom_logistik_non_medis_v_sppb_normalized')->where('no_sppb', $no_sppb)->toArray();
@@ -17969,6 +17976,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
     public function getAsetRegistrasi()
     {
         $this->_initAset();
+        $this->_initLokasi();
         $this->_addHeaderFiles();
         $units = $this->db('rsns_custom_logistik_non_medis_inventaris_master')->where('jenis_master', 'UNIT')->where('status', 'Aktif')->toArray();
         $kelompok = $this->db('rsns_custom_logistik_non_medis_inventaris_kelompok')->asc('kode_kategori')->asc('kode_kelompok')->toArray();
@@ -17991,8 +17999,20 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           'kelompok' => $kelompok,
           'jenis' => $jenis,
           'ringkasan' => $ringkasan,
-          'initial_klasifikasi' => InventarisClassification::validFilter($_GET['filter_klasifikasi'] ?? '')
+          'lokasi' => $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('status', 'Aktif')->asc('nama_lokasi')->toArray(),
+          'initial_klasifikasi' => InventarisClassification::validFilter($_GET['filter_klasifikasi'] ?? ''),
+          'initial_lokasi' => trim((string)($_GET['filter_lokasi'] ?? '')),
+          'judul_inventaris' => !empty($_GET['gudang_aset']) ? 'Stok Aset Gudang Logistik' : 'Inventaris Unit Non-Medis'
         ]);
+    }
+
+    /** Register aset yang secara fisik masih berada di Gudang Aset Logistik. */
+    public function getStokAsetGudang()
+    {
+        $_GET['filter_klasifikasi'] = InventarisClassification::ASSET;
+        $_GET['filter_lokasi'] = 'GUDANG-ASET';
+        $_GET['gudang_aset'] = '1';
+        return $this->getAsetRegistrasi();
     }
 
     /** Daftar inventaris dengan klasifikasi yang dikunci dari menu Non-Aset. */
@@ -18016,6 +18036,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         $filter_kondisi = trim((string)($_GET['filter_kondisi'] ?? ''));
         $filter_kelompok = trim((string)($_GET['filter_kelompok'] ?? ''));
         $filter_jenis = trim((string)($_GET['filter_jenis'] ?? ''));
+        $filter_lokasi = trim((string)($_GET['filter_lokasi'] ?? ''));
         $where = ["a.status = 'Aktif'"];
         $params = [];
         if ($cari !== '') {
@@ -18027,6 +18048,10 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         if ($filter_klasifikasi !== '') {
             $where[] = 'a.klasifikasi_pencatatan = ?';
             $params[] = $filter_klasifikasi;
+        }
+        if ($filter_lokasi !== '') {
+            $where[] = 'a.kode_lokasi = ?';
+            $params[] = $filter_lokasi;
         }
         if ($filter_unit !== '') {
             $where[] = 'a.kode_unit = ?';
@@ -18120,6 +18145,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         $filter_kondisi = isset($_POST['filter_kondisi']) ? trim($_POST['filter_kondisi']) : '';
         $filter_kelompok = isset($_POST['filter_kelompok']) ? trim($_POST['filter_kelompok']) : '';
         $filter_jenis = isset($_POST['filter_jenis']) ? trim($_POST['filter_jenis']) : '';
+        $filter_lokasi = isset($_POST['filter_lokasi']) ? trim($_POST['filter_lokasi']) : '';
 
         $_offset = ($halaman - 1) * $perpage;
 
@@ -18140,6 +18166,10 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         if ($filter_klasifikasi !== '') {
             $where[] = 'a.klasifikasi_pencatatan = ?';
             $params[] = $filter_klasifikasi;
+        }
+        if ($filter_lokasi !== '') {
+            $where[] = 'a.kode_lokasi = ?';
+            $params[] = $filter_lokasi;
         }
         if (!empty($filter_unit)) {
             $where[] = "a.kode_unit = ?";
@@ -19347,6 +19377,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         $halaman = $_POST['halaman'] ?? 1;
         $cari = $_POST['cari'] ?? '';
         $filter_unit = $_POST['filter_unit'] ?? '';
+        $filter_lokasi = trim((string)($_POST['filter_lokasi'] ?? ''));
         $filter_kelompok = $_POST['filter_kelompok'] ?? '';
         $filter_jenis = $_POST['filter_jenis'] ?? '';
         $filter_harga = $_POST['filter_harga'] ?? '';
@@ -19594,6 +19625,7 @@ public function anyDisplayLaporanInventaris()
         $halaman = $_POST['halaman'] ?? 1;
         $cari = $_POST['cari'] ?? '';
         $filter_unit = $_POST['filter_unit'] ?? '';
+        $filter_lokasi = trim((string)($_POST['filter_lokasi'] ?? ''));
         $filter_kelompok = $_POST['filter_kelompok'] ?? '';
         $filter_jenis = $_POST['filter_jenis'] ?? '';
         $filter_harga = $_POST['filter_harga'] ?? '';
@@ -19618,6 +19650,10 @@ public function anyDisplayLaporanInventaris()
         if ($filter_klasifikasi !== '') {
             $where[] = 'a.klasifikasi_pencatatan = ?';
             $params[] = $filter_klasifikasi;
+        }
+        if ($filter_lokasi !== '') {
+            $where[] = 'a.kode_lokasi = ?';
+            $params[] = $filter_lokasi;
         }
         if (!empty($filter_unit)) {
             $where[] = "a.kode_unit = ?";
