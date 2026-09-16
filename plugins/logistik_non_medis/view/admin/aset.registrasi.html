@@ -316,15 +316,15 @@
             var id = $(this).attr('data-id');
             var kode = $(this).attr('data-kode');
             
-            if(confirm('Apakah Anda yakin ingin menghapus data Registrasi Aset (' + kode + ') ini?')) {
+            if(confirm('Hapus aset ' + kode + ' dari Stok Aset Gudang? Data hanya dapat dibatalkan bila belum memiliki riwayat transaksi.')) {
                 $.ajax({
                     url: '{?=url([ADMIN, "logistik_non_medis", "hapusasetregistrasi"])?}',
                     type: 'POST',
-                    data: { id: id },
+                    data: { id: id, alasan: 'Pembatalan salah input dari Stok Aset Gudang' },
                     dataType: 'json',
                     success: function(response) {
                         if(response.status === 'success') {
-                            alert('Aset berhasil dihapus.');
+                            alert('Aset berhasil dibatalkan dari Stok Aset Gudang.');
                             loadAset(1);
                         } else {
                             alert('Gagal menghapus: ' + response.message);

@@ -18261,6 +18261,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           SELECT COALESCE(a.asset_group_id, -a.id) AS group_key,
                  MAX(a.asset_group_id) AS asset_group_id,
                  MIN(a.id) AS id,
+                 MIN(a.kode_aset) AS kode_aset,
                  MAX(a.kode_item) AS kode_item,
                  MAX(a.nama_aset) AS nama_aset,
                  MAX(a.merk_type) AS merk_type,
@@ -18389,7 +18390,9 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           'aset' => $rows,
           'halaman' => $halaman,
           'jumlah_data' => $jumlah_data,
-          'jml_halaman' => $jml_halaman
+          'jml_halaman' => $jml_halaman,
+          'gudang_aset' => $filter_lokasi === 'GUDANG-ASET'
+            && $filter_klasifikasi === InventarisClassification::ASSET
         ]);
         echo json_encode([
           'html' => $html,
