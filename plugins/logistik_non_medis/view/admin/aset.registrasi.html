@@ -153,7 +153,7 @@
                 <!-- Action Button Row -->
                 <div class="row" style="margin-bottom: 20px;">
                     <div class="col-md-12">
-                        <a href="{?=url([ADMIN, 'logistik_non_medis', 'asetformpage'])?}" class="btn btn-primary" id="btn-tambah-aset">
+                        <a href="{?=url([ADMIN, 'logistik_non_medis', 'asetformpage'])?}{if: $gudang_aset}&amp;gudang_aset=1{/if}" class="btn btn-primary" id="btn-tambah-aset">
                             <i class="fa fa-plus-circle"></i> Registrasikan Inventaris Baru
                         </a>
                         <a href="{?=url([ADMIN, 'logistik_non_medis', 'exportaset'])?}" class="btn btn-success btn-export-aset"><i class="fa fa-file-excel-o"></i> Export List Inventaris</a>

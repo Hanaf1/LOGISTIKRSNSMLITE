@@ -18002,6 +18002,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           'lokasi' => $this->db('rsns_custom_logistik_non_medis_lokasi_gudang')->where('status', 'Aktif')->asc('nama_lokasi')->toArray(),
           'initial_klasifikasi' => InventarisClassification::validFilter($_GET['filter_klasifikasi'] ?? ''),
           'initial_lokasi' => trim((string)($_GET['filter_lokasi'] ?? '')),
+          'gudang_aset' => !empty($_GET['gudang_aset']),
           'judul_inventaris' => !empty($_GET['gudang_aset']) ? 'Stok Aset Gudang Logistik' : 'Inventaris Unit Non-Medis'
         ]);
     }
@@ -18469,20 +18470,39 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
     {
         $this->_addHeaderFiles();
         $id = (int)($_GET['id'] ?? 0);
+        $gudangAset = $id === 0 && !empty($_GET['gudang_aset']);
+        if ($gudangAset) {
+            $this->_ensureGudangLogistikUnit();
+        }
         $from = (($_GET['from'] ?? '') === 'kib') ? 'kib' : 'registrasi';
         $groupId = max(0, (int)($_GET['group_id'] ?? 0));
         $data = $this->_getAsetRegistrasiFormData($id);
         $data['standalone'] = true;
         $data['from'] = $from;
         $data['group_id'] = $groupId;
+        $data['gudang_aset'] = $gudangAset;
         if ($from === 'kib') {
             $data['return_url'] = url([ADMIN, 'logistik_non_medis', 'asetkib']);
         } elseif ($groupId > 0) {
             $data['return_url'] = url([ADMIN, 'logistik_non_medis', 'asetgrouppage']) . '&group_id=' . $groupId;
+        } elseif ($gudangAset) {
+            $data['return_url'] = url([ADMIN, 'logistik_non_medis', 'stokasetgudang']);
         } else {
             $data['return_url'] = url([ADMIN, 'logistik_non_medis', 'asetregistrasi']);
         }
         return $this->draw('aset.registrasi.form.html', $data);
+    }
+
+    /** Unit sistem untuk nomor inventaris barang yang masih dititipkan di gudang. */
+    private function _ensureGudangLogistikUnit(): void
+    {
+        $pdo = $this->db()->pdo();
+        $pdo->prepare("INSERT IGNORE INTO rsns_custom_logistik_non_medis_inventaris_master
+            (jenis_master, kode, kode_inventaris, kode_kategori, nama, status, tgl_input)
+            VALUES ('UNIT', 'GL', 'GL', '', 'Gudang Logistik', 'Aktif', NOW())")->execute();
+        $pdo->prepare("INSERT IGNORE INTO rsns_custom_logistik_non_medis_unit
+            (kode_unit, nama_unit, parent_id, lokasi_detail, status)
+            VALUES ('GL', 'Gudang Logistik', 0, 'Penampungan aset sementara', 'Aktif')")->execute();
     }
 
     public function anyGenerateKodeAset()
@@ -18550,8 +18570,13 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
     public function postSaveAsetRegistrasi()
     {
         $this->_initAset();
+        $this->_initLokasi();
         $id = $_POST['id'] ?? '';
-        $kode_unit = $_POST['kode_unit'] ?? '';
+        $gudang_aset = empty($id) && !empty($_POST['penampungan_gudang_aset']);
+        if ($gudang_aset) {
+            $this->_ensureGudangLogistikUnit();
+        }
+        $kode_unit = $gudang_aset ? 'GL' : ($_POST['kode_unit'] ?? '');
 
         if (empty($kode_unit)) {
             echo json_encode(['status' => 'error', 'message' => 'Unit wajib dipilih!']);
@@ -18649,6 +18674,12 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
             }
         }
 
+        $keterangan_inventaris = trim((string)($_POST['keterangan_inventaris'] ?? ''));
+        if ($gudang_aset) {
+            $unitAsal = trim((string)($_POST['unit_asal'] ?? ''));
+            $catatanGudang = 'Penampungan Gudang Aset' . ($unitAsal !== '' ? ' | Unit asal: ' . $unitAsal : '');
+            $keterangan_inventaris = trim($keterangan_inventaris . ($keterangan_inventaris !== '' ? "\n" : '') . $catatanGudang);
+        }
         $data = [
           'serial_number' => $_POST['serial_number'] ?? '',
           'nomor_inventaris' => $nomor_inventaris,
@@ -18670,11 +18701,15 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           'jumlah' => 1,
           'pic' => $_POST['pic'] ?? '',
           'status_kondisi' => $_POST['status_kondisi'] ?? 'Baik',
-          'keterangan_inventaris' => $_POST['keterangan_inventaris'] ?? '',
+          'keterangan_inventaris' => $keterangan_inventaris,
           'status' => 'Aktif',
           'nilai_residu' => $nilai_residu,
           'masa_manfaat_tahun' => $masa_manfaat_tahun
         ];
+        if ($gudang_aset) {
+            $data['kode_lokasi'] = 'GUDANG-ASET';
+            $data['lokasi_fisik'] = 'Gudang Aset Logistik';
+        }
 
         // Capture and Sanitize KIB Fields
         $kib_jenis = $_POST['kib_jenis'] ?? null;
