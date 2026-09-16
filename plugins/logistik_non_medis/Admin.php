@@ -1577,7 +1577,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
             $dash_total_aset = (int) $pdo->query("
             SELECT COUNT(*)
             FROM rsns_custom_logistik_non_medis_aset
-            WHERE status = 'Aktif' AND klasifikasi_pencatatan = 'ASET'
+            WHERE status = 'Aktif' AND klasifikasi_pencatatan IN ('ASET', 'BELUM_DITENTUKAN')
         ")->fetchColumn();
         } catch (\Exception $e) {
             $dash_total_aset = 0;
@@ -19347,7 +19347,9 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         $perpage = 25;
         $_offset = ($halaman - 1) * $perpage;
 
-        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'"];
+        // Data lama yang belum diklasifikasikan tetap terlihat pada register/KIB
+        // agar tidak tampak hilang. Penyusutan tetap hanya memproses ASET.
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan IN ('ASET', 'BELUM_DITENTUKAN')"];
         $params = [];
         if (!empty($cari)) {
             $where[] = "(a.kode_aset LIKE ? OR a.nomor_inventaris LIKE ? OR a.nama_aset LIKE ? OR b.nama_barang LIKE ? OR im.nama LIKE ?)";
@@ -19777,7 +19779,7 @@ public function anyDisplayLaporanInventaris()
         $filter_jenis = trim((string)($_GET['filter_jenis'] ?? ''));
         $filter_harga = trim((string)($_GET['filter_harga'] ?? ''));
 
-        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan = 'ASET'"];
+        $where = ["a.status = 'Aktif'", "a.klasifikasi_pencatatan IN ('ASET', 'BELUM_DITENTUKAN')"];
         $params = [];
         if ($cari !== '') {
             $where[] = "(a.kode_aset LIKE ? OR a.nomor_inventaris LIKE ? OR a.nama_aset LIKE ? OR b.nama_barang LIKE ? OR im.nama LIKE ?)";
@@ -20111,7 +20113,7 @@ public function anyDisplayLaporanInventaris()
             $assets_in_cat = $this->db('rsns_custom_logistik_non_medis_aset')
                                 ->where('kib_jenis', $jenis)
                                 ->where('status', 'Aktif')
-                                ->where('klasifikasi_pencatatan', 'ASET')
+                                ->where('klasifikasi_pencatatan', 'IN', ['ASET', 'BELUM_DITENTUKAN'])
                                 ->toArray();
 
             $total_count = count($assets_in_cat);
