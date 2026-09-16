@@ -123,7 +123,7 @@ try {
         return $json;
     }
     $kpi = route('anyGetLaporanAsetKpi');
-    check($kpi['total_unit'] === 4 && (float)$kpi['total_nilai'] === 8200000.0, 'Capital KPI includes non-assets');
+    check($kpi['total_unit'] === 5 && (float)$kpi['total_nilai'] === 9200000.0, 'Capital KPI excludes threshold-price assets');
     $list = route('anyDisplayAsetRegistrasi', ['filter_klasifikasi'=>Policy::NON_ASSET]);
     check($list['jumlah'] === 1, 'Register filter failed');
     $inventory = route('anyDisplayLaporanInventaris', ['filter_klasifikasi'=>Policy::NON_ASSET]);
@@ -150,7 +150,7 @@ try {
     $result = route('postProsesPenyusutan', ['bulan'=>'09','tahun'=>'2026']);
     check($result['status'] === 'success', 'Depreciation posting failed: ' . json_encode($result));
     $posted = $pdo->query("SELECT kode_aset FROM rsns_custom_logistik_non_medis_aset_penyusutan WHERE periode='2026-09' ORDER BY kode_aset")->fetchAll(PDO::FETCH_COLUMN);
-    check($posted === ['DEPRECIATED','HIGH','IMPORTED'], 'Posting included non-asset or unreviewed inventory');
+    check($posted === ['DEPRECIATED','EXACT','HIGH','IMPORTED'], 'Posting did not include every depreciable asset');
     check((int)$pdo->query("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_aset_penyusutan WHERE periode='2025-01'")->fetchColumn() === 1, 'Historical depreciation was modified');
     $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_inventaris_master (jenis_master,kode,kode_inventaris,kode_kategori,nama,kode_kelompok,kode_jenis,kode_barang) VALUES
         ('UNIT','01','01','','Test Unit',NULL,NULL,NULL), ('BARANG','010100',NULL,'2','Test Chair','01','01','00')");
