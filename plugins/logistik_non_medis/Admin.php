@@ -18753,6 +18753,19 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
             $kib_jenis = null;
         }
 
+        // Nilai 0 di formulir berarti "ikuti standar KIB". Simpan nilai
+        // standar pada aset baru agar laporan, penyusutan, dan KIB memakai
+        // masa manfaat yang sama.
+        if ($klasifikasi === InventarisClassification::ASSET && $masa_manfaat_tahun <= 0 && $kib_jenis !== null) {
+            $this->_initPenyusutan();
+            $standar = $this->db('mlite_settings')
+                ->where('module', 'logistik_non_medis')
+                ->where('field', 'depr_manfaat_' . $kib_jenis)
+                ->oneArray();
+            $masa_manfaat_tahun = (int)($standar['value'] ?? 0);
+            $data['masa_manfaat_tahun'] = $masa_manfaat_tahun;
+        }
+
         $data['kib_jenis'] = $kib_jenis;
 
         if ($kib_jenis !== null) {
@@ -26615,6 +26628,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
     public function anyGetLaporanAsetMasaManfaat()
     {
         $this->_initAset();
+        $this->_initPenyusutan();
         $start_date = $_POST['start_date'] ?? '';
         $end_date = $_POST['end_date'] ?? '';
         $kategori = $_POST['kategori'] ?? '';
@@ -26649,6 +26663,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                   a.nama_aset, 
                   a.tanggal_perolehan, 
                   a.tahun_beli,
+                  a.kib_jenis,
                   a.masa_manfaat_tahun,
                   a.nilai_buku,
                   COALESCE(NULLIF(iu.nama, ''), u.nama_unit, a.kode_unit, '-') AS nama_unit
@@ -26664,6 +26679,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $stmt->execute($params);
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
+        $settings = [];
+        foreach ($this->db('mlite_settings')->where('module', 'logistik_non_medis')->toArray() as $setting) {
+            $settings[$setting['field']] = $setting['value'];
+        }
+
         $processed = [];
         foreach ($rows as $r) {
             $tahun_perolehan = (int)($r['tahun_beli'] ?? 0);
@@ -26672,6 +26692,9 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                     ? (int)substr($r['tanggal_perolehan'], 0, 4) : 0;
             }
             $masa_manfaat = (int)$r['masa_manfaat_tahun'];
+            if ($masa_manfaat <= 0 && !empty($r['kib_jenis'])) {
+                $masa_manfaat = (int)($settings['depr_manfaat_' . $r['kib_jenis']] ?? 0);
+            }
 
             if ($tahun_perolehan === 0) {
                 $usia_tahun = 0;
