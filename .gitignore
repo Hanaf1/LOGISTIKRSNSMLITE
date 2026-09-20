@@ -58,3 +58,22 @@ agent/
 master_head.html
 custom_logistiknonmedis.sql
 rsns_custom_master_aset_*.sql
+
+# Migrasi klasifikasi inventaris: alat sekali-pakai, bukan bagian runtime
+plugins/logistik_non_medis/InventarisClassificationMigration.php
+plugins/logistik_non_medis/tools/classify_inventory.php
+plugins/logistik_non_medis/tests/classification.php
+
+# Skrip Python bantu & cache-nya
+*.py
+__pycache__/
+*.pyc
+
+# Dump/berkas cadangan
+*.bak
+*_backup.sql
+backup_*.sql
+plugins/logistik_non_medis/backup/
+
+# Dokumentasi kerja
+docs/

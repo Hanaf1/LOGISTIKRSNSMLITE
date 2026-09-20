@@ -43,7 +43,6 @@ class Admin extends AdminModule
     {
         $this->_initUserRoles();
         $this->_initWaNotificationContacts();
-        $this->_initFonnteConfig();
         $this->_initWahaConfig();
         $this->_checkAccessControl();
     }
@@ -106,68 +105,7 @@ class Admin extends AdminModule
         }
     }
 
-    private function _initFonnteConfig()
-    {
-        $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_fonnte_config` (
-        `id` tinyint(1) NOT NULL,
-        `aktif` tinyint(1) NOT NULL DEFAULT 0,
-        `token` varchar(255) DEFAULT NULL,
-        `duration` tinyint(2) NOT NULL DEFAULT 1,
-        `delay` tinyint(2) NOT NULL DEFAULT 0,
-        `tgl_diperbarui` datetime NOT NULL,
-        PRIMARY KEY (`id`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-        $existingColumns = $this->db()->pdo()->query("SHOW COLUMNS FROM rsns_custom_logistik_non_medis_fonnte_config")->fetchAll(\PDO::FETCH_COLUMN);
-        foreach (['duration' => 'tinyint(2) NOT NULL DEFAULT 1', 'delay' => 'tinyint(2) NOT NULL DEFAULT 0'] as $column => $definition) {
-            if (!in_array($column, $existingColumns, true)) {
-                $this->db()->pdo()->exec("ALTER TABLE rsns_custom_logistik_non_medis_fonnte_config ADD COLUMN `$column` $definition");
-            }
-        }
-        $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_fonnte_template` (
-        `tipe` varchar(50) NOT NULL,
-        `aktif` tinyint(1) NOT NULL DEFAULT 1,
-        `pesan` text NOT NULL,
-        `tgl_diperbarui` datetime NOT NULL,
-        PRIMARY KEY (`tipe`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-        $this->db()->pdo()->exec("CREATE TABLE IF NOT EXISTS `rsns_custom_logistik_non_medis_fonnte_send_log` (
-        `id` bigint NOT NULL AUTO_INCREMENT,
-        `username` varchar(100) NOT NULL,
-        `tipe` varchar(50) NOT NULL,
-        `no_sppb` varchar(100) DEFAULT NULL,
-        `nomor` varchar(30) NOT NULL,
-        `tgl_kirim` datetime NOT NULL,
-        PRIMARY KEY (`id`), KEY `dedupe` (`username`,`tipe`,`no_sppb`,`tgl_kirim`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-        foreach ($this->_fonnteTemplateDefaults() as $tipe => $template) {
-            if (!$this->db('rsns_custom_logistik_non_medis_fonnte_template')->where('tipe', $tipe)->oneArray()) {
-                $this->db('rsns_custom_logistik_non_medis_fonnte_template')->save(['tipe' => $tipe, 'aktif' => 1, 'pesan' => $template['pesan'], 'tgl_diperbarui' => date('Y-m-d H:i:s')]);
-            }
-        }
-        $exists = $this->db('rsns_custom_logistik_non_medis_fonnte_config')->where('id', 1)->oneArray();
-        if (!$exists) {
-            $legacyToken = trim((string)$this->settings->get('logistik_non_medis', 'fonnte_token'));
-            $legacyActive = (string)$this->settings->get('logistik_non_medis', 'fonnte_aktif') === '1';
-            if ($legacyToken !== '' || $legacyActive) {
-                $this->db('rsns_custom_logistik_non_medis_fonnte_config')->save(['id' => 1, 'aktif' => $legacyActive ? 1 : 0, 'token' => $legacyToken, 'tgl_diperbarui' => date('Y-m-d H:i:s')]);
-            }
-        }
-    }
-
-
     private function _wahaTemplateDefaults(): array
-    {
-        return [
-          'approval_ka_unit' => ['label' => 'Butuh persetujuan Ka. Unit', 'pesan' => '[RSNS] SPPB {no_sppb} membutuhkan persetujuan Ka. Unit.\n\n{detail_permintaan}'],
-          'approval_kasie' => ['label' => 'Butuh persetujuan Ka. Sie', 'pesan' => '[RSNS] SPPB {no_sppb} membutuhkan persetujuan Ka. Sie.\n\n{detail_permintaan}'],
-          'approval_kabid' => ['label' => 'Butuh persetujuan Kabid', 'pesan' => '[RSNS] SPPB {no_sppb} membutuhkan persetujuan Kabid.\n\n{detail_permintaan}'],
-          'konsul_kabid_umum' => ['label' => 'Konsul Kabid Umum', 'pesan' => '[RSNS] SPPB {no_sppb} membutuhkan keputusan Kabid Umum.\n\n{detail_permintaan}'],
-          'approval_selesai' => ['label' => 'Permintaan disetujui/selesai', 'pesan' => '[RSNS] SPPB {no_sppb} telah disetujui.\n\n{detail_permintaan}'],
-          'approval_ditolak' => ['label' => 'Permintaan ditolak', 'pesan' => '[RSNS] SPPB {no_sppb} ditolak.\n\n{detail_permintaan}']
-        ];
-    }
-
-    private function _fonnteTemplateDefaults(): array
     {
         return [
           'approval_ka_unit' => ['label' => 'Butuh persetujuan Ka. Unit', 'pesan' => '[RSNS] SPPB {no_sppb} membutuhkan persetujuan Ka. Unit.\n\n{detail_permintaan}'],
@@ -271,7 +209,6 @@ class Admin extends AdminModule
 
         // Master inventaris berdiri sendiri dari master logistik umum.
         $this->db()->pdo()->exec("UPDATE rsns_custom_logistik_non_medis_role_permissions SET permissions = CONCAT(permissions, ',masterinventaris') WHERE role IN ('admin','logistik','aset') AND permissions NOT LIKE '%masterinventaris%'");
-        $this->db()->pdo()->exec("UPDATE rsns_custom_logistik_non_medis_role_permissions SET permissions = CONCAT(permissions, ',konfigurasifonnte') WHERE role IN ('admin','logistik') AND permissions NOT LIKE '%konfigurasifonnte%'");
         $this->db()->pdo()->exec("UPDATE rsns_custom_logistik_non_medis_role_permissions SET permissions = CONCAT(permissions, ',konfigurasiwaha') WHERE role IN ('admin','logistik') AND permissions NOT LIKE '%konfigurasiwaha%'");
 
         // Rekap cetak permintaan Non Rutin hanya untuk Kabid Umum, Logistik, dan Admin.
@@ -683,12 +620,6 @@ class Admin extends AdminModule
         if (strpos($method, 'waha') !== false) {
             return 'konfigurasiwaha';
         }
-        if (strpos($method, 'konfigurasifonnte') !== false) {
-            return 'konfigurasifonnte';
-        }
-        if (strpos($method, 'fonnte') !== false) {
-            return 'konfigurasifonnte';
-        }
         return '';
     }
 
@@ -721,7 +652,6 @@ class Admin extends AdminModule
         'Kategori & Klasifikasi' => 'masterkategori',
         'Data Rekanan Jasa'   => 'masterrekanan',
         'Kode Akun (COA)'     => 'mastercoa',
-        'Konfigurasi Fonnte'  => 'konfigurasifonnte',
         'Konfigurasi WAHA'    => 'konfigurasiwaha',
         'Perencanaan Belanja (RKBU)' => 'pengadaanperencanaan',
         'Realisasi Belanja'   => 'realisasibelanja',
@@ -810,156 +740,6 @@ class Admin extends AdminModule
         }
 
         return $cleanNav;
-    }
-
-    public function getKonfigurasifonnte()
-    {
-        $this->_initFonnteConfig();
-        $config = $this->db('rsns_custom_logistik_non_medis_fonnte_config')->where('id', 1)->oneArray() ?: [];
-        $token = (string)($config['token'] ?? '');
-        $duration = max(0, min(10, (int)($config['duration'] ?? 1)));
-        $delay = max(0, min(10, (int)($config['delay'] ?? 0)));
-        $templateRows = $this->db('rsns_custom_logistik_non_medis_fonnte_template')->toArray();
-        $templateMap = [];
-        foreach ($templateRows as $row) {
-            $templateMap[$row['tipe']] = $row;
-        }
-        $templates = [];
-        foreach ($this->_fonnteTemplateDefaults() as $tipe => $default) {
-            $row = $templateMap[$tipe] ?? [];
-            $templates[] = ['tipe' => $tipe, 'label' => $default['label'], 'aktif' => !empty($row['aktif']), 'pesan' => (string)($row['pesan'] ?? $default['pesan'])];
-        }
-        return $this->draw('konfigurasi.fonnte.html', [
-          'aktif' => !empty($config['aktif']),
-          'token_tersimpan' => $token !== '',
-          'token_akhir' => $token !== '' ? substr($token, -4) : '',
-          'token_placeholder' => $token !== '' ? 'Token sudah tersimpan - isi hanya untuk mengganti' : 'Masukkan token dari dashboard Fonnte',
-          'duration' => $duration,
-          'delay' => $delay,
-          'templates' => $templates
-        ]);
-    }
-
-    public function postSaveKonfigurasiFonnte()
-    {
-        $this->_initFonnteConfig();
-        $existing = $this->db('rsns_custom_logistik_non_medis_fonnte_config')->where('id', 1)->oneArray() ?: [];
-        $token = trim((string)($_POST['fonnte_token'] ?? ''));
-        if ($token === '') {
-            $token = (string)($existing['token'] ?? '');
-        }
-        $duration = max(0, min(10, (int)($_POST['fonnte_duration'] ?? ($existing['duration'] ?? 1))));
-        $delay = max(0, min(10, (int)($_POST['fonnte_delay'] ?? ($existing['delay'] ?? 0))));
-        $data = ['id' => 1, 'aktif' => isset($_POST['fonnte_aktif']) ? 1 : 0, 'token' => $token, 'duration' => $duration, 'delay' => $delay, 'tgl_diperbarui' => date('Y-m-d H:i:s')];
-        if ($existing) {
-            $this->db('rsns_custom_logistik_non_medis_fonnte_config')->where('id', 1)->save($data);
-        } else {
-            $this->db('rsns_custom_logistik_non_medis_fonnte_config')->save($data);
-        }
-        $this->notify('success', 'Konfigurasi Fonnte telah disimpan');
-        redirect(url([ADMIN, 'logistik_non_medis', 'konfigurasifonnte']));
-    }
-
-    public function postTestFonnte()
-    {
-        $this->_initFonnteConfig();
-        $config = $this->db('rsns_custom_logistik_non_medis_fonnte_config')->where('id', 1)->oneArray() ?: [];
-        $token = trim((string)($config['token'] ?? ''));
-        $target = preg_replace('/[^0-9]/', '', (string)($_POST['nomor_tujuan'] ?? ''));
-        if (strpos($target, '0') === 0) {
-            $target = '62' . substr($target, 1);
-        }
-        $message = trim((string)($_POST['pesan'] ?? ''));
-        $sendOptions = ['duration' => max(0, min(10, (int)($config['duration'] ?? 1))), 'delay' => max(0, min(10, (int)($config['delay'] ?? 0)))];
-
-        if ($token === '') {
-            $this->notify('failure', 'Fonnte API Token belum diisi.');
-        } elseif (strlen($target) < 10) {
-            $this->notify('failure', 'Nomor tujuan tidak valid. Gunakan format 08xxx atau 628xxx.');
-        } elseif ($message === '') {
-            $this->notify('failure', 'Isi pesan tes tidak boleh kosong.');
-        } else {
-            $ch = curl_init('https://api.fonnte.com/send');
-            curl_setopt_array($ch, [
-              CURLOPT_POST => true,
-              CURLOPT_POSTFIELDS => http_build_query(array_merge(['target' => $target, 'message' => $message], $sendOptions)),
-              CURLOPT_HTTPHEADER => ['Authorization: ' . $token],
-              CURLOPT_RETURNTRANSFER => true,
-              CURLOPT_CONNECTTIMEOUT => 10,
-              CURLOPT_TIMEOUT => 30
-            ]);
-            $raw = curl_exec($ch);
-            $curlError = curl_error($ch);
-            $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-            $result = json_decode((string)$raw, true);
-            if (is_array($result) && !empty($result['status'])) {
-                $this->notify('success', 'Pesan tes berhasil dikirim ke ' . $target . '.');
-            } else {
-                $reason = $curlError !== '' ? $curlError : (string)($result['reason'] ?? $result['message'] ?? trim((string)$raw));
-                if ($reason === '') {
-                    $reason = 'Respons tidak dikenal (HTTP ' . $httpCode . ').';
-                }
-                $this->notify('failure', 'Gagal mengirim pesan tes: ' . substr(strip_tags($reason), 0, 220));
-            }
-        }
-        redirect(url([ADMIN, 'logistik_non_medis', 'konfigurasifonnte']));
-    }
-
-    public function postSaveTemplateFonnte()
-    {
-        $this->_initFonnteConfig();
-        $input = $_POST['template'] ?? [];
-        foreach ($this->_fonnteTemplateDefaults() as $tipe => $default) {
-            $row = $input[$tipe] ?? [];
-            $pesan = trim((string)($row['pesan'] ?? $default['pesan']));
-            if ($pesan === '') {
-                $pesan = $default['pesan'];
-            }
-            $data = ['tipe' => $tipe, 'aktif' => !empty($row['aktif']) ? 1 : 0, 'pesan' => $pesan, 'tgl_diperbarui' => date('Y-m-d H:i:s')];
-            $this->db('rsns_custom_logistik_non_medis_fonnte_template')->where('tipe', $tipe)->save($data);
-        }
-        $this->notify('success', 'Konfigurasi pesan Fonnte telah disimpan');
-        redirect(url([ADMIN, 'logistik_non_medis', 'konfigurasifonnte']) . '#pesan');
-    }
-
-    public function postTestTemplateFonnte()
-    {
-        $this->_initFonnteConfig();
-        $config = $this->db('rsns_custom_logistik_non_medis_fonnte_config')->where('id', 1)->oneArray() ?: [];
-        $token = trim((string)($config['token'] ?? ''));
-        $type = trim((string)($_POST['test_tipe'] ?? ''));
-        $target = preg_replace('/[^0-9]/', '', (string)($_POST['test_target'] ?? ''));
-        if (strpos($target, '0') === 0) {
-            $target = '62' . substr($target, 1);
-        }
-        $noSppb = trim((string)($_POST['test_no_sppb'] ?? 'TEST-SPPB'));
-        $defaults = $this->_fonnteTemplateDefaults();
-        $row = $this->db('rsns_custom_logistik_non_medis_fonnte_template')->where('tipe', $type)->oneArray() ?: [];
-        $message = trim((string)($row['pesan'] ?? ($defaults[$type]['pesan'] ?? '')));
-        $valid = isset($defaults[$type]);
-        if ($token === '' || !$valid || strlen($target) < 10 || $message === '') {
-            $this->notify('failure', $token === '' ? 'Token Fonnte belum diisi.' : 'Data tes status atau nomor tujuan tidak valid.');
-        } else {
-            $message = str_replace(['{no_sppb}', '{username}'], [$noSppb, 'TEST'], $message);
-            $sendOptions = ['duration' => max(0, min(10, (int)($config['duration'] ?? 1))), 'delay' => max(0, min(10, (int)($config['delay'] ?? 0)))];
-            $ch = curl_init('https://api.fonnte.com/send');
-            curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => http_build_query(array_merge(['target' => $target, 'message' => $message], $sendOptions)), CURLOPT_HTTPHEADER => ['Authorization: ' . $token], CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 30]);
-            $raw = curl_exec($ch);
-            $error = curl_error($ch);
-            $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-            $result = json_decode((string)$raw, true);
-            if (is_array($result) && !empty($result['status'])) {
-                $this->notify('success', 'Tes status berhasil dikirim ke ' . $target . '.');
-            } else {
-                $reason = $error !== '' ? $error : (string)($result['reason'] ?? $result['message'] ?? trim((string)$raw));
-                if ($reason === '') {
-                    $reason = 'HTTP ' . $code;
-                } $this->notify('failure', 'Tes status gagal: ' . substr(strip_tags($reason), 0, 220));
-            }
-        }
-        redirect(url([ADMIN, 'logistik_non_medis', 'konfigurasifonnte']) . '#pesan');
     }
 
     public function getKonfigurasiwaha()
@@ -1331,7 +1111,6 @@ class Admin extends AdminModule
         'laporandashboardkpi' => 'Dashboard & KPI',
         'laporaneksporcetak' => 'Ekspor & Cetak Laporan',
         'hakakses' => 'Hak Akses Logistik',
-        'konfigurasifonnte' => 'Konfigurasi Fonnte',
         'konfigurasiwaha' => 'Konfigurasi WAHA'
         ];
 
@@ -1840,7 +1619,7 @@ class Admin extends AdminModule
         }
         $hakakses_access = in_array('hakakses', $permissions);
 
-        $has_master = count(array_intersect(['masterbarang', 'mastervendor', 'masterunit', 'masterlokasi', 'mastersatuan', 'masterkategori', 'masterrekanan', 'mastercoa', 'masterinventaris', 'konfigurasifonnte', 'konfigurasiwaha'], $permissions)) > 0;
+        $has_master = count(array_intersect(['masterbarang', 'mastervendor', 'masterunit', 'masterlokasi', 'mastersatuan', 'masterkategori', 'masterrekanan', 'mastercoa', 'masterinventaris', 'konfigurasiwaha'], $permissions)) > 0;
         $has_pengadaan = count(array_intersect(['pengadaanperencanaan', 'pengadaanpr', 'pengadaanvendor', 'pengadaanpo', 'pengadaanekatalog', 'pengadaanpenerimaan', 'pengadaankontrak'], $permissions)) > 0;
         $has_gudang = count(array_intersect(['gudangpenerimaan', 'gudanglokasi', 'gudangstok', 'stokasetgudang', 'gudangpenyesuaian', 'gudangopname', 'gudangopnamev2', 'gudangmetode', 'gudangrusak', 'gudangproduksi', 'gudangmutasi'], $permissions)) > 0;
         $has_distribusi = count(array_intersect(['distribusisppb', 'distribusinonrutin', 'distribusimendesak', 'distribusiverifikasi', 'distribusipacking', 'distribusiserahterima', 'distribusitracking', 'distribusiretur', 'distribusikuota'], $permissions)) > 0;
@@ -1867,7 +1646,7 @@ class Admin extends AdminModule
         $perm_flags = [];
         $all_perm_keys = [
         'masterbarang', 'mastervendor', 'masterunit', 'masterlokasi', 'mastersatuan',
-        'masterkategori', 'masterrekanan', 'mastercoa', 'masterinventaris', 'konfigurasifonnte', 'konfigurasiwaha',
+        'masterkategori', 'masterrekanan', 'mastercoa', 'masterinventaris', 'konfigurasiwaha',
         'pengadaanperencanaan', 'pengadaanpr', 'pengadaanvendor', 'pengadaanpo', 'pengadaankontrak',
         'gudangpenerimaan', 'gudanglokasi', 'gudangstok', 'stokasetgudang', 'gudangopname', 'gudangopnamev2',
         'gudangmetode', 'gudangrusak', 'gudangmutasi', 'gudangpenyesuaian', 'gudangproduksi',
@@ -1884,7 +1663,6 @@ class Admin extends AdminModule
         $perm_flags['perm_stokasetgudang'] = in_array('stokasetgudang', $permissions) || in_array('gudangstok', $permissions);
         $perm_flags['perm_gudangkomposisivip'] = in_array('gudangproduksi', $permissions);
         $perm_flags['perm_laporancostunit'] = in_array('laporandistribusi', $permissions);
-        $perm_flags['perm_konfigurasifonnte'] = in_array('konfigurasifonnte', $permissions);
         $perm_flags['perm_konfigurasiwaha'] = in_array('konfigurasiwaha', $permissions);
 
         $start_date = date('Y-m-d', strtotime('last Friday'));
@@ -31971,72 +31749,9 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
             }
         }
 
-        // CEK FONNTE
-        $template = $this->db('rsns_custom_logistik_non_medis_fonnte_template')->where('tipe', $type)->oneArray() ?: [];
-        if (empty($template['aktif'])) {
-            return ['status' => 'skipped', 'message' => 'Template pesan ' . $type . ' sedang dinonaktifkan.'];
-        }
-        $message = trim((string)($template['pesan'] ?? ''));
-        if ($message === '') {
-            $message = '[RSNS] Ada permintaan logistik yang menunggu persetujuan. Silakan buka SIMRS untuk melihat detail.';
-        }
-        $detailMessage = $this->_buildWaApprovalDetailMessage($noSppb);
-        $message = str_replace(['{no_sppb}', '{username}', '{detail_permintaan}'], [$noSppb !== '' ? $noSppb : '-', $username, $detailMessage], $message);
-        if (strpos($message, 'Detail Permintaan Barang') === false) {
-            $message .= $detailMessage;
-        }
-        $config = $this->db('rsns_custom_logistik_non_medis_fonnte_config')->where('id', 1)->oneArray() ?: [];
-        if (empty($config['aktif'])) {
-            return ['status' => 'skipped', 'message' => 'Fonnte belum diaktifkan pada konfigurasi.'];
-        }
-        $fonnteToken = trim((string)($config['token'] ?? ''));
-        if ($fonnteToken === '' || $fonnteToken === '-') {
-            return ['status' => 'failed', 'message' => 'Token Fonnte belum disetel.'];
-        }
-        $recent = $this->db()->pdo()->prepare("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_fonnte_send_log WHERE username = :username AND tipe = :tipe AND COALESCE(no_sppb, '') = :no_sppb AND tgl_kirim >= DATE_SUB(NOW(), INTERVAL 15 MINUTE)");
-        $recent->execute([':username' => $username, ':tipe' => $type, ':no_sppb' => $noSppb]);
-        if ((int)$recent->fetchColumn() > 0) {
-            return ['status' => 'skipped', 'message' => 'Pesan ke ' . $username . ' tidak dikirim ulang karena sudah terkirim dalam 15 menit terakhir.'];
-        }
-        $ch = curl_init('https://api.fonnte.com/send');
-        if ($ch === false) {
-            return ['status' => 'failed', 'message' => 'Gagal menyiapkan koneksi ke Fonnte.'];
-        }
-        $sendOptions = ['duration' => max(0, min(10, (int)($config['duration'] ?? 1))), 'delay' => max(0, min(10, (int)($config['delay'] ?? 0)))];
-        curl_setopt_array($ch, [
-          CURLOPT_POST => true,
-          CURLOPT_POSTFIELDS => http_build_query(array_merge(['target' => $number, 'message' => $message], $sendOptions)),
-          CURLOPT_HTTPHEADER => ['Authorization: ' . $fonnteToken],
-          CURLOPT_RETURNTRANSFER => true,
-          CURLOPT_CONNECTTIMEOUT => 5,
-          CURLOPT_TIMEOUT => 10
-        ]);
-        $raw = curl_exec($ch);
-        $curlError = curl_error($ch);
-        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        if ($raw === false) {
-            return ['status' => 'failed', 'message' => 'Fonnte tidak dapat dihubungi: ' . ($curlError !== '' ? $curlError : 'kesalahan koneksi.')];
-        }
-        $result = json_decode((string)$raw, true);
-        $apiStatus = is_array($result) ? ($result['status'] ?? false) : false;
-        $apiOk = $apiStatus === true || $apiStatus === 1 || $apiStatus === '1'
-          || (is_string($apiStatus) && in_array(strtolower($apiStatus), ['true', 'success'], true));
-        if ($httpCode < 200 || $httpCode >= 300 || !$apiOk) {
-            $apiMessage = is_array($result) ? trim((string)($result['reason'] ?? $result['message'] ?? '')) : '';
-            if ($apiMessage === '') {
-                $apiMessage = 'respons API tidak valid (HTTP ' . $httpCode . ').';
-            }
-            return ['status' => 'failed', 'message' => 'Pesan ke ' . $username . ' gagal: ' . mb_substr($apiMessage, 0, 180)];
-        }
-        $this->db('rsns_custom_logistik_non_medis_fonnte_send_log')->save([
-          'username' => $username,
-          'tipe' => $type,
-          'no_sppb' => $noSppb,
-          'nomor' => $number,
-          'tgl_kirim' => date('Y-m-d H:i:s')
-        ]);
-        return ['status' => 'sent', 'message' => 'Pesan WhatsApp terkirim ke ' . $username . ' (' . $maskedNumber . ').'];
+        // WAHA adalah satu-satunya gateway WhatsApp. Bila belum aktif, notifikasi
+        // in-app tetap jalan dan pengiriman WA dilewati.
+        return ['status' => 'skipped', 'message' => 'WAHA belum diaktifkan pada Konfigurasi WAHA, pesan WhatsApp tidak dikirim.'];
     }
 
     private function _buildWaApprovalDetailMessage(string $noSppb): string
