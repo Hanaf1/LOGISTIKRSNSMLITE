@@ -10835,7 +10835,7 @@ LEFT JOIN rsns_custom_logistik_non_medis_v_sppb_normalized s
         }
         // Paket & barang olahan: semua barang hasil yang punya resep, ditambah barang paket
         // (nama "Paket ...") yang belum punya isi agar kelihatan perlu diatur.
-        $paket = $pdo->query("SELECT h.kode_item, h.nama_barang, h.kategori, h.jenis_komposisi, h.harga_referensi,
+        $paket = $pdo->query("SELECT h.kode_item, h.nama_barang, h.deskripsi, h.kategori, h.jenis_komposisi, h.harga_referensi,
                 COUNT(r.id) AS jumlah_isi,
                 GROUP_CONCAT(CONCAT(COALESCE(b.nama_barang, r.kode_item_bahan), ' x', TRIM(TRAILING '.' FROM TRIM(TRAILING '0' FROM r.qty_bahan_per_hasil)))
                     ORDER BY b.nama_barang SEPARATOR ', ') AS isi
@@ -10843,7 +10843,7 @@ LEFT JOIN rsns_custom_logistik_non_medis_v_sppb_normalized s
             LEFT JOIN rsns_custom_logistik_non_medis_produksi_resep r ON r.kode_item_hasil = h.kode_item AND r.status = 'Aktif'
             LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = r.kode_item_bahan
             WHERE h.status = 'Aktif' AND (r.id IS NOT NULL OR h.jenis_komposisi = 'Paket')
-            GROUP BY h.kode_item, h.nama_barang, h.kategori, h.jenis_komposisi, h.harga_referensi
+            GROUP BY h.kode_item, h.nama_barang, h.deskripsi, h.kategori, h.jenis_komposisi, h.harga_referensi
             ORDER BY (h.jenis_komposisi = 'Paket') DESC, h.nama_barang")->fetchAll(\PDO::FETCH_ASSOC);
         $stokIsi = $pdo->prepare("SELECT r.qty_bahan_per_hasil AS qty, COALESCE(b.nama_barang, r.kode_item_bahan) AS nama_barang,
                 (SELECT COALESCE(SUM(sb.stok), 0) FROM rsns_custom_logistik_non_medis_stok_batch sb
