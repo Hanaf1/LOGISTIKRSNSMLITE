@@ -25,16 +25,20 @@
           </div>
           <div class="table-responsive">
             <table class="table table-bordered table-condensed pe-tabel">
-              <thead><tr><th width="40">No</th><th>Paket</th><th>Isi</th><th class="text-right">Harga</th><th>Stok cukup untuk</th><th width="120" class="text-center">Aksi</th></tr></thead>
+              <thead><tr><th width="40">No</th><th>Paket</th><th>Isi</th><th class="text-right">Harga</th><th>Stok cukup untuk</th><th width="280" class="text-center">Aksi</th></tr></thead>
               <tbody>
                 {if: !empty($paket)}
                   {loop: $paket as $i => $pk}<tr>
                     <td>{?=$i+1?}</td>
-                    <td><b>{$pk.nama_barang}</b></td>
-                    <td>{if: $pk.jumlah_isi > 0}<small>{$pk.isi}</small>{else}<span class="label label-danger">Belum ada isi</span>{/if}</td>
+                    <td><b>{$pk.nama_barang|e}</b></td>
+                    <td>{if: $pk.jumlah_isi > 0}<small>{$pk.isi|e}</small>{else}<span class="label label-danger">Belum ada isi</span>{/if}</td>
                     <td class="text-right" style="white-space:nowrap">Rp {?=number_format((float)$pk['harga_referensi'],0,',','.')?}</td>
-                    <td>{if: $pk.bisa_dipenuhi !== null}<b>{$pk.bisa_dipenuhi}</b> paket{if: $pk.bisa_dipenuhi < 5}<br><small class="text-danger">kurang: {$pk.pembatas}</small>{/if}{else}<span class="text-muted">-</span>{/if}</td>
-                    <td class="text-center"><a class="btn btn-xs btn-primary" href="{$pk.url_ubah}"><i class="fa fa-pencil"></i> Ubah Isi</a></td>
+                    <td>{if: $pk.bisa_dipenuhi !== null}<b>{$pk.bisa_dipenuhi}</b> paket{if: $pk.bisa_dipenuhi < 5}<br><small class="text-danger">kurang: {$pk.pembatas|e}</small>{/if}{else}<span class="text-muted">-</span>{/if}</td>
+                    <td class="text-center" style="white-space:nowrap">
+                      <a class="btn btn-xs btn-primary" href="{$pk.url_ubah|e}"><i class="fa fa-list"></i> Ubah Paket</a>
+                      <button type="button" class="btn btn-xs btn-default pe-edit-paket" data-kode="{$pk.kode_item|e}" data-nama="{$pk.nama_barang|e}" data-deskripsi="{$pk.deskripsi|e}"><i class="fa fa-pencil"></i> Ubah Nama</button>
+                      <button type="button" class="btn btn-xs btn-danger pe-status-paket" data-kode="{$pk.kode_item|e}" data-nama="{$pk.nama_barang|e}" data-aksi="hapus"><i class="fa fa-trash"></i> Hapus</button>
+                    </td>
                   </tr>{/loop}
                 {else}
                   <tr><td colspan="6" class="text-center text-muted">Belum ada paket.</td></tr>
@@ -42,7 +46,17 @@
               </tbody>
             </table>
           </div>
-          <a class="btn btn-default btn-sm" href="{?=url([ADMIN,'logistik_non_medis','gudangkomposisivip'])?}"><i class="fa fa-plus"></i> Tambah / atur paket</a>
+          <a class="btn btn-default btn-sm" href="{?=url([ADMIN,'logistik_non_medis','gudangkomposisivip'])?}"><i class="fa fa-list"></i> Atur isi paket</a>
+          {if: !empty($paket_nonaktif)}
+          <details style="margin-top:16px"><summary><b>Paket nonaktif ({?=count($paket_nonaktif)?})</b></summary>
+            <p class="text-muted" style="margin-top:8px">Paket yang dihapus dari pilihan aktif dapat diaktifkan kembali. Riwayat dan resepnya tetap tersimpan.</p>
+            <div class="table-responsive"><table class="table table-bordered table-condensed">
+              <thead><tr><th>Kode</th><th>Nama Paket</th><th width="100">Aksi</th></tr></thead><tbody>
+              {loop: $paket_nonaktif as $pn}<tr><td>{$pn.kode_item|e}</td><td>{$pn.nama_barang|e}</td>
+                <td><button type="button" class="btn btn-xs btn-success pe-status-paket" data-kode="{$pn.kode_item|e}" data-nama="{$pn.nama_barang|e}" data-aksi="aktifkan">Aktifkan</button></td></tr>{/loop}
+              </tbody></table></div>
+          </details>
+          {/if}
         </div>
 
         <div class="tab-pane" id="pe-fotocopy">
@@ -100,6 +114,20 @@
     </div>
   </div></div>
 </article>
+<div class="modal fade" id="pe-modal-paket" tabindex="-1" role="dialog" aria-labelledby="pe-modal-paket-title">
+  <div class="modal-dialog" role="document"><div class="modal-content">
+    <form id="pe-form-paket">
+      <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-label="Tutup">&times;</button><h4 class="modal-title" id="pe-modal-paket-title">Ubah Nama dan Keterangan Paket</h4></div>
+      <div class="modal-body">
+        <input type="hidden" name="kode_item" id="pe-kode-paket">
+        <div class="form-group"><label>Nama Paket <span class="text-danger">*</span></label><input type="text" class="form-control" name="nama_barang" id="pe-nama-paket" maxlength="200" required></div>
+        <div class="form-group"><label>Keterangan</label><textarea class="form-control" name="deskripsi" id="pe-deskripsi-paket" maxlength="2000" rows="3"></textarea></div>
+        <p class="help-block">Isi dan harga paket diatur melalui tombol Ubah Paket. Kode paket dan riwayat transaksi tetap sama.</p>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Batal</button><button type="submit" class="btn btn-primary" id="pe-simpan-paket">Simpan</button></div>
+    </form>
+  </div></div>
+</div>
 <script>
 // Buka tab sesuai alamat (#pe-paket / #pe-fotocopy / #pe-ecer) dan simpan tab terakhir di alamat.
 $(function () {
@@ -111,6 +139,37 @@ $(function () {
         if (window.history && window.history.replaceState) {
             window.history.replaceState(null, document.title, $(e.target).attr('href'));
         }
+    });
+    $('.pe-edit-paket').on('click', function () {
+        $('#pe-kode-paket').val($(this).attr('data-kode'));
+        $('#pe-nama-paket').val($(this).attr('data-nama'));
+        $('#pe-deskripsi-paket').val($(this).attr('data-deskripsi'));
+        $('#pe-modal-paket').modal('show');
+    });
+    $('#pe-form-paket').on('submit', function (e) {
+        e.preventDefault();
+        var $button = $('#pe-simpan-paket').prop('disabled', true);
+        $.post('{?=url(ADMIN."/logistik_non_medis/simpanpaketgudangproduksi")?}', $(this).serialize(), function (res) {
+            if (res.status === 'success') window.location.reload();
+            else alert(res.message || 'Paket gagal diubah.');
+        }, 'json').fail(function () { alert('Paket gagal diubah. Coba lagi.'); })
+          .always(function () { $button.prop('disabled', false); });
+    });
+    $('.pe-status-paket').on('click', function () {
+        var $button = $(this);
+        var aksi = $button.attr('data-aksi');
+        var pesan = aksi === 'hapus'
+            ? 'Hapus paket "' + $button.attr('data-nama') + '" dari pilihan aktif?\n\nPaket akan dinonaktifkan. Riwayat transaksi dan isi paket tetap tersimpan.'
+            : 'Aktifkan kembali paket "' + $button.attr('data-nama') + '"?';
+        if (!confirm(pesan)) return;
+        $button.prop('disabled', true);
+        $.post('{?=url(ADMIN."/logistik_non_medis/statuspaketgudangproduksi")?}', {
+            kode_item: $button.attr('data-kode'), aksi: aksi
+        }, function (res) {
+            if (res.status === 'success') window.location.reload();
+            else alert(res.message || 'Status paket gagal diubah.');
+        }, 'json').fail(function () { alert('Status paket gagal diubah. Coba lagi.'); })
+          .always(function () { $button.prop('disabled', false); });
     });
 });
 </script>
