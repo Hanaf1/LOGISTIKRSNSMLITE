@@ -14,6 +14,10 @@ final class InventarisClassification
         if (!is_numeric($price) || !is_finite((float)$price) || $price <= 0) {
             return self::UNKNOWN;
         }
+        if ((float)$price === 1000000.0) {
+            // Keputusan kebijakan untuk nilai tepat batas belum ditetapkan.
+            return self::UNKNOWN;
+        }
         return $price < 1000000 ? self::NON_ASSET : self::ASSET;
     }
 

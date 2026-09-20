@@ -31,7 +31,7 @@ function invokePrivate($admin, $name, ...$args) {
     $method->setAccessible(true);
     return $method->invokeArgs($admin, $args);
 }
-foreach ([[999999,Policy::NON_ASSET],[1000001,Policy::ASSET],[1000000,Policy::ASSET],
+foreach ([[999999,Policy::NON_ASSET],[1000001,Policy::ASSET],[1000000,Policy::UNKNOWN],
     [0,Policy::UNKNOWN],[-1,Policy::UNKNOWN],[null,Policy::UNKNOWN],[INF,Policy::UNKNOWN],
     [350000,Policy::NON_ASSET]] as [$price,$expected]) {
     check(Policy::fromPrice($price) === $expected, 'Price boundary classification failed');
@@ -86,12 +86,12 @@ try {
     $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_aset_penyusutan (kode_aset,periode,tanggal_proses,user_proses) VALUES ('LEGACY-HISTORY','2025-01',NOW(),'test')");
     $plan = Migration::propose(Migration::snapshot($pdo));
     $backup = sys_get_temp_dir() . '/' . $database . '.json';
-    check(Migration::apply($pdo, $plan, $backup) === 4, 'Migration should classify all valid per-unit prices without depreciation history');
+    check(Migration::apply($pdo, $plan, $backup) === 3, 'Migration should classify prices outside the undecided boundary');
     check(is_file($backup), 'Backup missing');
     $byCode = [];
     foreach (Migration::snapshot($pdo) as $r) $byCode[$r['kode_aset']] = $r;
     check($byCode['LOW']['klasifikasi_pencatatan'] === Policy::NON_ASSET, 'Low-price inventory lost');
-    check($byCode['EXACT']['klasifikasi_pencatatan'] === Policy::ASSET, 'Threshold-price inventory was not classified as asset');
+    check($byCode['EXACT']['klasifikasi_pencatatan'] === Policy::UNKNOWN, 'Threshold-price inventory must await policy decision');
     check($byCode['IMPORTED']['klasifikasi_pencatatan'] === Policy::ASSET, 'Imported actual acquisition price was not classified');
     check($byCode['LEGACY-HISTORY']['klasifikasi_pencatatan'] === Policy::UNKNOWN, 'History must require reconciliation');
     $reconciliationPlan = Migration::propose(Migration::snapshot($pdo), true);
@@ -101,7 +101,7 @@ try {
     try { Migration::apply($pdo, $plan, $backup . '.stale'); } catch (RuntimeException $e) { $failed = true; }
     check($failed, 'Stale migration accepted');
     $preview = invokePrivate($admin, '_hitungDataPenyusutan', '2026-09', '', '');
-    check(count($preview['data']) === 4, 'Preview did not include every depreciable asset');
+    check(count($preview['data']) === 3, 'Preview did not include every depreciable asset');
     check($byCode['DEPRECIATED']['klasifikasi_pencatatan'] === Policy::ASSET, 'Book value changed classification');
     $failed = false;
     try {
@@ -123,7 +123,7 @@ try {
         return $json;
     }
     $kpi = route('anyGetLaporanAsetKpi');
-    check($kpi['total_unit'] === 5 && (float)$kpi['total_nilai'] === 9200000.0, 'Capital KPI excludes threshold-price assets');
+    check($kpi['total_unit'] === 4 && (float)$kpi['total_nilai'] === 8200000.0, 'Capital KPI includes unresolved threshold-price inventory');
     $list = route('anyDisplayAsetRegistrasi', ['filter_klasifikasi'=>Policy::NON_ASSET]);
     check($list['jumlah'] === 1, 'Register filter failed');
     $inventory = route('anyDisplayLaporanInventaris', ['filter_klasifikasi'=>Policy::NON_ASSET]);
@@ -150,7 +150,7 @@ try {
     $result = route('postProsesPenyusutan', ['bulan'=>'09','tahun'=>'2026']);
     check($result['status'] === 'success', 'Depreciation posting failed: ' . json_encode($result));
     $posted = $pdo->query("SELECT kode_aset FROM rsns_custom_logistik_non_medis_aset_penyusutan WHERE periode='2026-09' ORDER BY kode_aset")->fetchAll(PDO::FETCH_COLUMN);
-    check($posted === ['DEPRECIATED','EXACT','HIGH','IMPORTED'], 'Posting did not include every depreciable asset');
+    check($posted === ['DEPRECIATED','HIGH','IMPORTED'], 'Posting did not include every depreciable asset');
     check((int)$pdo->query("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_aset_penyusutan WHERE periode='2025-01'")->fetchColumn() === 1, 'Historical depreciation was modified');
     $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_inventaris_master (jenis_master,kode,kode_inventaris,kode_kategori,nama,kode_kelompok,kode_jenis,kode_barang) VALUES
         ('UNIT','01','01','','Test Unit',NULL,NULL,NULL), ('BARANG','010100',NULL,'2','Test Chair','01','01','00')");
