@@ -116,7 +116,7 @@ try {
         $out = stream_get_contents($pipes[1]); $err = stream_get_contents($pipes[2]);
         fclose($pipes[1]); fclose($pipes[2]);
         $status = proc_close($process);
-        check($status === 0 && $err === '', 'Route failed: ' . $method . ' ' . $err);
+        check($status === 0 && $err === '', 'Route failed: ' . $method . ' ' . $err . ' Output: ' . $out);
         if ($raw) return $out;
         $json = json_decode($out, true);
         check(is_array($json), 'Invalid JSON from ' . $method . ': ' . $out);

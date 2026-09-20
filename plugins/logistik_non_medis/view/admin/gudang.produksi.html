@@ -115,7 +115,9 @@ var MODE_VIP = {if: $vip_pack}1{else}0{/if};
 $(document).ready(function () {
     var urlBarang = '{?=url(ADMIN."/logistik_non_medis/ajaxmasterbarang")?}';
     var qs = new URLSearchParams(window.location.search);
-    var paketTerpilih = MODE_VIP ? (qs.get('hasil') || '') : '';
+    // Parameter hasil dipakai untuk Paket maupun Barang Olahan agar tombol
+    // "Ubah Paket" langsung membuka resep barang yang benar.
+    var paketTerpilih = qs.get('hasil') || '';
 
     // mLITE memasang Selectator ke semua <select>; field yang memakai Select2
     // harus melepasnya dulu supaya tidak muncul dua widget.
