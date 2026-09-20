@@ -179,12 +179,33 @@ try {
       ('VIP-TISU','Tisu','VIP','Pcs','Rutin','Habis Pakai','Aktif'),
       ('VIP-SIKAT','Sikat Gigi','VIP','Pcs','Rutin','Habis Pakai','Aktif')");
     foreach (['VIP-TAS','VIP-HANDUK','VIP-TISU','VIP-SIKAT'] as $bahan) {
-        $resep = route('postSaveResepGudangProduksi', ['kode_item_hasil'=>'VIP-PACK','kode_item_bahan'=>$bahan,'qty_bahan_per_hasil'=>1]);
+        $resep = route('postSaveResepGudangProduksi', ['kode_item_hasil'=>'VIP-PACK','kode_item_bahan'=>$bahan,'qty_bahan_per_hasil'=>1,'jenis'=>'Paket']);
         check($resep['status'] === 'success', 'VIP composition cannot be saved');
     }
     $komponen = invokePrivate($admin, '_uraikanResepProduksi', 'VIP-PACK', 3.0);
     check(count($komponen) === 4 && array_sum(array_column($komponen, 'qty')) === 12.0, 'VIP composition is not expanded per package');
     check(invokePrivate($admin, '_getPermissionKeyForMethod', 'gudangkomposisivip') === 'gudangproduksi', 'VIP composition permission mismatch');
+    check(invokePrivate($admin, '_getPermissionKeyForMethod', 'simpanpaketgudangproduksi') === 'gudangproduksi', 'Package edit permission mismatch');
+    check(invokePrivate($admin, '_getPermissionKeyForMethod', 'statuspaketgudangproduksi') === 'gudangproduksi', 'Package status permission mismatch');
+    check(route('postSimpanPaketGudangproduksi', ['kode_item'=>'VIP-TAS','nama_barang'=>'Tas Baru'])['status'] === 'error', 'Non-package item was editable as package');
+    check(route('postSimpanPaketGudangproduksi', ['kode_item'=>'VIP-PACK','nama_barang'=>'VIP Pack Baru','deskripsi'=>'Untuk pasien VIP'])['status'] === 'success', 'Package edit failed');
+    $paketEdit = $pdo->query("SELECT nama_barang,deskripsi FROM rsns_custom_logistik_non_medis_master_barang WHERE kode_item='VIP-PACK'")->fetch(PDO::FETCH_ASSOC);
+    check($paketEdit['nama_barang'] === 'VIP Pack Baru' && $paketEdit['deskripsi'] === 'Untuk pasien VIP', 'Package edit did not persist');
+    check(route('postStatusPaketGudangproduksi', ['kode_item'=>'VIP-PACK','aksi'=>'hapus'])['status'] === 'success', 'Package deactivation failed');
+    check($pdo->query("SELECT status FROM rsns_custom_logistik_non_medis_master_barang WHERE kode_item='VIP-PACK'")->fetchColumn() === 'Tidak Aktif', 'Package was not hidden from active inventory');
+    check((int)$pdo->query("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_produksi_resep WHERE kode_item_hasil='VIP-PACK' AND status='Aktif'")->fetchColumn() === 4, 'Package deletion removed recipe history');
+    check(route('postSimpanPaketGudangproduksi', ['kode_item'=>'VIP-PACK','nama_barang'=>'Tidak Boleh'])['status'] === 'error', 'Inactive package was editable');
+    check(route('postSaveResepGudangProduksi', ['kode_item_hasil'=>'VIP-PACK','kode_item_bahan'=>'VIP-TAS','qty_bahan_per_hasil'=>2,'jenis'=>'Paket'])['status'] === 'error', 'Inactive package recipe was editable');
+    check(route('postStatusPaketGudangproduksi', ['kode_item'=>'VIP-PACK','aksi'=>'aktifkan'])['status'] === 'success', 'Package reactivation failed');
+    check($pdo->query("SELECT status FROM rsns_custom_logistik_non_medis_master_barang WHERE kode_item='VIP-PACK'")->fetchColumn() === 'Aktif', 'Package was not restored');
+    $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_master_barang (kode_item,nama_barang,kategori,satuan_dasar,jenis_item,tipe_barang,status,jenis_komposisi)
+        VALUES ('VIP-PACK-LAIN','VIP Pack Lain','VIP','Paket','Rutin','Habis Pakai','Aktif','Paket')");
+    check(route('postSaveResepGudangProduksi', ['kode_item_hasil'=>'VIP-PACK-LAIN','kode_item_bahan'=>'VIP-TAS','qty_bahan_per_hasil'=>1,'jenis'=>'Paket'])['status'] === 'success', 'Second package recipe failed');
+    $allRecipes = route('anyDisplayResepGudangProduksi', ['vip'=>1]);
+    check(count($allRecipes['grup']) === 2, 'Unfiltered composition list omitted a package');
+    $focusedRecipes = route('anyDisplayResepGudangProduksi', ['vip'=>1,'kode_item_hasil'=>'VIP-PACK']);
+    check(count($focusedRecipes['grup']) === 1 && isset($focusedRecipes['grup']['VIP-PACK']) && count($focusedRecipes['grup']['VIP-PACK']['bahan']) === 4, 'Focused package showed other contents');
+    check(route('anyDisplayResepGudangProduksi', ['vip'=>0,'kode_item_hasil'=>'VIP-PACK'])['grup'] === [], 'Package recipe appeared in non-package view');
     $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_vendor (kode_vendor,nama_vendor) VALUES ('V-TEST','Toko Uji')");
     $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_penerimaan (no_penerimaan,tgl_penerimaan,no_po,kode_vendor,kode_item,qty_terima,harga,kode_lokasi,status,stok_diposting) VALUES
       ('TERIMA-TEST','2026-09-11','PO-TEST','V-TEST','VIP-TISU',10,5000,'GUDANG-LOGISTIK','Selesai',1),
@@ -200,7 +221,43 @@ try {
     $zip->close(); unlink($exportFile);
     check(strpos($sheet, '>PO-TEST<') !== false && strpos($sheet, '>PO-DRAFT<') === false, 'Realization export included unposted receipt');
     check(invokePrivate($admin, '_getPermissionKeyForMethod', 'realisasibelanja') === 'pengadaanperencanaan', 'Realisasi permission mismatch');
-    echo "PASS: boundaries, classification migration, asset-only depreciation, Non-Aset Unit, default warehouses, VIP Pack composition, and receipt/PO realization reporting.\n";
+    $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_user_roles (username,role,kode_unit) VALUES ('test','admin',NULL)");
+    $pdo->exec("CREATE OR REPLACE VIEW rsns_custom_logistik_non_medis_v_sppb_normalized AS
+        SELECT s.*, 'Non Rutin' AS jenis_permintaan FROM rsns_custom_logistik_non_medis_sppb s");
+    $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_sppb
+        (no_sppb,tgl_sppb,kode_unit,kode_item,jumlah,status) VALUES
+        ('NR-UNIT','2026-09-20','01','VIP-PACK',1,'Diajukan'),
+        ('NR-KASIE','2026-09-20','01','VIP-PACK',1,'Disetujui Ka. Unit'),
+        ('NR-KABID','2026-09-20','01','VIP-PACK',1,'Disetujui Ka. Sie'),
+        ('NR-TTD','2026-09-20','01','VIP-PACK',1,'Diserahkan ke Kasie Umum'),
+        ('NR-LOGISTIK','2026-09-20','01','VIP-PACK',1,'Diteruskan ke Logistik Umum')");
+    foreach (['admin','logistik'] as $testRole) {
+        $pdo->prepare("UPDATE rsns_custom_logistik_non_medis_user_roles SET role=? WHERE username='test'")->execute([$testRole]);
+        check(invokePrivate($admin, '_canDecideKonsulKabid') === false, $testRole . ' retained Kabid Umum decision access');
+        foreach (['NR-UNIT','NR-KASIE','NR-KABID'] as $no) {
+            check(route('postApproveSppb', ['no_sppb'=>$no])['status'] === 'error', $testRole . ' approved another role stage');
+            check(route('postRejectSppb', ['no_sppb'=>$no,'alasan_penolakan'=>'test'])['status'] === 'error', $testRole . ' rejected another role stage');
+        }
+        check(route('postSaveSppb', ['no_sppb'=>'NR-UNIT','kode_unit'=>'01','jenis_permintaan'=>'Rutin','status'=>'Disetujui Ka. Unit'])['status'] === 'error', $testRole . ' submitted an approval status through the form');
+        check(route('postMundurSppb', ['no_sppb'=>'NR-KASIE'])['status'] === 'error', $testRole . ' reversed a Kasie stage');
+        check(route('postTtdKasieUmumSppb', ['no_sppb'=>'NR-TTD'])['status'] === 'error', $testRole . ' signed for Kasie Umum');
+        check(route('postProsesLogistikSppb', ['no_sppb'=>'NR-TTD'])['status'] === 'error', $testRole . ' skipped Kasie Umum');
+        check(route('postKeputusanDanaSppb', ['no_sppb'=>'NR-KABID','keputusan'=>'tidak_acc','alasan'=>'test'])['status'] === 'error', $testRole . ' decided for Kabid Umum');
+        check(route('postSimpanDraftKonsulKabid', ['keputusan'=>['NR-KABID'=>'tidak_acc']])['status'] === 'error', $testRole . ' saved a Kabid Umum decision');
+        check(route('postPersetujuanDanaSppb', ['no_sppb'=>'NR-KABID','keputusan'=>'tolak','alasan'=>'test'])['status'] === 'error', $testRole . ' decided for Keuangan');
+    }
+    $unchanged = $pdo->query("SELECT no_sppb,status FROM rsns_custom_logistik_non_medis_sppb WHERE no_sppb LIKE 'NR-%' ORDER BY no_sppb")->fetchAll(PDO::FETCH_KEY_PAIR);
+    check($unchanged['NR-UNIT'] === 'Diajukan' && $unchanged['NR-KASIE'] === 'Disetujui Ka. Unit'
+        && $unchanged['NR-KABID'] === 'Disetujui Ka. Sie' && $unchanged['NR-TTD'] === 'Diserahkan ke Kasie Umum', 'Denied Non Rutin action changed a status');
+    check(route('postProsesLogistikSppb', ['no_sppb'=>'NR-LOGISTIK'])['status'] === 'success', 'Logistik own stage was blocked');
+    check($pdo->query("SELECT status FROM rsns_custom_logistik_non_medis_sppb WHERE no_sppb='NR-LOGISTIK'")->fetchColumn() === 'Logistik Umum & Rekap', 'Logistik stage did not advance');
+    $pdo->exec("INSERT INTO rsns_custom_logistik_non_medis_unit (kode_unit,nama_unit) VALUES ('UMUM-TEST','Bidang Umum')");
+    $pdo->exec("UPDATE rsns_custom_logistik_non_medis_user_roles SET role='kepala_bidang',kode_unit='UMUM-TEST' WHERE username='test'");
+    check(invokePrivate($admin, '_canDecideKonsulKabid') === true, 'Kabid Umum lost decision access');
+    $pdo->exec("UPDATE rsns_custom_logistik_non_medis_user_roles SET role='keuangan',kode_unit=NULL WHERE username='test'");
+    $finance = route('postPersetujuanDanaSppb', ['no_sppb'=>'MISSING','keputusan'=>'setuju']);
+    check($finance['status'] === 'error' && $finance['message'] === 'Permintaan tidak sedang menunggu persetujuan dana.', 'Keuangan did not pass role check');
+    echo "PASS: boundaries, classification migration, asset-only depreciation, Non-Aset Unit, package management, VIP Pack composition, receipt/PO reporting, and Non Rutin role boundaries.\n";
 } finally {
     QueryWrapper::close();
     $server->exec("DROP DATABASE `{$database}`");

@@ -13108,7 +13108,7 @@ LEFT JOIN rsns_custom_logistik_non_medis_v_sppb_normalized s
         $units = [];
         foreach ($units_raw as $u) {
             $n = strtolower($u['nama_unit'] ?? '');
-            if (strpos($n, 'kasie') !== false || strpos($n, 'kanit') !== false || strpos($n, 'kabid') !== false) {
+            if (strpos($n, 'kasie') !== false || strpos($n, 'ka sie') !== false || strpos($n, 'kanit') !== false || strpos($n, 'ka unit') !== false || strpos($n, 'kabid') !== false || strpos($n, 'direktur') !== false || strpos($n, 'manajer') !== false) {
                 continue;
             }
             $units[] = $u;
@@ -14429,7 +14429,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $units = [];
         foreach ($units_raw as $u) {
             $n = strtolower($u['nama_unit'] ?? '');
-            if (strpos($n, 'kasie') !== false || strpos($n, 'kanit') !== false || strpos($n, 'kabid') !== false) {
+            if (strpos($n, 'kasie') !== false || strpos($n, 'ka sie') !== false || strpos($n, 'kanit') !== false || strpos($n, 'ka unit') !== false || strpos($n, 'kabid') !== false || strpos($n, 'direktur') !== false || strpos($n, 'manajer') !== false) {
                 continue;
             }
             $units[] = $u;
@@ -14745,7 +14745,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                     WHERE d.no_sppb = ? ORDER BY d.waktu, d.id");
                 $stmtDitolak->execute([(string)$sppb['no_sppb']]);
                 $item_ditolak = $stmtDitolak->fetchAll(\PDO::FETCH_ASSOC);
-                echo $this->draw('distribusi.sppb.detail.html', ['item_ditolak' => $item_ditolak, 'sppb' => $sppb, 'serah_terima' => $serah_terima, 'role' => $role, 'can_approve_sppb' => $can_approve_sppb, 'can_decide_konsul_kabid' => $this->_canAccessRekapNonRutin(), 'stepper_step' => $stepper_step, 'stepper_rejected' => $stepper_rejected, 'skip_kasie_umum_repeat' => $skip_kasie_umum_repeat, 'flow_internal' => $flow_internal, 'flow_source_label' => $flow_source_label, 'flow_next' => $flow_next, 'can_add_tambahan' => $can_add_tambahan, 'master_barang_tambahan' => $master_barang_tambahan, 'is_terminal_request' => $is_terminal_request, 'inline_mode' => $inline_mode]);
+                echo $this->draw('distribusi.sppb.detail.html', ['item_ditolak' => $item_ditolak, 'sppb' => $sppb, 'serah_terima' => $serah_terima, 'role' => $role, 'is_kasie_umum' => ($role === 'kepala_sie' && $this->_isPimpinanUmum('kepala_sie', $userRoleData ?: null)), 'can_approve_sppb' => $can_approve_sppb, 'can_decide_konsul_kabid' => $this->_canAccessRekapNonRutin(), 'stepper_step' => $stepper_step, 'stepper_rejected' => $stepper_rejected, 'skip_kasie_umum_repeat' => $skip_kasie_umum_repeat, 'flow_internal' => $flow_internal, 'flow_source_label' => $flow_source_label, 'flow_next' => $flow_next, 'can_add_tambahan' => $can_add_tambahan, 'master_barang_tambahan' => $master_barang_tambahan, 'is_terminal_request' => $is_terminal_request, 'inline_mode' => $inline_mode]);
             }
         }
         exit();
@@ -16061,7 +16061,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 $ttdKasie->execute([$no_sppb]);
                 $langsung_rekap = (bool)$ttdKasie->fetchColumn();
             }
-            $status_setelah_kabid = $langsung_rekap ? 'Logistik Umum & Rekap' : 'Disetujui Kabid';
+            $status_setelah_kabid = $langsung_rekap ? 'Logistik Umum & Rekap' : 'Diserahkan ke Kasie Umum';
             $update_data = [
               'status' => $status_setelah_kabid,
               'user_approve_ka_bidang' => $user,
@@ -16279,8 +16279,10 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 exit();
             }
             if ($role === 'kepala_sie' && $current_status_reject !== 'Disetujui Ka. Unit') {
-                echo json_encode(['status' => 'error', 'message' => 'KASI hanya dapat menolak pada tahap "Disetujui Ka. Unit".']);
-                exit();
+                if (!($this->_isPimpinanUmum($role, $userRoleData) && in_array($current_status_reject, ['Diserahkan ke Kasie Umum', 'Verifikasi Kasie Umum']))) {
+                    echo json_encode(['status' => 'error', 'message' => 'KASI hanya dapat menolak pada tahap "Disetujui Ka. Unit", atau "Verifikasi Kasie Umum" jika Anda adalah Kasie Umum.']);
+                    exit();
+                }
             }
             if ($role === 'kepala_bidang' && $current_status_reject !== 'Disetujui Ka. Sie') {
                 echo json_encode(['status' => 'error', 'message' => 'KABID hanya dapat menolak pada tahap "Disetujui Ka. Sie".']);
@@ -16787,6 +16789,62 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
     }
 
     /**
+     * Daftar barang SPPB Non-Rutin untuk keputusan per item oleh Kasie Umum.
+     * Digunakan untuk mengisi Step 1 modal TTD Kasie Umum.
+     */
+    public function postGetItemsForKasieDecision()
+    {
+        $user = $this->core->getUserInfo('username', null, true);
+        $roleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $user)->oneArray() ?: [];
+        if (!$this->_isKasieUmum() && ($roleData['role'] ?? '') !== 'admin') {
+            echo json_encode(['status' => 'error', 'message' => 'Akses ditolak.']);
+            exit();
+        }
+        $no_sppb = trim((string)($_POST['no_sppb'] ?? ''));
+        $cek = $this->db('rsns_custom_logistik_non_medis_v_sppb_normalized')->where('no_sppb', $no_sppb)->oneArray();
+        $allowedStatuses = ['Disetujui Ka. Unit', 'Diserahkan ke Kasie Umum', 'Verifikasi Kasie Umum'];
+        if (!$cek || $cek['jenis_permintaan'] !== 'Non Rutin' || !in_array($cek['status'], $allowedStatuses, true)) {
+            echo json_encode(['status' => 'error', 'message' => 'Permintaan tidak sedang menunggu Kasie Umum.']);
+            exit();
+        }
+        $stmt = $this->db()->pdo()->prepare("
+            SELECT s.id, s.kode_item,
+                   COALESCE(NULLIF(s.nama_barang_manual,''), im.nama, b.nama_barang, s.kode_item, '-') AS nama_barang,
+                   COALESCE(NULLIF(s.spesifikasi_manual,''), b.spesifikasi, '') AS spesifikasi,
+                   CASE WHEN COALESCE(s.jumlah_disetujui,0)>0 THEN s.jumlah_disetujui ELSE s.jumlah END AS jumlah,
+                   COALESCE(NULLIF(s.satuan,''), b.satuan_dasar, '-') AS satuan
+            FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
+            LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item = s.kode_item
+            LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master im
+                ON im.jenis_master='BARANG' AND im.kode_kategori='2' AND im.kode=s.kode_item
+            WHERE s.no_sppb = ?
+            ORDER BY s.id
+        ");
+        $stmt->execute([$no_sppb]);
+        $items = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $mapped = array_map(static function($r) {
+            return [
+                'id'         => (int)$r['id'],
+                'nama_barang' => $r['nama_barang'],
+                'spesifikasi' => $r['spesifikasi'],
+                'jumlah'     => (float)$r['jumlah'],
+                'satuan'     => $r['satuan'],
+            ];
+        }, $items);
+        echo json_encode(['status' => 'success', 'items' => $mapped, 'sppb_status' => $cek['status']]);
+        exit();
+    }
+
+    /**
+     * TTD Kasie Umum dengan keputusan per barang.
+     * POST params:
+     *   no_sppb, catatan, tanda_tangan,
+     *   keputusan_item[{id}] = 'acc'|'tolak',
+     *   catatan_item[{id}]   = string
+     *
+     * Barang yang di-Tolak dikeluarkan dari SPPB dan dicatat ke sppb_item_ditolak.
+     * Jika semua barang di-Tolak → SPPB menjadi 'Ditolak'.
+     *
      * TTD Kasie Umum cukup sekali. Jika Kasie Umum adalah Ka. Sie pada struktur
      * pemohon, TTD disimpan saat ACC KASI. Status lama setelah KABID tetap
      * didukung untuk menyelesaikan dokumen yang telanjur masuk alur lama.
@@ -16815,11 +16873,114 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 exit();
             }
         }
+
+        // --- Keputusan per barang ---
+        $keputusanRaw = is_array($_POST['keputusan_item'] ?? null) ? $_POST['keputusan_item'] : [];
+        $catatanRaw   = is_array($_POST['catatan_item'] ?? null) ? $_POST['catatan_item'] : [];
+
+        // Ambil semua item SPPB saat ini
+        $stmtItems = $this->db()->pdo()->prepare("
+            SELECT s.id, s.kode_item,
+                   COALESCE(NULLIF(s.nama_barang_manual,''), b.nama_barang, im.nama, s.kode_item) AS nama_barang,
+                   COALESCE(NULLIF(s.spesifikasi_manual,''), b.spesifikasi, '') AS spesifikasi,
+                   CASE WHEN COALESCE(s.jumlah_disetujui,0)>0 THEN s.jumlah_disetujui ELSE s.jumlah END AS jumlah,
+                   COALESCE(NULLIF(s.satuan,''), b.satuan_dasar, '-') AS satuan,
+                   COALESCE(NULLIF(s.estimasi_harga,0), NULLIF(b.harga_referensi,0), 0) AS estimasi_harga
+            FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
+            LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item
+            LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master im
+                ON im.jenis_master='BARANG' AND im.kode_kategori='2' AND im.kode=s.kode_item
+            WHERE s.no_sppb = ?
+            ORDER BY s.id
+        ");
+        $stmtItems->execute([$no_sppb]);
+        $allItems = $stmtItems->fetchAll(\PDO::FETCH_ASSOC);
+
+        if (empty($allItems)) {
+            echo json_encode(['status' => 'error', 'message' => 'Tidak ada barang dalam permintaan ini.']);
+            exit();
+        }
+
+        // Validasi: setiap item harus ada keputusannya
+        $tolakIds = [];
+        $accIds   = [];
+        foreach ($allItems as $item) {
+            $itemId   = (int)$item['id'];
+            $keputusan = strtolower(trim((string)($keputusanRaw[$itemId] ?? '')));
+            if ($keputusan === 'tolak') {
+                $tolakIds[] = $itemId;
+            } elseif ($keputusan === 'acc') {
+                $accIds[] = $itemId;
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Keputusan untuk barang "' . $item['nama_barang'] . '" belum dipilih (ACC atau Tolak).']);
+                exit();
+            }
+        }
+
+        $semuaDitolak = !empty($tolakIds) && empty($accIds);
+
         $pdo = $this->db()->pdo();
         try {
-            $encoded = $this->_encodeSerahTerimaSignature((string)($_POST['tanda_tangan'] ?? ''));
+            $tanda_tangan = trim((string)($_POST['tanda_tangan'] ?? ''));
+            $encoded = null;
+            if ($tanda_tangan !== '' && $tanda_tangan !== '{}' && $tanda_tangan !== '[]' && $tanda_tangan !== 'null') {
+                $encoded = $this->_encodeSerahTerimaSignature($tanda_tangan);
+            }
+            if (!$encoded && !$semuaDitolak) {
+                // TTD wajib jika ada barang yang di-ACC (tidak dibutuhkan jika semua Tolak)
+                echo json_encode(['status' => 'error', 'message' => 'Tanda tangan Kasie Umum wajib diisi.']);
+                exit();
+            }
             $this->_initSppbTtd();
+            $this->_initSppbItemDitolak();
             $pdo->beginTransaction();
+
+            // Catat barang yang Tolak ke tabel jejak, lalu hapus dari SPPB
+            if (!empty($tolakIds)) {
+                $stmtDel = $pdo->prepare("DELETE FROM rsns_custom_logistik_non_medis_sppb WHERE id=?");
+                $stmtIns = $pdo->prepare("INSERT INTO rsns_custom_logistik_non_medis_sppb_item_ditolak
+                    (no_sppb, sppb_item_id_asal, kode_item, nama_barang, spesifikasi, jumlah, satuan, estimasi_harga, alasan, tahap, username, waktu)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())");
+                foreach ($allItems as $item) {
+                    if (!in_array((int)$item['id'], $tolakIds, true)) {
+                        continue;
+                    }
+                    $catatanItem = trim((string)($catatanRaw[(int)$item['id']] ?? ''));
+                    $stmtIns->execute([
+                        $no_sppb,
+                        $item['id'],
+                        $item['kode_item'],
+                        $item['nama_barang'],
+                        $item['spesifikasi'],
+                        $item['jumlah'],
+                        $item['satuan'],
+                        $item['estimasi_harga'],
+                        $catatanItem,
+                        'Kasie Umum',
+                        $user,
+                    ]);
+                    if (!$semuaDitolak) {
+                        $stmtDel->execute([$item['id']]);
+                    }
+                }
+            }
+
+            if ($semuaDitolak) {
+                // Semua barang Tolak → SPPB ditolak
+                $alasanTolak = trim((string)($_POST['catatan'] ?? '')) ?: 'Semua barang ditolak oleh Kasie Umum.';
+                $this->_updateSppbNormalized(
+                    ['no_sppb' => $no_sppb, 'status' => $cek['status']],
+                    ['status' => 'Ditolak', 'alasan_penolakan' => $alasanTolak, 'ditolak_pada_status' => $cek['status'],
+                     'user_tolak' => $user, 'tgl_tolak' => date('Y-m-d H:i:s')]
+                );
+                $this->_logAction('logistik_non_medis_sppb', 'Semua barang ditolak Kasie Umum: ' . $no_sppb, 'U');
+                $pdo->commit();
+                echo json_encode(['status' => 'success', 'new_status' => 'Ditolak',
+                    'message' => 'Semua barang ditolak. SPPB dinyatakan Ditolak.']);
+                exit();
+            }
+
+            // Ada barang yang ACC — simpan TTD dan lanjutkan alur
             $this->_simpanTtdSppb($no_sppb, 'KASIE_UMUM', 'Setuju', trim((string)($_POST['catatan'] ?? '')), $encoded);
             $isApprovalKasie = $cek['status'] === 'Disetujui Ka. Unit';
             $newStatus = $isApprovalKasie ? 'Disetujui Ka. Sie' : 'Logistik Umum & Rekap';
@@ -16842,10 +17003,12 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         }
         if ($isApprovalKasie) {
             $notification = $this->_notifyApprovalRecipients('kepala_bidang', $cek['kode_unit'], $no_sppb, 'Permintaan ' . $no_sppb . ' sudah ditandatangani Kasie Umum dan membutuhkan persetujuan KABID.', 'approval_kabid');
-            $message = 'Disetujui dan ditandatangani Kasie Umum. Permintaan lanjut ke KABID; TTD Kasie tidak akan diminta lagi.';
+            $totalTolak = count($tolakIds);
+            $message = 'Disetujui dan ditandatangani Kasie Umum.' . ($totalTolak ? ' ' . $totalTolak . ' barang ditolak dan dikeluarkan dari SPPB.' : '') . ' Permintaan lanjut ke KABID.';
         } else {
             $notification = null;
-            $message = 'Ditandatangani Kasie Umum. Permintaan lanjut ke Logistik & Rekap.';
+            $totalTolak = count($tolakIds);
+            $message = 'Ditandatangani Kasie Umum.' . ($totalTolak ? ' ' . $totalTolak . ' barang ditolak dan dikeluarkan dari SPPB.' : '') . ' Permintaan lanjut ke Logistik & Rekap.';
         }
         $this->_logAction('logistik_non_medis_sppb', 'TTD Kasie Umum, lanjut ' . $newStatus . ': ' . $no_sppb, 'U');
         echo json_encode(['status' => 'success', 'new_status' => $newStatus, 'message' => $message, 'notification' => $notification]);

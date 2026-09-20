@@ -576,6 +576,10 @@
     {if: (($sppb.status == 'Disetujui Kabid' || $sppb.status == 'Disetujui Unit') || ($sppb.status == 'Diajukan' && $sppb.jenis_permintaan == 'Rutin')) && ($role == 'admin' || $role == 'logistik')}
         <button type="button" class="btn btn-info" style="background:#17a2b8;" onclick="verifikasiLogistik('{$sppb.no_sppb}')"><i class="fa fa-arrow-right"></i> {if: $sppb.jenis_permintaan == 'Non Rutin'}Serahkan ke KASIE Umum & Administrasi{else}Proses Logistik{/if}</button>
     {/if}
+    {if: in_array($sppb.status, ['Diserahkan ke Kasie Umum', 'Verifikasi Kasie Umum']) && $sppb.jenis_permintaan == 'Non Rutin' && !empty($is_kasie_umum)}
+        <button type="button" class="btn btn-warning" onclick="openTtdKasieUmum('{$sppb.no_sppb}')"><i class="fa fa-pencil-square-o"></i> TTD Kasie</button>
+        <button type="button" class="btn btn-danger" onclick="rejectUnit('{$sppb.no_sppb}')">Tolak</button>
+    {/if}
     {if: in_array($sppb.status, ['Diserahkan ke Kasie Umum','Verifikasi Kasie Umum','Diteruskan ke Logistik Umum','Rekap Logistik','Logistik Umum & Rekap']) && $sppb.jenis_permintaan == 'Non Rutin' && ($role == 'admin' || $role == 'logistik')}
         {if: $sppb.status == 'Logistik Umum & Rekap'}
             <button type="button" class="btn btn-primary" onclick="tindakLanjutCepat('{$sppb.no_sppb}')"><i class="fa fa-random"></i> Tindak Lanjut</button>

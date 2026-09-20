@@ -254,6 +254,7 @@
                                 {/if}
                                 {if: $value.can_ttd_kasie_umum}
                                     <button class="btn btn-xs btn-success" onclick="openTtdKasieUmum('{$value.no_sppb}')" title="Tandatangani dan lanjutkan ke Logistik & Rekap"><i class="fa fa-pencil-square-o"></i> TTD Kasie</button>
+                                    <button class="btn btn-xs btn-danger" onclick="rejectUnit('{$value.no_sppb}')" title="Tolak Permintaan"><i class="fa fa-times"></i></button>
                                 {/if}
                                 {if: $value.can_setujui_dana}
                                     <button class="btn btn-xs btn-success" onclick="persetujuanDanaSppb('{$value.no_sppb}', 'setuju')" title="Setujui dana, lanjut Proses Pengadaan"><i class="fa fa-check"></i> Dana</button>
@@ -284,31 +285,73 @@
 </div>
 
 <div class="modal fade" id="modal-ttd-kasie-umum" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-success" style="color:#fff">
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                <h4 class="modal-title"><i class="fa fa-pencil-square-o"></i> Persetujuan Kasie Umum</h4>
+            <div class="modal-header" style="background:linear-gradient(135deg,#28a745,#20863a);color:#fff">
+                <button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:.9">&times;</button>
+                <h4 class="modal-title"><i class="fa fa-pencil-square-o"></i> Persetujuan Kasie Umum &mdash; <span id="ttd-kasie-no-label" style="font-size:.9em"></span></h4>
             </div>
-            <div class="modal-body">
-                <input type="hidden" id="ttd-kasie-no-sppb">
-                <div class="alert alert-info">SPPB <strong id="ttd-kasie-no-label"></strong> <span id="ttd-kasie-next">akan diteruskan ke <strong>Logistik &amp; Rekap</strong> setelah tanda tangan disimpan.</span></div>
-                <div class="form-group">
-                    <label>Catatan <small class="text-muted">(opsional)</small></label>
-                    <textarea id="ttd-kasie-catatan" class="form-control" rows="2" maxlength="1000"></textarea>
+            <div class="modal-body" style="padding:0">
+                <!-- Step indicator -->
+                <div style="display:flex;border-bottom:1px solid #e5e5e5;background:#f8f9fa">
+                    <div id="kasie-step-ind-1" style="flex:1;padding:10px 16px;text-align:center;font-weight:600;border-bottom:3px solid #28a745;color:#28a745;font-size:.92em"><i class="fa fa-list-ul"></i> 1. Keputusan Barang</div>
+                    <div id="kasie-step-ind-2" style="flex:1;padding:10px 16px;text-align:center;font-weight:600;border-bottom:3px solid transparent;color:#aaa;font-size:.92em"><i class="fa fa-pencil"></i> 2. Catatan &amp; TTD</div>
                 </div>
-                <div class="form-group">
-                    <label>Tanda Tangan Kasie Umum <span class="text-danger">*</span></label>
-                    <div style="position:relative;border:1px solid #bbb;border-radius:3px;background:#fff;overflow:hidden">
-                        <canvas id="ttd-kasie-canvas" height="150" style="display:block;width:100%;height:150px;touch-action:none;cursor:crosshair"></canvas>
-                        <span id="ttd-kasie-hint" class="text-muted" style="position:absolute;left:0;right:0;top:62px;text-align:center;pointer-events:none">Tanda tangan dengan digital pen, mouse, atau jari</span>
+
+                <!-- Step 1: per-item decisions -->
+                <div id="kasie-step-1" style="padding:16px">
+                    <div id="kasie-items-loading" class="text-center" style="padding:30px"><i class="fa fa-spinner fa-spin fa-2x"></i><br><small>Memuat daftar barang...</small></div>
+                    <div id="kasie-items-wrap" style="display:none">
+                        <p class="text-muted" style="margin-bottom:8px;font-size:.88em">Tentukan keputusan ACC atau Tolak untuk setiap barang. Catatan wajib saat Tolak, opsional saat ACC.</p>
+                        <div style="overflow-x:auto">
+                            <table class="table table-bordered table-condensed" style="margin-bottom:0">
+                                <thead style="background:#f0f4f8">
+                                    <tr>
+                                        <th style="width:35%">Barang</th>
+                                        <th style="width:13%;text-align:center">Jumlah</th>
+                                        <th style="width:22%;text-align:center">Keputusan</th>
+                                        <th style="width:30%">Catatan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kasie-items-tbody"></tbody>
+                            </table>
+                        </div>
+                        <div id="kasie-step1-warning" class="alert alert-warning" style="display:none;margin-top:10px;padding:7px 12px;font-size:.88em"><i class="fa fa-exclamation-triangle"></i> <span id="kasie-step1-warning-msg"></span></div>
                     </div>
-                    <button type="button" class="btn btn-default btn-xs" id="ttd-kasie-clear" style="margin-top:6px"><i class="fa fa-eraser"></i> Hapus</button>
+                </div>
+
+                <!-- Step 2: catatan umum + TTD -->
+                <div id="kasie-step-2" style="padding:16px;display:none">
+                    <div id="kasie-step2-summary" class="alert alert-info" style="font-size:.88em;padding:8px 14px;margin-bottom:12px"></div>
+                    <div class="form-group">
+                        <label>Catatan Umum <small class="text-muted">(opsional)</small></label>
+                        <textarea id="ttd-kasie-catatan" class="form-control" rows="2" maxlength="1000" placeholder="Catatan untuk keseluruhan SPPB ini..."></textarea>
+                    </div>
+                    <div id="kasie-ttd-section">
+                        <div class="form-group">
+                            <label>Tanda Tangan Kasie Umum <span class="text-danger">*</span></label>
+                            <div style="position:relative;border:1px solid #bbb;border-radius:3px;background:#fff;overflow:hidden">
+                                <canvas id="ttd-kasie-canvas" height="150" style="display:block;width:100%;height:150px;touch-action:none;cursor:crosshair"></canvas>
+                                <span id="ttd-kasie-hint" class="text-muted" style="position:absolute;left:0;right:0;top:62px;text-align:center;pointer-events:none">Tanda tangan dengan digital pen, mouse, atau jari</span>
+                            </div>
+                            <button type="button" class="btn btn-default btn-xs" id="ttd-kasie-clear" style="margin-top:6px"><i class="fa fa-eraser"></i> Hapus</button>
+                        </div>
+                    </div>
+                    <div id="kasie-all-tolak-note" class="alert alert-warning" style="display:none;font-size:.88em;padding:8px 14px"><i class="fa fa-exclamation-triangle"></i> Semua barang di-Tolak — SPPB akan dinyatakan <strong>Ditolak</strong>. Tanda tangan tidak diperlukan.</div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-success" id="ttd-kasie-submit"><i class="fa fa-check"></i> Simpan TTD &amp; Setujui</button>
+
+            <input type="hidden" id="ttd-kasie-no-sppb">
+
+            <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                    <button type="button" class="btn btn-default" id="kasie-btn-back" style="display:none"><i class="fa fa-arrow-left"></i> Kembali</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-primary" id="kasie-btn-next"><i class="fa fa-arrow-right"></i> Lanjut ke TTD</button>
+                    <button type="button" class="btn btn-success" id="ttd-kasie-submit" style="display:none"><i class="fa fa-check"></i> Simpan &amp; Setujui</button>
+                </div>
             </div>
         </div>
     </div>
@@ -767,22 +810,173 @@ function kasieSignaturePayload() {
     $.each(kasieSignatureStrokes, function(_, stroke) { if (stroke.length >= 2) { clean.push(stroke); points += stroke.length; } });
     return canvas && points >= 3 ? JSON.stringify({version:1, width:canvas.width, height:canvas.height, strokes:clean}) : '';
 }
-function openTtdKasieUmum(noSppb, tahap) {
-    $('#ttd-kasie-no-sppb').val(noSppb); $('#ttd-kasie-no-label').text(noSppb); $('#ttd-kasie-catatan').val('');
-    $('#ttd-kasie-next').html(tahap === 'approval'
-      ? 'akan diteruskan ke <strong>KABID</strong>. Tanda tangan Kasie Umum cukup dilakukan sekali pada tahap ini.'
-      : 'akan diteruskan ke <strong>Logistik &amp; Rekap</strong> setelah tanda tangan disimpan.');
-    $('#modal-ttd-kasie-umum').modal('show');
+// ===== Kasie Umum: Per-Item Decision Modal =====
+var _kasieItemsData = [];
+
+function _kasieEscHtml(v) {
+    return String(v || '').replace(/[&<>"']/g, function(c) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c];
+    });
 }
-$(document).off('shown.bs.modal.kasieTtd', '#modal-ttd-kasie-umum').on('shown.bs.modal.kasieTtd', '#modal-ttd-kasie-umum', initKasieSignature);
+
+function _kasieRenderItems(items) {
+    var html = '';
+    items.forEach(function(item) {
+        var nama = _kasieEscHtml(item.nama_barang);
+        var spek = item.spesifikasi ? '<br><small class="text-muted">' + _kasieEscHtml(item.spesifikasi) + '</small>' : '';
+        html += '<tr id="kasie-row-' + item.id + '">' +
+            '<td>' + nama + spek + '</td>' +
+            '<td class="text-center">' + item.jumlah + ' <small>' + _kasieEscHtml(item.satuan) + '</small></td>' +
+            '<td class="text-center" style="white-space:nowrap">' +
+                '<div class="btn-group btn-group-xs" role="group">' +
+                '<button type="button" class="btn btn-default kasie-acc-btn" data-id="' + item.id + '" onclick="_kasieSetKeputusan(' + item.id + ',\'acc\')" style="min-width:50px">' +
+                    '<i class="fa fa-check"></i> ACC</button>' +
+                '<button type="button" class="btn btn-default kasie-tolak-btn" data-id="' + item.id + '" onclick="_kasieSetKeputusan(' + item.id + ',\'tolak\')" style="min-width:50px">' +
+                    '<i class="fa fa-times"></i> Tolak</button>' +
+                '</div>' +
+            '</td>' +
+            '<td>' +
+                '<textarea class="form-control input-sm kasie-catatan-field" id="kasie-catatan-' + item.id + '" data-id="' + item.id + '" rows="2" maxlength="500" placeholder="Keterangan..."></textarea>' +
+            '</td>' +
+        '</tr>';
+    });
+    if (!html) html = '<tr><td colspan="4" class="text-center text-muted">Tidak ada barang</td></tr>';
+    $('#kasie-items-tbody').html(html);
+}
+
+function _kasieSetKeputusan(id, val) {
+    var row = $('#kasie-row-' + id);
+    row.find('.kasie-acc-btn').toggleClass('btn-success', val === 'acc').toggleClass('btn-default', val !== 'acc');
+    row.find('.kasie-tolak-btn').toggleClass('btn-danger', val === 'tolak').toggleClass('btn-default', val !== 'tolak');
+    // Update placeholder based on decision
+    var textarea = $('#kasie-catatan-' + id);
+    textarea.attr('placeholder', val === 'tolak' ? 'Alasan penolakan (wajib)...' : 'Keterangan (opsional)...');
+    row.data('kasie-keputusan', val);
+    $('#kasie-step1-warning').hide();
+}
+
+function openTtdKasieUmum(noSppb, tahap) {
+    $('#ttd-kasie-no-sppb').val(noSppb);
+    $('#ttd-kasie-no-label').text(noSppb);
+    $('#ttd-kasie-catatan').val('');
+    _kasieItemsData = [];
+
+    // Reset to step 1
+    $('#kasie-step-1').show(); $('#kasie-step-2').hide();
+    $('#kasie-btn-next').show(); $('#ttd-kasie-submit').hide(); $('#kasie-btn-back').hide();
+    $('#kasie-step-ind-1').css({'border-bottom-color':'#28a745','color':'#28a745'});
+    $('#kasie-step-ind-2').css({'border-bottom-color':'transparent','color':'#aaa'});
+    $('#kasie-items-loading').show(); $('#kasie-items-wrap').hide();
+    $('#kasie-step1-warning').hide();
+
+    $('#modal-ttd-kasie-umum').modal('show');
+
+    // Load items via AJAX
+    $.post('{?=url(ADMIN."/logistik_non_medis/getitemsforkasiedecision")?}', {no_sppb: noSppb}, function(res) {
+        var data = typeof res === 'string' ? JSON.parse(res) : res;
+        if (data.status !== 'success') {
+            $('#kasie-items-loading').html('<div class="alert alert-danger"><i class="fa fa-times"></i> ' + (data.message || 'Gagal memuat barang.') + '</div>');
+            return;
+        }
+        _kasieItemsData = data.items || [];
+        _kasieRenderItems(_kasieItemsData);
+        $('#kasie-items-loading').hide();
+        $('#kasie-items-wrap').show();
+    }, 'json').fail(function() {
+        $('#kasie-items-loading').html('<div class="alert alert-danger">Gagal menghubungi server.</div>');
+    });
+}
+
+$(document).off('shown.bs.modal.kasieTtd', '#modal-ttd-kasie-umum').on('shown.bs.modal.kasieTtd', '#modal-ttd-kasie-umum', function() {
+    if ($('#kasie-step-2').is(':visible')) { initKasieSignature(); }
+});
+
 $(document).off('click.kasieTtd', '#ttd-kasie-clear').on('click.kasieTtd', '#ttd-kasie-clear', resetKasieSignature);
+
+// "Lanjut ke TTD" button
+$(document).off('click.kasieNext', '#kasie-btn-next').on('click.kasieNext', '#kasie-btn-next', function() {
+    // Validate all items have a decision
+    var missing = false;
+    var allTolak = true;
+    var accCount = 0, tolakCount = 0;
+    var tolakMissingCatatan = [];
+
+    _kasieItemsData.forEach(function(item) {
+        var keputusan = $('#kasie-row-' + item.id).data('kasie-keputusan');
+        if (!keputusan) { missing = true; return; }
+        if (keputusan === 'acc') { accCount++; allTolak = false; }
+        if (keputusan === 'tolak') {
+            tolakCount++;
+            // Catatan wajib saat Tolak
+            var catatan = $.trim($('#kasie-catatan-' + item.id).val());
+            if (!catatan) { tolakMissingCatatan.push(item.nama_barang); }
+        }
+    });
+
+    if (missing) {
+        $('#kasie-step1-warning-msg').text('Semua barang harus mendapat keputusan (ACC atau Tolak) sebelum melanjutkan.');
+        $('#kasie-step1-warning').show();
+        return;
+    }
+    if (tolakMissingCatatan.length) {
+        $('#kasie-step1-warning-msg').text('Catatan/alasan penolakan wajib diisi untuk: ' + tolakMissingCatatan.join(', '));
+        $('#kasie-step1-warning').show();
+        return;
+    }
+
+    // Build step 2 summary
+    var summaryParts = [];
+    if (accCount > 0) summaryParts.push('<strong>' + accCount + ' barang</strong> di-<span class="text-success">ACC</span>');
+    if (tolakCount > 0) summaryParts.push('<strong>' + tolakCount + ' barang</strong> di-<span class="text-danger">Tolak</span> dan akan dikeluarkan dari SPPB');
+    $('#kasie-step2-summary').html('<i class="fa fa-info-circle"></i> Ringkasan: ' + summaryParts.join(', ') + '.');
+
+    if (allTolak) {
+        $('#kasie-ttd-section').hide();
+        $('#kasie-all-tolak-note').show();
+    } else {
+        $('#kasie-ttd-section').show();
+        $('#kasie-all-tolak-note').hide();
+        setTimeout(function() { initKasieSignature(); }, 300);
+    }
+
+    $('#kasie-step-1').hide(); $('#kasie-step-2').show();
+    $('#kasie-btn-next').hide(); $('#ttd-kasie-submit').show(); $('#kasie-btn-back').show();
+    $('#kasie-step-ind-1').css({'border-bottom-color':'#6c757d','color':'#6c757d'});
+    $('#kasie-step-ind-2').css({'border-bottom-color':'#28a745','color':'#28a745'});
+});
+
+// "Kembali" button
+$(document).off('click.kasieBack', '#kasie-btn-back').on('click.kasieBack', '#kasie-btn-back', function() {
+    $('#kasie-step-2').hide(); $('#kasie-step-1').show();
+    $('#kasie-btn-next').show(); $('#ttd-kasie-submit').hide(); $('#kasie-btn-back').hide();
+    $('#kasie-step-ind-1').css({'border-bottom-color':'#28a745','color':'#28a745'});
+    $('#kasie-step-ind-2').css({'border-bottom-color':'transparent','color':'#aaa'});
+});
+
 $(document).off('click.kasieTtd', '#ttd-kasie-submit').on('click.kasieTtd', '#ttd-kasie-submit', function() {
-    var payload = kasieSignaturePayload(), button = $(this);
-    if (!payload) { alert('Tanda tangan Kasie Umum wajib diisi.'); return; }
+    var button = $(this);
+    var noSppb = $('#ttd-kasie-no-sppb').val();
+    var catatan = $('#ttd-kasie-catatan').val();
+
+    // Build keputusan and catatan arrays
+    var allTolak = true;
+    var postData = {no_sppb: noSppb, catatan: catatan, 'keputusan_item': {}, 'catatan_item': {}};
+    _kasieItemsData.forEach(function(item) {
+        var k = $('#kasie-row-' + item.id).data('kasie-keputusan');
+        postData['keputusan_item'][item.id] = k;
+        postData['catatan_item'][item.id] = $.trim($('#kasie-catatan-' + item.id).val());
+        if (k === 'acc') allTolak = false;
+    });
+
+    // TTD not needed when all tolak
+    if (!allTolak) {
+        var payload = kasieSignaturePayload();
+        if (!payload) { alert('Tanda tangan Kasie Umum wajib diisi.'); return; }
+        postData.tanda_tangan = payload;
+    }
+
     button.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
-    $.post('{?=url(ADMIN."/logistik_non_medis/ttdkasieumumsppb")?}', {
-        no_sppb: $('#ttd-kasie-no-sppb').val(), catatan: $('#ttd-kasie-catatan').val(), tanda_tangan: payload
-    }, function(res) {
+    $.post('{?=url(ADMIN."/logistik_non_medis/ttdkasieumumsppb")?}', postData, function(res) {
         var data = typeof res === 'string' ? JSON.parse(res) : res;
         if (data.status === 'success') {
             $('#modal-ttd-kasie-umum').modal('hide');
@@ -791,7 +985,7 @@ $(document).off('click.kasieTtd', '#ttd-kasie-submit').on('click.kasieTtd', '#tt
         } else { alert(data.message || 'Tanda tangan gagal disimpan.'); }
     }, 'json').fail(function(xhr) {
         alert((xhr.responseJSON && xhr.responseJSON.message) || 'Server gagal menyimpan tanda tangan.');
-    }).always(function() { button.prop('disabled', false).html('<i class="fa fa-check"></i> Simpan TTD & Setujui'); });
+    }).always(function() { button.prop('disabled', false).html('<i class="fa fa-check"></i> Simpan & Setujui'); });
 });
 
 function selesaikanSppb(no_sppb) {
