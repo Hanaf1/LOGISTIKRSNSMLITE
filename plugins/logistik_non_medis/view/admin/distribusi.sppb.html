@@ -181,7 +181,11 @@
                         <div class="text-muted" style="font-size:11px;margin-top:2px;"><i class="fa fa-hand-pointer-o"></i> Klik kartu untuk melihat daftar permintaannya.</div></div>
                         <div class="form-inline nonrutin-summary-period">
                             <label for="nonrutin-summary-bulan" class="text-muted" style="font-weight:normal;">Bulan</label>
-                            <input type="month" id="nonrutin-summary-bulan" class="form-control input-sm" value="{$nonrutin_summary.bulan}">
+                            <select id="nonrutin-summary-bulan" class="form-control input-sm">
+                                {loop: $bulan_options}
+                                <option value="{$value.val}" {if: $value.val == $nonrutin_summary.bulan}selected{/if}>{$value.label}</option>
+                                {/loop}
+                            </select>
                         </div>
                         {/if}
                     </div>
@@ -388,7 +392,6 @@
                     <div style="margin-top:15px;"></div>
                     {/if}
                     <div id="sppb-list-pane">
-                    {if: !empty($can_manage_distribusi_controls)}
                     <div class="well well-sm">
                         <div class="row">
                             <div class="col-md-3">
@@ -399,18 +402,28 @@
                                     </span>
                                 </div>
                             </div>
+                            {if: $jenis_page == 'Non Rutin'}
                             <div class="col-md-3">
                                 <div class="input-group">
-                                    <span class="input-group-addon" style="background:transparent;border:none;padding:0 10px 0 0;line-height:34px;">Dari</span>
-                                    <input type="date" id="filter-tgl-awal" class="form-control" title="Tanggal Awal" onchange="loadDisplay()">
+                                    <span class="input-group-addon" style="background:transparent;border:none;padding:0 10px 0 0;line-height:34px;">Bulan</span>
+                                    <select id="filter-bulan" class="form-control" title="Pilih Bulan" onchange="loadDisplay()">
+                                        <option value="">-- Semua Bulan --</option>
+                                        {loop: $bulan_options}
+                                        <option value="{$value.val}">{$value.label}</option>
+                                        {/loop}
+                                    </select>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            {else}
+                            <div class="col-md-6">
                                 <div class="input-group">
-                                    <span class="input-group-addon" style="background:transparent;border:none;padding:0 10px 0 0;line-height:34px;">s/d</span>
-                                    <input type="date" id="filter-tgl-akhir" class="form-control" title="Tanggal Akhir" onchange="loadDisplay()">
+                                    <span class="input-group-addon">Tgl. SPPB</span>
+                                    <input type="date" id="filter-tgl-awal" class="form-control" value="{?=date('Y-m-01')?}" onchange="loadDisplay()">
+                                    <span class="input-group-addon">s/d</span>
+                                    <input type="date" id="filter-tgl-akhir" class="form-control" value="{?=date('Y-m-d')?}" onchange="loadDisplay()">
                                 </div>
                             </div>
+                            {/if}
                             <div class="col-md-3">
                                 <select id="filter-unit" class="form-control" onchange="loadDisplay()">
                                     <option value="">-- Semua Unit --</option>
@@ -455,7 +468,7 @@
                             {/if}
                         </div>
                     </div>
-                    {/if}
+
                     {if: !empty($jenis_page) && $jenis_page == 'Rutin' && !empty($is_unit_requester)}
                     <div id="sppb-active-rutin">
                         {if: !empty($current_week_sppb)}
@@ -889,8 +902,17 @@ function loadDisplay(halaman) {
     var cari = $('#cari').val() || '';
     var status = $('#filter-status').length ? $('#filter-status').val() : '';
     
-    var tgl_awal = $('#filter-tgl-awal').length ? $('#filter-tgl-awal').val() : '';
-    var tgl_akhir = $('#filter-tgl-akhir').length ? $('#filter-tgl-akhir').val() : '';
+    var tgl_awal = '';
+    var tgl_akhir = '';
+    if ($('#filter-bulan').length && $('#filter-bulan').val()) {
+        var b = $('#filter-bulan').val();
+        tgl_awal = b + '-01';
+        var lastDay = new Date(b.split('-')[0], b.split('-')[1], 0).getDate();
+        tgl_akhir = b + '-' + lastDay;
+    } else {
+        tgl_awal = $('#filter-tgl-awal').length ? $('#filter-tgl-awal').val() : '';
+        tgl_akhir = $('#filter-tgl-akhir').length ? $('#filter-tgl-akhir').val() : '';
+    }
     var unit = $('#filter-unit').length ? $('#filter-unit').val() : '';
 
     var jenis = '{$jenis_page}';

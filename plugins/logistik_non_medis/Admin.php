@@ -13470,7 +13470,7 @@ LEFT JOIN rsns_custom_logistik_non_medis_v_sppb_normalized s
     }
 
     /** Jumlah baris tiap tab persetujuan, untuk badge di judul tab. Lintas bulan, mengikuti isi tabnya. */
-    private function _getNonRutinTabCounts(string $role, array $userRoleData, string $username): array
+    private function _getNonRutinTabCounts(string $role, array $userRoleData, string $username, string $bulan = ''): array
     {
         $hasil = [];
         if (!in_array($role, ['kepala_unit', 'kepala_sie', 'kepala_bidang'], true)) {
@@ -13488,6 +13488,14 @@ LEFT JOIN rsns_custom_logistik_non_medis_v_sppb_normalized s
             try {
                 $params = [];
                 $sql = "SELECT COUNT(DISTINCT s.no_sppb) FROM rsns_custom_logistik_non_medis_v_sppb_normalized s WHERE 1=1 ";
+                
+                if ($bulan !== '') {
+                    $start = new \DateTimeImmutable($bulan . '-01');
+                    $sql .= " AND s.tgl_sppb >= ? AND s.tgl_sppb < ? ";
+                    $params[] = $start->format('Y-m-d');
+                    $params[] = $start->modify('first day of next month')->format('Y-m-d');
+                }
+
                 // Lingkup unit sama dengan daftar: Kasie/Kabid Umum tidak dibatasi hierarkinya.
                 if (!$isKasieUmum && !$isKabidUmum && !empty($scopeUnits)) {
                     $sql .= " AND s.kode_unit IN (" . implode(',', array_fill(0, count($scopeUnits), '?')) . ") ";
@@ -13515,27 +13523,26 @@ LEFT JOIN rsns_custom_logistik_non_medis_v_sppb_normalized s
 
         // Kasie & Kabid (umum maupun bidang lain) hanya diberi angka yang menjadi
         // tanggung jawab posisinya, memakai aturan yang sama persis dengan tab di
-        // bawahnya. Tidak dibatasi bulan karena antrean persetujuan juga tidak.
+        // bawahnya.
         if (in_array(strtolower($role), ['kepala_sie', 'kepala_bidang'], true)) {
             $tabCounts = $this->_getNonRutinTabCounts(
                 strtolower($role),
                 $userRoleData,
-                (string)($userRoleData['username'] ?? '')
+                (string)($userRoleData['username'] ?? ''),
+                $start->format('Y-m')
             );
             $pending = (int)($tabCounts['pending'] ?? 0);
             $history = (int)($tabCounts['history'] ?? 0);
             return [
               'bulan' => $start->format('Y-m'),
-              'basis_posisi' => true,
-              'label_periode' => 'semua periode',
+              'basis_posisi' => false,
+              'label_periode' => $start->format('Y-m'),
               'label_lingkup' => 'sesuai posisi Anda',
               'label_total' => 'Total Permintaan',
               'total' => $pending + $history,
               'cards' => [
-                ['key' => 'posisi_pending', 'label' => 'Butuh Persetujuan Saya', 'jumlah' => $pending,
-                  'status' => 'Masih menunggu keputusan Anda'],
-                ['key' => 'posisi_history', 'label' => 'Riwayat Keputusan Saya', 'jumlah' => $history,
-                  'status' => 'Sudah Anda setujui / tanda tangani'],
+                  ['key' => 'posisi_pending', 'label' => 'Butuh Persetujuan Saya', 'jumlah' => $pending],
+                  ['key' => 'posisi_history', 'label' => 'Riwayat Keputusan Saya', 'jumlah' => $history],
               ],
             ];
         }
@@ -13633,9 +13640,10 @@ LEFT JOIN rsns_custom_logistik_non_medis_v_sppb_normalized s
         $username = $this->core->getUserInfo('username', null, true);
         $userRoleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray() ?: [];
         $role = $userRoleData['role'] ?? 'unit';
-        $summary = $this->_getNonRutinMonthlySummary((string)($_REQUEST['bulan'] ?? ''), $role, $userRoleData);
-        // Badge tab dihitung lintas bulan karena isi tab memang tidak dibatasi periode.
-        $summary['tab_counts'] = $this->_getNonRutinTabCounts($role, $userRoleData, (string)$username);
+        $bulan = (string)($_REQUEST['bulan'] ?? '');
+        $summary = $this->_getNonRutinMonthlySummary($bulan, $role, $userRoleData);
+        // Badge tab dihitung berdasarkan bulan yang dipilih juga
+        $summary['tab_counts'] = $this->_getNonRutinTabCounts($role, $userRoleData, (string)$username, $bulan);
         header('Content-Type: application/json');
         echo json_encode(['status' => 'success'] + $summary);
         exit();
@@ -13725,19 +13733,30 @@ LEFT JOIN rsns_custom_logistik_non_medis_v_sppb_normalized s
         $units = [];
         foreach ($units_raw as $u) {
             $n = strtolower($u['nama_unit'] ?? '');
-            if (strpos($n, 'kasie') !== false || strpos($n, 'kanit') !== false || strpos($n, 'kabid') !== false) {
+            if (strpos($n, 'kasie') !== false || strpos($n, 'ka sie') !== false || strpos($n, 'kanit') !== false || strpos($n, 'ka unit') !== false || strpos($n, 'kabid') !== false || strpos($n, 'direktur') !== false || strpos($n, 'manajer') !== false) {
                 continue;
             }
             $units[] = $u;
         }
         $fridaySummary = $this->_getSppbFridaySummary($jenis, $role, $userRoleData ?: []);
         $nonRutinSummary = $jenis === 'Non Rutin' ? $this->_getNonRutinMonthlySummary(date('Y-m'), $role, $userRoleData ?: []) : null;
+        
+        $months = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        $bulan_options = [];
+        for ($i = 0; $i < 12; $i++) {
+            $t = strtotime("-$i months");
+            $val = date('Y-m', $t);
+            $lbl = $months[(int)date('n', $t)] . ' ' . date('Y', $t);
+            $bulan_options[] = ['val' => $val, 'label' => $lbl];
+        }
+
         // Badge tab hanya untuk halaman Non Rutin; alur Rutin tidak memakai tab persetujuan ini.
         $nonRutinTabCounts = $jenis === 'Non Rutin'
           ? $this->_getNonRutinTabCounts($role, $userRoleData ?: [], (string)$username)
           : [];
 
         return $this->draw('distribusi.sppb.html', [
+          'bulan_options' => $bulan_options,
           'nonrutin_summary' => $nonRutinSummary,
           'nonrutin_tab_counts' => $nonRutinTabCounts,
           'role' => $role,
@@ -14168,7 +14187,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 $card_statuses = $this->_nonRutinCardStatuses($card_key, $role, $userRoleData ?: []);
             }
             $card_active = ($card_posisi || ($card_key !== '' && ($card_key === 'total' || !empty($card_statuses))));
-            if ($card_active && !$card_posisi) {
+            if ($card_active) {
                 if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $card_bulan)) {
                     $card_bulan = date('Y-m');
                 }
@@ -14379,7 +14398,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             'baris_awal' => $jumlah_data > 0 ? $_offset + 1 : 0,
             'baris_akhir' => min($_offset + $perpage, $jumlah_data),
             'card_filter_label' => $card_active ? $this->_nonRutinCardLabel($card_key, $role, $userRoleData ?: []) : '',
-            'card_filter_periode' => ($card_active && !$card_posisi) ? $card_bulan : 'semua periode',
+            'card_filter_periode' => $card_active ? $card_bulan : 'semua periode',
             'lingkup_daftar' => $this->_sppbSummaryUnitScope($role, $userRoleData ?: [])
               ? 'unit Anda dan unit di bawahnya' : 'seluruh unit rumah sakit',
             'weekly_count_belum' => $fridaySummary['belum_diproses'],
