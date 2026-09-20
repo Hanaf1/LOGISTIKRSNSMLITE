@@ -26,6 +26,7 @@ for arg in "$@"; do
   esac
 done
 
+
 # Deteksi folder plugin bila --out tidak diberikan.
 if [ -z "$OUT" ]; then
   for c in \

@@ -74,6 +74,14 @@ __pycache__/
 *_backup.sql
 backup_*.sql
 plugins/logistik_non_medis/backup/
+plugins/logistik_non_medis/*_versi_lama.sql
+plugins/logistik_non_medis/tools/backup_*.json
+
+# Data kerja lokal yang tidak diperlukan untuk runtime aplikasi
+/Import_Hak_Akses_SK063_2026.xlsx
+/LIST INVENTARIS_NON MEDIS terbaru.xlsx
+/LIST VENDOR REKANAN.xlsx
+/Rekonsiliasi_Inventaris_Non_Medis_RSU_Nurusyifa.xlsx
 
 # Dokumentasi kerja
 docs/
