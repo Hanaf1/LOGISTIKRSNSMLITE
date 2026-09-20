@@ -180,7 +180,7 @@
                                 <th>Range Inventaris</th>
                                 <th>Kondisi</th>
                                 <th>Harga</th>
-                                <th class="text-right" style="width: 160px;">Aksi</th>
+                                <th class="text-right" style="width: 120px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="display-aset">
@@ -207,6 +207,7 @@
         </div>
     </div>
 </article>
+{$koreksi_modal}
 
 <!-- Modal Import Aset -->
 <div class="modal fade" id="modal-import-aset" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
@@ -310,31 +311,9 @@
             window.open(print_url, '_blank');
         });
 
-        // Delegated Delete Button Clicks
-        $(document).on('click', '.btn-hapus-aset', function(e) {
-            e.preventDefault();
-            var id = $(this).attr('data-id');
-            var kode = $(this).attr('data-kode');
-            
-            if(confirm('Hapus aset ' + kode + ' dari Stok Aset Gudang? Data hanya dapat dibatalkan bila belum memiliki riwayat transaksi.')) {
-                $.ajax({
-                    url: '{?=url([ADMIN, "logistik_non_medis", "hapusasetregistrasi"])?}',
-                    type: 'POST',
-                    data: { id: id, alasan: 'Pembatalan salah input dari Stok Aset Gudang' },
-                    dataType: 'json',
-                    success: function(response) {
-                        if(response.status === 'success') {
-                            alert('Aset berhasil dibatalkan dari Stok Aset Gudang.');
-                            loadAset(1);
-                        } else {
-                            alert('Gagal menghapus: ' + response.message);
-                        }
-                    },
-                    error: function() {
-                        alert('Terjadi kesalahan jaringan saat menghapus aset.');
-                    }
-                });
-            }
+        // Setelah koreksi/pembatalan aset, muat ulang halaman daftar yang sedang dibuka.
+        $(document).on('asetKoreksiSelesai', function() {
+            loadAset(parseInt($('#aset-display-data').attr('data-halaman'), 10) || 1);
         });
     });
 

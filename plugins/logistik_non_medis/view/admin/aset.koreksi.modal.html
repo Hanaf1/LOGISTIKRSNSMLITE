@@ -1,0 +1,112 @@
+<style>
+    .aset-aksi .dropdown-menu { min-width: 190px; }
+    .aset-aksi .dropdown-menu > li > a { padding: 6px 14px; }
+    .aset-aksi .dropdown-menu .text-danger { color: #c9302c; }
+</style>
+
+<div class="modal fade" id="modal-koreksi-aset" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="form-koreksi-aset">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title"><i class="fa fa-exclamation-triangle text-danger"></i> <span id="koreksi-judul">Koreksi Aset</span></h4>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="koreksi-id">
+                    <table class="table table-condensed" style="margin-bottom:12px;">
+                        <tr><td style="width:110px;border-top:none;">Kode aset</td><td style="border-top:none;"><code id="koreksi-kode"></code></td></tr>
+                        <tr><td>Barang</td><td id="koreksi-nama"></td></tr>
+                        <tr><td>Unit / Lokasi</td><td id="koreksi-unit"></td></tr>
+                    </table>
+                    <div class="form-group">
+                        <label>Alasan koreksi <span class="text-danger">*</span></label>
+                        <select name="jenis_koreksi" id="koreksi-jenis" class="form-control" required>
+                            <option value="tidak_ada_fisik">Tidak ada fisik / salah catat</option>
+                            <option value="dobel_input">Dobel input / impor</option>
+                            <option value="lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Catatan <span class="text-danger">*</span></label>
+                        <textarea name="alasan" id="koreksi-catatan" class="form-control" rows="3" minlength="10" required
+                            placeholder="Contoh: dicek bersama Ka. Unit 17-09-2026, barang tidak pernah ada di ruangan."></textarea>
+                        <p class="help-block" style="margin-bottom:0;">Minimal 10 karakter. Catatan tersimpan sebagai jejak audit.</p>
+                    </div>
+                    <div class="alert alert-warning" style="margin:12px 0 0;padding:8px 12px;">
+                        Aset akan berstatus <strong>Dibatalkan</strong> (tidak dihapus dari database) dan label QR-nya tidak berlaku lagi.
+                        Kalau barang pernah ada lalu rusak atau hilang, gunakan menu <strong>Penghapusan Aset</strong>.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger" id="btn-simpan-koreksi"><i class="fa fa-check"></i> Simpan Koreksi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    if (window.__asetKoreksiReady) return;
+    window.__asetKoreksiReady = true;
+
+    // .table-responsive memotong dropdown; posisikan menu relatif ke layar,
+    // dan buka ke atas bila ruang di bawah tombol tidak cukup.
+    $(document).on('shown.bs.dropdown', '.aset-aksi', function () {
+        var menu = $(this).find('.dropdown-menu');
+        var rect = this.getBoundingClientRect();
+        var tinggi = menu.outerHeight(), lebar = menu.outerWidth();
+        var top = window.innerHeight - rect.bottom < tinggi + 10 ? rect.top - tinggi - 2 : rect.bottom + 2;
+        menu.css({ position: 'fixed', top: Math.max(4, top), left: Math.max(4, rect.right - lebar), right: 'auto', bottom: 'auto' });
+    });
+    $(document).on('hidden.bs.dropdown', '.aset-aksi', function () {
+        $(this).find('.dropdown-menu').removeAttr('style');
+    });
+    $(window).on('scroll resize', function () {
+        $('.aset-aksi.open .dropdown-toggle').dropdown('toggle');
+    });
+
+    $(document).on('click', '.btn-koreksi-aset', function (e) {
+        e.preventDefault();
+        var b = $(this);
+        $('#koreksi-id').val(b.attr('data-id'));
+        $('#koreksi-kode').text(b.attr('data-kode') || '-');
+        $('#koreksi-nama').text(b.attr('data-nama') || '-');
+        $('#koreksi-unit').text(b.attr('data-unit') || '-');
+        $('#koreksi-judul').text(b.attr('data-judul') || 'Koreksi Aset');
+        $('#koreksi-jenis').val('tidak_ada_fisik');
+        $('#koreksi-catatan').val('');
+        $('#modal-koreksi-aset').modal('show');
+    });
+
+    $(document).on('submit', '#form-koreksi-aset', function (e) {
+        e.preventDefault();
+        var catatan = $.trim($('#koreksi-catatan').val());
+        if (catatan.length < 10) {
+            alert('Catatan koreksi minimal 10 karakter.');
+            return;
+        }
+        var tombol = $('#btn-simpan-koreksi').prop('disabled', true);
+        $.ajax({
+            url: '{?=url([ADMIN, "logistik_non_medis", "hapusasetregistrasi"])?}',
+            type: 'POST',
+            dataType: 'json',
+            data: $(this).serialize()
+        }).done(function (res) {
+            if (res.status === 'success') {
+                $('#modal-koreksi-aset').modal('hide');
+                alert(res.message);
+                $(document).trigger('asetKoreksiSelesai');
+            } else {
+                alert(res.message || 'Koreksi gagal disimpan.');
+            }
+        }).fail(function () {
+            alert('Koreksi gagal disimpan karena koneksi bermasalah.');
+        }).always(function () {
+            tombol.prop('disabled', false);
+        });
+    });
+})();
+</script>

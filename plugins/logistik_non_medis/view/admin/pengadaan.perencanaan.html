@@ -39,44 +39,85 @@
                     <i class="fa fa-chevron-right separator"></i>
                     <a href="{?=url([ADMIN, 'logistik_non_medis', 'manage'])?}">Pengadaan</a>
                     <i class="fa fa-chevron-right separator"></i>
-                    <span class="active">Perencanaan</span>
+                    <span class="active">{$rkbu_breadcrumb}</span>
                 </div>
 
-                <h3 class="panel-title" style="margin-top: 5px;">Perencanaan Kebutuhan (RKBU)</h3>
+                <h3 class="panel-title" style="margin-top: 5px;">{$rkbu_judul}</h3>
             </div>
             <div class="panel-body">
-                <div style="margin-top: 10px;">
-                    <!-- Data RKBU -->
-                    <div id="rkbu">
-                        <div class="row" style="margin-bottom: 15px;">
-                            <div class="col-sm-5 col-xs-12" style="margin-bottom: 10px;">
-                                <input type="text" id="cari_rkbu" class="form-control" placeholder="Cari Kelompok/Barang/Kode...">
-                            </div>
-                            <div class="col-sm-4 col-xs-12" style="margin-bottom: 10px;">
-                                <select class="form-control" id="filter_kategori">
-                                    <option value="">Semua Kategori</option>
-                                    <option value="atk">Alat Tulis Kantor (ATK)</option>
-                                    <option value="kebersihan">Alat Kebersihan</option>
-                                    <option value="cetakan">Barang Cetakan</option>
+                <p class="help-block">RKBU menyusun kebutuhan barang dan estimasi biaya berdasarkan jumlah &times; harga referensi. Usulan item dikumpulkan menjadi <b>RKBU Bulanan</b> lalu disetujui bertingkat: <b>Kasie Umum &rarr; Kabid Umum &rarr; Keuangan</b>.</p>
+                <style>
+                    .rkbu-step { display:inline-block; padding:2px 7px; border-radius:10px; font-size:11px; background:#eee; color:#888; }
+                    .rkbu-step.done { background:#dff0d8; color:#2e7d32; font-weight:600; }
+                    .rkbu-step.done:before { content:"\2713 "; }
+                    .rkbu-step.now { background:#fcf8e3; color:#8a6d3b; font-weight:700; border:1px solid #f0ad4e; }
+                    .rkbu-item-coret td { text-decoration:line-through; color:#a94442; background:#fdf2f2 !important; }
+                    .rkbu-item-coret td:first-child { text-decoration:none; }
+                    .rkbu-total-box { border:1px solid #ddd; border-radius:4px; padding:8px 12px; background:#fafafa; }
+                    .rkbu-total-box h4 { margin:2px 0 0; }
+                    .rkbu-abc, .rkbu-ven { display:inline-block; min-width:20px; padding:2px 5px; font-size:11px; font-weight:700; text-align:center; color:#fff; }
+                    .rkbu-abc { border-radius:3px 0 0 3px; } .rkbu-ven { border-radius:0 3px 3px 0; }
+                    .rkbu-abc-A { background:#8e44ad; } .rkbu-abc-B { background:#2980b9; } .rkbu-abc-C { background:#95a5a6; }
+                    .rkbu-ven-V { background:#c0392b; } .rkbu-ven-E { background:#e67e22; } .rkbu-ven-N { background:#7f8c8d; }
+                </style>
+                <ul class="nav nav-tabs" style="margin-top:10px">
+                    <li class="active"><a href="#tab-rkbu-batch" data-toggle="tab"><i class="fa fa-calendar-check-o"></i> RKBU Bulanan &amp; Persetujuan</a></li>
+                    <li><a href="#rkbu" data-toggle="tab"><i class="fa fa-list"></i> Item Usulan</a></li>
+                </ul>
+                <div class="tab-content" style="margin-top: 15px;">
+                    <div class="tab-pane active" id="tab-rkbu-batch">
+                        <div class="row" style="margin-bottom:10px">
+                            <div class="col-sm-3 col-xs-6">
+                                <select id="rkbu-batch-bulan" class="form-control">
+                                    <option value="">Semua Bulan</option>
+                                    <option value="01">Januari</option><option value="02">Februari</option><option value="03">Maret</option><option value="04">April</option><option value="05">Mei</option><option value="06">Juni</option>
+                                    <option value="07">Juli</option><option value="08">Agustus</option><option value="09">September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option>
                                 </select>
                             </div>
-                            <div class="col-sm-3 col-xs-12 text-right">
+                            <div class="col-sm-2 col-xs-6">
+                                <select id="rkbu-batch-tahun" class="form-control" data-tahun="{$tahun}"></select>
+                            </div>
+                            <div class="col-sm-7 col-xs-12 text-right">
+                                {if: $can_compose}<button class="btn btn-primary" onclick="rkbuSusun('', $('#rkbu-batch-bulan').val() || '{?=date('m')?}', $('#rkbu-batch-tahun').val() || '{?=date('Y')?}')"><i class="fa fa-plus"></i> Susun RKBU Bulanan</button>{/if}
+                            </div>
+                        </div>
+                        <div id="rkbu-batch-display"><div class="text-center text-muted" style="padding:30px"><i class="fa fa-spinner fa-spin fa-2x"></i></div></div>
+                    </div>
+                    <!-- Data RKBU -->
+                    <div class="tab-pane" id="rkbu">
+                        <div class="row" style="margin-bottom: 15px;">
+                            <div class="col-sm-3 col-xs-12" style="margin-bottom: 10px;">
+                                <input type="text" id="cari_rkbu" class="form-control" placeholder="Cari Kelompok/Barang/Kode...">
+                            </div>
+                            <div class="col-sm-2 col-xs-6" style="margin-bottom: 10px;">
+                                <select class="form-control" id="filter_bulan_rkbu" title="Filter periode bulan"></select>
+                            </div>
+                            <div class="col-sm-2 col-xs-6" style="margin-bottom: 10px;">
+                                <select class="form-control" id="filter_abcven" title="A = 70% nilai belanja teratas, B = 20% berikutnya, C = sisanya · V Vital, E Essential, N Non-Essential">
+                                    <option value="">Semua ABC-VEN</option>
+                                    <option value="A">Kelas A</option><option value="B">Kelas B</option><option value="C">Kelas C</option>
+                                    <option value="V">Vital (V)</option><option value="E">Essential (E)</option><option value="N">Non-Essential (N)</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-5 col-xs-12 text-right">
                                 <a class="btn btn-info" href="{?=url([ADMIN,'logistik_non_medis','realisasibelanja'])?}" title="Lihat realisasi dari penerimaan barang selesai">
                                     <i class="fa fa-line-chart"></i> Realisasi Belanja
                                 </a>
                                 <a class="btn btn-success" href="{?=url([ADMIN,'logistik_non_medis','exportperencanaanxlsx'])?}" title="Ekspor laporan RKBU dengan kolom tanda tangan">
                                     <i class="fa fa-file-excel-o"></i> Export XLSX + TTD
                                 </a>
-                                <button class="btn btn-primary" onclick="tambahRKBU()"><i class="fa fa-plus"></i> Tambah Usulan</button>
+                                {if: $can_compose}<button class="btn btn-primary" onclick="tambahRKBU()"><i class="fa fa-plus"></i> Tambah Usulan</button>{/if}
                             </div>
                         </div>
                         <div class="table-responsive">
+                            {if: $can_compose}
                             <div class="well well-sm" style="margin-bottom:10px;">
-                                <button type="button" class="btn btn-success btn-sm" id="btn-bulk-po-rkbu">
-                                    <i class="fa fa-shopping-cart"></i> Buat PO Draft dari Pilihan
-                                </button>
-                                <span class="text-muted" style="margin-left:8px;">Pilih perencanaan yang sudah disetujui.</span>
+                                <a class="btn btn-success btn-sm" href="{?=url([ADMIN,'logistik_non_medis','pengadaanpo'])?}#po-rkbu">
+                                    <i class="fa fa-shopping-cart"></i> Buat PO dari RKBU Disetujui
+                                </a>
+                                <span class="text-muted" style="margin-left:8px;">Pilih barang per kelompok atau satuan di menu PO &gt; tab <b>Item RKBU Siap PO</b>.</span>
                             </div>
+                            {/if}
                             <table class="table table-striped table-hover" id="tbl-perencanaan">
                                 <thead>
                                     <tr>
@@ -84,12 +125,11 @@
                                         <th>No</th>
                                         <th>Kelompok</th>
                                         <th>Periode</th>
-                                        <th>Kategori</th>
                                         <th>Barang</th>
                                         <th>Pemakaian Bulan Lalu</th>
                                         <th>Rencana Qty</th>
                                         <th>Estimasi Anggaran</th>
-                                        <th>Prioritas</th>
+                                        <th title="ABC dari nilai belanja per bulan · VEN dari prioritas">ABC-VEN</th>
                                         <th>Status</th>
                                         <th>Aksi</th>
                                     </tr>
@@ -97,24 +137,17 @@
                                 <tbody id="tbody-perencanaan">
                                     {if: !empty($perencanaan)}
                                         {loop: $perencanaan as $row}
-                                        <tr>
+                                        <tr data-periode="{$row.periode_key}" data-abc="{$row.abc}" data-ven="{$row.ven}">
                                             <td><input type="checkbox" class="check-rkbu" value="{$row.id}" data-status="{$row.status}" aria-label="Pilih perencanaan {$row.kode_perencanaan}"></td>
                                             <td>{$row.no}</td>
-                                            <td><b>{$row.nama_unit}</b><br><small class="text-muted">{$row.kode_perencanaan}</small></td>
+                                            <td><b>{$row.nama_unit}</b><br><small class="text-muted">{$row.kode_perencanaan}</small>{if: !empty($row.no_batch)}<br><span class="label label-primary"><i class="fa fa-calendar-check-o"></i> {$row.no_batch}</span>{/if}</td>
                                             <td>{?=isset($row['bulan']) ? $row['bulan'] : date('m')?}/{?=isset($row['tahun']) ? $row['tahun'] : date('Y')?}</td>
-                                            <td><span class="label label-info">{?=isset($row['kategori']) ? $row['kategori'] : 'Umum'?}</span></td>
-                                            <td>{?=isset($row['nama_barang']) ? $row['nama_barang'] : ''?}<br><small class="text-muted">{?=isset($row['kode_item']) ? $row['kode_item'] : ''?}</small></td>
+                                            <td>{?=isset($row['nama_barang']) ? $row['nama_barang'] : ''?}<br><small class="text-muted">{?=isset($row['kode_item']) ? $row['kode_item'] : ''?} · {?=isset($row['kategori']) ? $row['kategori'] : 'Umum'?}</small></td>
                                             <td class="text-warning"><b>{?=isset($row['pemakaian_lalu']) ? $row['pemakaian_lalu'] : '0'?}</b> {?=isset($row['satuan_dasar']) ? $row['satuan_dasar'] : ''?}</td>
                                             <td class="text-primary"><b>{?=isset($row['total_qty']) ? $row['total_qty'] : '0'?}</b> {?=isset($row['satuan_dasar']) ? $row['satuan_dasar'] : ''?}</td>
                                             <td>Rp. {?=isset($row['estimasi']) ? $row['estimasi'] : '0'?}</td>
-                                            <td>
-                                                {if: $row.prioritas == 'Vital'}
-                                                    <span class="label label-danger" title="Sangat penting/kritis; harus diprioritaskan">V (Sangat Penting)</span>
-                                                {elseif: $row.prioritas == 'Essential'}
-                                                    <span class="label label-warning" title="Penting/kebutuhan utama">E (Penting)</span>
-                                                {else}
-                                                    <span class="label label-info" title="Diinginkan/penunjang; dapat ditunda">D (Penunjang)</span>
-                                                {/if}
+                                            <td style="white-space:nowrap">
+                                                <span class="rkbu-abc rkbu-abc-{$row.abc}" title="Kelas {$row.abc} dari nilai belanja bulan {$row.periode_key}">{$row.abc}</span><span class="rkbu-ven rkbu-ven-{$row.ven}" title="{if: $row.ven == 'V'}Vital: kritis, wajib tersedia{elseif: $row.ven == 'E'}Essential: kebutuhan utama{else}Non-Essential: penunjang, dapat ditunda{/if}">{$row.ven}</span>
                                             </td>
                                             <td>
                                                 {if: $row.status == 'Disetujui'}
@@ -126,22 +159,22 @@
                                                 {else}
                                                     <span class="label label-default">Draft</span>
                                                 {/if}
+                                                {if: !empty($row.catatan_keputusan)}<br><small class="text-danger">{$row.catatan_keputusan}</small>{/if}
                                             </td>
                                             <td>
                                                 <div class="btn-group">
-                                                    {if: !$row.is_disetujui}
-                                                    <button class="btn btn-xs btn-success btn-setujui-rkbu" data-id="{$row.id}" title="Setujui"><i class="fa fa-check"></i> Setujui</button>
-                                                    {/if}
                                                     <button class="btn btn-xs btn-info" onclick="viewRKBU('{$row.kode_perencanaan}')" title="Lihat Detail"><i class="fa fa-eye"></i></button>
+                                                    {if: $can_compose && !$row.is_disetujui && $row.status != 'Diajukan'}
                                                     <button class="btn btn-xs btn-default" onclick="editRKBU('{$row.kode_perencanaan}')" title="Ubah Data"><i class="fa fa-edit"></i></button>
                                                     <button class="btn btn-xs btn-danger" onclick="hapusRKBU('{$row.kode_perencanaan}')" title="Hapus Data"><i class="fa fa-trash"></i></button>
+                                                    {/if}
                                                 </div>
                                             </td>
                                         </tr>
                                         {/loop}
                                     {else}
                                         <tr>
-                                            <td colspan="12" class="text-center text-muted" style="padding: 30px;">
+                                            <td colspan="11" class="text-center text-muted" style="padding: 30px;">
                                                 <i class="fa fa-inbox fa-2x"></i><br>Belum ada data perencanaan.
                                             </td>
                                         </tr>
@@ -169,27 +202,27 @@
 
 <script>
 $(document).ready(function() {
-    // Filter tabel RKBU secara lokal
-    $('#cari_rkbu').on('keyup', function() {
-        var val = $(this).val().toLowerCase();
-        $('#tbl-perencanaan tbody tr').filter(function() {
-            $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1);
-        });
+    // Filter tabel RKBU secara lokal: teks, periode bulan, dan ABC-VEN.
+    var periodeRkbu = {};
+    $('#tbl-perencanaan tbody tr[data-periode]').each(function() { periodeRkbu[$(this).data('periode')] = true; });
+    var namaBulanRkbu = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    $('#filter_bulan_rkbu').append('<option value="">Semua Bulan</option>');
+    $.each(Object.keys(periodeRkbu).sort(function(a, b) { return b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join('')); }), function(_, p) {
+        var part = p.split('/');
+        $('#filter_bulan_rkbu').append('<option value="' + p + '">' + namaBulanRkbu[Number(part[0])] + ' ' + part[1] + '</option>');
     });
-    
-    // Filter tabel RKBU berdasarkan kategori
-    $('#filter_kategori').on('change', function() {
-        var val = $(this).find('option:selected').text().toLowerCase();
-        if ($(this).val() === '') val = '';
-        
-        $('#tbl-perencanaan tbody tr').filter(function() {
-            if (val === '') {
-                $(this).show();
-            } else {
-                $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1);
-            }
+    function filterItemRkbu() {
+        var teks = $('#cari_rkbu').val().toLowerCase(), periode = $('#filter_bulan_rkbu').val(), abcven = $('#filter_abcven').val();
+        $('#tbl-perencanaan tbody tr[data-periode]').each(function() {
+            var row = $(this);
+            var ok = (!teks || row.text().toLowerCase().indexOf(teks) > -1)
+                && (!periode || row.data('periode') === periode)
+                && (!abcven || row.data('abc') === abcven || row.data('ven') === abcven);
+            row.toggle(ok);
         });
-    });
+    }
+    $('#cari_rkbu').on('keyup', filterItemRkbu);
+    $('#filter_bulan_rkbu, #filter_abcven').on('change', filterItemRkbu);
 
     function setCheckboxState(checkboxes, checked) {
         checkboxes.prop('checked', checked).each(function() {
@@ -264,6 +297,71 @@ $(document).ready(function() {
         });
     });
 });
+</script>
+
+<script>
+(function () {
+    var urls = {
+        displaybatchperencanaan: '{?=url([ADMIN, "logistik_non_medis", "displaybatchperencanaan"])?}',
+        kandidatbatchperencanaan: '{?=url([ADMIN, "logistik_non_medis", "kandidatbatchperencanaan"])?}',
+        simpanbatchperencanaan: '{?=url([ADMIN, "logistik_non_medis", "simpanbatchperencanaan"])?}',
+        hapusbatchperencanaan: '{?=url([ADMIN, "logistik_non_medis", "hapusbatchperencanaan"])?}',
+        detailbatchperencanaan: '{?=url([ADMIN, "logistik_non_medis", "detailbatchperencanaan"])?}',
+        keputusanbatchperencanaan: '{?=url([ADMIN, "logistik_non_medis", "keputusanbatchperencanaan"])?}'
+    };
+    var bulanNama = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    var esc = function (v) { return $('<div>').text(v == null ? '' : v).html(); };
+    var rp = function (n) { return 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID'); };
+    var angka = function (n) { return (Number(n) || 0).toLocaleString('id-ID', {maximumFractionDigits: 2}); };
+    var endpoint = function (slug) { return urls[slug]; };
+    var notif = function (ok, msg) { if (typeof showNotif === 'function') { showNotif(ok ? 'success' : 'error', msg); } else { alert(msg); } };
+    var labelTahap = { KASIE_UMUM: 'Kasie Umum', KABID_UMUM: 'Kabid Umum', KEUANGAN: 'Keuangan' };
+    var abcVen = function (it) {
+        return '<span style="white-space:nowrap"><span class="rkbu-abc rkbu-abc-' + esc(it.abc) + '">' + esc(it.abc) + '</span><span class="rkbu-ven rkbu-ven-' + esc(it.ven) + '">' + esc(it.ven) + '</span></span>';
+    };
+    // Matriks ABC-VEN: jumlah item & nilai per kombinasi, untuk bahan pertimbangan penyetuju.
+    var matriksAbcVen = function (items) {
+        var m = {}, html = '';
+        $.each(items, function (_, it) { var k = it.abc + it.ven; m[k] = m[k] || { n: 0, nilai: 0 }; m[k].n++; m[k].nilai += Number(it.nilai) || 0; });
+        html = '<table class="table table-condensed table-bordered text-center" style="font-size:11px;margin:0"><tr class="active"><th></th><th>V Vital</th><th>E Essential</th><th>N Non-Essential</th></tr>';
+        $.each(['A', 'B', 'C'], function (_, a) {
+            html += '<tr><th class="active">' + a + '</th>';
+            $.each(['V', 'E', 'N'], function (_, v) { var c = m[a + v]; html += '<td>' + (c ? c.n + ' item<br><small>' + rp(c.nilai) + '</small>' : '<span class="text-muted">-</span>') + '</td>'; });
+            html += '</tr>';
+        });
+        return html + '</table>';
+    };
+
+    var $tahun = $('#rkbu-batch-tahun'), tahunAktif = Number($tahun.data('tahun')) || new Date().getFullYear();
+    for (var th = tahunAktif + 1; th >= tahunAktif - 3; th--) { $tahun.append('<option value="' + th + '"' + (th === tahunAktif ? ' selected' : '') + '>Tahun ' + th + '</option>'); }
+
+    window.rkbuMuatBatch = function () {
+        $.post(endpoint('displaybatchperencanaan'), { tahun: $tahun.val(), bulan: $('#rkbu-batch-bulan').val() }, function (html) { $('#rkbu-batch-display').html(html); })
+            .fail(function () { $('#rkbu-batch-display').html('<div class="alert alert-danger">Daftar RKBU bulanan gagal dimuat.</div>'); });
+    };
+    $('#rkbu-batch-bulan').val(String(new Date().getMonth() + 1).padStart(2, '0'));
+    $tahun.add('#rkbu-batch-bulan').on('change', rkbuMuatBatch);
+    rkbuMuatBatch();
+    if (location.hash === '#rkbu-batch') { $('a[href="#tab-rkbu-batch"]').tab('show'); }
+
+    // Susun/ubah dan lihat detail memakai halaman penuh karena isi RKBU bisa ratusan barang.
+    var urlHalamanBatch = '{?=url([ADMIN,"logistik_non_medis","rkbubatchperencanaan"])?}';
+    window.rkbuSusun = function (noBatch, bulan, tahun) {
+        window.location.href = urlHalamanBatch + (noBatch ? '&no=' + encodeURIComponent(noBatch) : '&bulan=' + String(bulan).padStart(2, '0') + '&tahun=' + tahun);
+    };
+    window.rkbuHapusBatch = function (noBatch) {
+        if (!confirm('Hapus batch ' + noBatch + '? Item akan kembali menjadi usulan Draft.')) return;
+        $.post(endpoint('hapusbatchperencanaan'), { no_batch: noBatch }, function (res) {
+            notif(res.status === 'success', res.message);
+            if (res.status === 'success') rkbuMuatBatch();
+        }, 'json');
+    };
+
+    // Detail dan keputusan (Kasie Umum / Kabid Umum / Keuangan) ada di halaman batch.
+    window.rkbuDetail = function (noBatch) {
+        window.location.href = urlHalamanBatch + '&no=' + encodeURIComponent(noBatch);
+    };
+})();
 </script>
 
 {$js}

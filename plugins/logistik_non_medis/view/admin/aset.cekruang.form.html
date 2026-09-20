@@ -1,0 +1,332 @@
+<style>
+    #tabel-cek td { vertical-align: middle; }
+    #tabel-cek tr.baris-ada { background: #f3fbf3; }
+    #tabel-cek tr.baris-tidak { background: #fdf1f1; }
+    #tabel-cek .nama-barang { font-weight: 600; }
+    #tabel-cek .btn-keberadaan .btn { min-width: 44px; }
+    #tabel-cek .input-catatan { min-width: 140px; }
+    .cek-filter .btn { margin-bottom: 4px; }
+    .cek-sticky { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: #fff; padding: 8px 0; border-bottom: 1px solid #eee; }
+    @media (max-width: 767px) {
+        #tabel-cek thead { display: none; }
+        #tabel-cek tr { display: block; border-bottom: 1px solid #ddd; padding: 6px 0; }
+        #tabel-cek td { display: block; border: none !important; padding: 3px 8px; }
+        #tabel-cek td.kol-pilih { float: left; }
+    }
+</style>
+
+<article class="row">
+    <div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <div class="pull-right">
+                    {if: $cek.status == 'Selesai'}
+                    <a href="{$cetak_url}" target="_blank" class="btn btn-default btn-sm"><i class="fa fa-print"></i> Cetak</a>
+                    {else}
+                    <button type="button" id="btn-hapus-draft" class="btn btn-default btn-sm text-danger"><i class="fa fa-trash"></i> Hapus draft</button>
+                    {/if}
+                    <a href="{$kembali_url}" class="btn btn-default btn-sm"><i class="fa fa-arrow-left"></i> Kembali</a>
+                </div>
+                <h3 class="panel-title" style="margin-top:5px;"><i class="fa fa-check-square-o"></i> {$cek.nama_ruangan|e}</h3>
+                <div class="clearfix"></div>
+            </div>
+            <div class="panel-body">
+                <div class="row" style="margin-bottom:10px;">
+                    <div class="col-xs-6 col-sm-3"><small class="text-muted">No. Cek</small><br><code>{$cek.no_cek|e}</code></div>
+                    <div class="col-xs-6 col-sm-3"><small class="text-muted">Area</small><br>{if: !empty($cek.nama_area)}{$cek.nama_area|e}{else}-{/if}</div>
+                    <div class="col-xs-6 col-sm-3"><small class="text-muted">Tanggal / Pemeriksa</small><br>{?=date('d-m-Y', strtotime($cek['tanggal']))?} · {$cek.nama_pemeriksa|e}</div>
+                    <div class="col-xs-6 col-sm-3"><small class="text-muted">Status</small><br>
+                        {if: $cek.status == 'Selesai'}<span class="label label-success"><i class="fa fa-check"></i> Selesai</span>{else}<span class="label label-default">Belum selesai</span>{/if}
+                    </div>
+                </div>
+
+                <div class="cek-sticky">
+                    <div id="ringkasan" style="margin-bottom:6px;"></div>
+                    <div class="progress" style="height:8px;margin-bottom:8px;"><div id="progress-bar" class="progress-bar" style="width:0%"></div></div>
+                    <div class="row">
+                        <div class="col-sm-7 cek-filter">
+                            <div class="btn-group btn-group-xs" id="filter-keberadaan">
+                                <button type="button" class="btn btn-default active" data-filter="">Semua</button>
+                                <button type="button" class="btn btn-default" data-filter="Belum">Belum</button>
+                                <button type="button" class="btn btn-default" data-filter="Ada">Ada</button>
+                                <button type="button" class="btn btn-default" data-filter="Tidak Ada">Tidak Ada</button>
+                                <button type="button" class="btn btn-default" data-filter="berubah">Kondisi berubah</button>
+                            </div>
+                        </div>
+                        <div class="col-sm-5"><input type="text" id="cari-barang" class="form-control input-sm" placeholder="Cari nama / nomor inventaris / merk..."></div>
+                    </div>
+                    {if: $cek.status == 'Draft'}
+                    <div style="margin-top:6px;">
+                        <span id="jumlah-dipilih" class="text-muted" style="margin-right:6px;">0 dipilih</span>
+                        <div class="btn-group btn-group-xs">
+                            <button type="button" class="btn btn-success aksi-massal" data-keberadaan="Ada"><i class="fa fa-check"></i> Ada</button>
+                            <button type="button" class="btn btn-danger aksi-massal" data-keberadaan="Tidak Ada"><i class="fa fa-times"></i> Tidak Ada</button>
+                        </div>
+                        <div class="btn-group btn-group-xs">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">Kondisi <span class="caret"></span></button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" class="aksi-massal" data-kondisi="Baik">Baik</a></li>
+                                <li><a href="#" class="aksi-massal" data-kondisi="Rusak Ringan">Rusak Ringan</a></li>
+                                <li><a href="#" class="aksi-massal" data-kondisi="Rusak Berat">Rusak Berat</a></li>
+                            </ul>
+                        </div>
+                        <button type="button" class="btn btn-default btn-xs" id="btn-catatan-massal"><i class="fa fa-comment-o"></i> Catatan</button>
+                        <button type="button" class="btn btn-primary btn-xs" id="btn-sisanya-ada" title="Tandai semua barang yang belum dicek sebagai Ada"><i class="fa fa-check-circle"></i> Sisanya Ada</button>
+                    </div>
+                    {/if}
+                </div>
+
+                <div class="table-responsive" style="margin-top:8px;">
+                    <table class="table table-condensed" id="tabel-cek">
+                        <thead>
+                            <tr>
+                                <th class="kol-pilih" style="width:30px;">{if: $cek.status == 'Draft'}<input type="checkbox" id="pilih-semua" title="Pilih semua yang tampil">{/if}</th>
+                                <th>Barang</th>
+                                <th style="width:120px;">Ada?</th>
+                                <th style="width:150px;">Kondisi</th>
+                                <th>Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <hr>
+                {if: $cek.status == 'Draft'}
+                <h4><i class="fa fa-pencil-square-o"></i> Selesaikan &amp; Tanda Tangan</h4>
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label>Catatan umum <small class="text-muted">(opsional)</small></label>
+                            <textarea id="catatan-umum" class="form-control" rows="4" maxlength="2000" placeholder="Contoh: AC bocor sudah dilaporkan ke IPSRS; 2 kursi dipinjam ke ruang sebelah.">{$cek.catatan_umum|e}</textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-7 form-group">
+                                <label>Nama perwakilan unit <span class="text-danger">*</span></label>
+                                <input type="text" id="ttd-nama" class="form-control" maxlength="150">
+                            </div>
+                            <div class="col-xs-5 form-group">
+                                <label>Jabatan</label>
+                                <input type="text" id="ttd-jabatan" class="form-control" maxlength="150" placeholder="Karu / Perawat">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label>Tanda tangan perwakilan unit <span class="text-danger">*</span></label>
+                        <div style="position:relative;border:1px solid #bbb;border-radius:3px;background:#fff;overflow:hidden">
+                            <canvas id="ttd-canvas" height="160" style="display:block;width:100%;height:160px;touch-action:none;cursor:crosshair"></canvas>
+                            <span id="ttd-hint" class="text-muted" style="position:absolute;left:0;right:0;top:68px;text-align:center;pointer-events:none">Tanda tangan dengan jari, pen, atau mouse</span>
+                        </div>
+                        <button type="button" class="btn btn-default btn-xs" id="ttd-clear" style="margin-top:6px"><i class="fa fa-eraser"></i> Hapus tanda tangan</button>
+                    </div>
+                </div>
+                <button type="button" id="btn-selesai" class="btn btn-success"><i class="fa fa-check"></i> Simpan &amp; Selesai</button>
+                <span class="text-muted" style="margin-left:8px;">Kondisi aset di register diperbarui saat disimpan. Barang "Tidak Ada" hanya dicatat.</span>
+                {else}
+                <div class="row">
+                    <div class="col-sm-6">
+                        <strong>Catatan umum</strong>
+                        <p style="white-space:pre-wrap;">{if: !empty($cek.catatan_umum)}{$cek.catatan_umum|e}{else}-{/if}</p>
+                    </div>
+                    <div class="col-sm-6 text-center">
+                        <strong>Perwakilan unit</strong><br>
+                        {if: !empty($ttd_gambar)}<img src="{$ttd_gambar}" alt="Tanda tangan" style="max-height:110px;max-width:100%;">{/if}<br>
+                        <strong>{$cek.ttd_nama|e}</strong>{if: !empty($cek.ttd_jabatan)}<br><small>{$cek.ttd_jabatan|e}</small>{/if}<br>
+                        <small class="text-muted">{?=date('d-m-Y H:i', strtotime($cek['ttd_waktu']))?}</small>
+                    </div>
+                </div>
+                {/if}
+            </div>
+        </div>
+    </div>
+</article>
+
+{$koreksi_modal}
+<script type="application/json" id="data-items">{$items_json}</script>
+<script>
+(function () {
+    var cekId = {?=(int)$cek['id']?};
+    var draft = {?=$cek['status'] === 'Draft' ? 'true' : 'false'?};
+    var bolehKoreksi = {?=$boleh_koreksi ? 'true' : 'false'?};
+    var items = JSON.parse(document.getElementById('data-items').textContent || '[]');
+    var dipilih = {};
+    var filter = '';
+    var urlSimpan = '{?=url([ADMIN,"logistik_non_medis","cekruangsimpan"])?}';
+    var kondisiList = ['Baik', 'Rusak Ringan', 'Rusak Berat'];
+
+    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
+    function berubah(it) { return it.keberadaan === 'Ada' && it.kondisi_sesudah !== it.kondisi_sebelum; }
+
+    function ringkasan() {
+        var n = { total: items.length, ada: 0, tidak: 0, belum: 0, ubah: 0 };
+        $.each(items, function (_, it) {
+            if (it.keberadaan === 'Ada') n.ada++; else if (it.keberadaan === 'Tidak Ada') n.tidak++; else n.belum++;
+            if (berubah(it)) n.ubah++;
+        });
+        var persen = n.total ? Math.round((n.total - n.belum) / n.total * 100) : 100;
+        $('#progress-bar').css('width', persen + '%').toggleClass('progress-bar-success', persen === 100);
+        $('#ringkasan').html('<strong>' + (n.total - n.belum) + ' / ' + n.total + '</strong> dicek &nbsp; '
+            + '<span class="label label-success">' + n.ada + ' ada</span> '
+            + '<span class="label label-danger">' + n.tidak + ' tidak ada</span> '
+            + '<span class="label label-default">' + n.belum + ' belum</span> '
+            + (n.ubah ? '<span class="label label-warning">' + n.ubah + ' kondisi berubah</span>' : ''));
+        $('#jumlah-dipilih').text(Object.keys(dipilih).length + ' dipilih');
+    }
+
+    function tampil(it) {
+        var cari = $.trim($('#cari-barang').val()).toLowerCase();
+        if (filter === 'berubah' ? !berubah(it) : (filter && it.keberadaan !== filter)) return false;
+        return !cari || [it.nama_aset, it.nomor_inventaris, it.merk_type, it.kode_aset].join(' ').toLowerCase().indexOf(cari) !== -1;
+    }
+
+    function render() {
+        var html = '';
+        $.each(items, function (_, it) {
+            if (!tampil(it)) return;
+            var kelas = it.keberadaan === 'Ada' ? 'baris-ada' : (it.keberadaan === 'Tidak Ada' ? 'baris-tidak' : '');
+            var opsi = '';
+            $.each(kondisiList, function (_, k) { opsi += '<option' + (it.kondisi_sesudah === k ? ' selected' : '') + '>' + k + '</option>'; });
+            html += '<tr class="' + kelas + '" data-id="' + it.id + '">'
+                + '<td class="kol-pilih">' + (draft ? '<input type="checkbox" class="pilih-item"' + (dipilih[it.id] ? ' checked' : '') + '>' : '') + '</td>'
+                + '<td><span class="nama-barang">' + esc(it.nama_aset || it.kode_aset) + '</span>'
+                + (it.merk_type ? ' <small class="text-muted">' + esc(it.merk_type) + '</small>' : '')
+                + '<br><code style="font-size:11px;">' + esc(it.nomor_inventaris || it.kode_aset) + '</code>'
+                + (it.status_aset && it.status_aset !== 'Aktif' ? ' <span class="label label-default">' + esc(it.status_aset) + '</span>' : '')
+                + (berubah(it) ? ' <span class="label label-warning">' + esc(it.kondisi_sebelum) + ' → ' + esc(it.kondisi_sesudah) + '</span>' : '')
+                + (it.keberadaan === 'Tidak Ada' && bolehKoreksi && it.status_aset === 'Aktif'
+                    ? ' <a href="#" class="btn-koreksi-aset text-danger" style="font-size:12px;" data-id="' + it.aset_id + '" data-kode="' + esc(it.kode_aset)
+                      + '" data-nama="' + esc(it.nama_aset) + '" data-unit="' + esc($('h3.panel-title').text()) + '"><i class="fa fa-ban"></i> Koreksi</a>' : '')
+                + '</td>'
+                + '<td>' + (draft
+                    ? '<div class="btn-group btn-group-xs btn-keberadaan">'
+                      + '<button type="button" class="btn ' + (it.keberadaan === 'Ada' ? 'btn-success' : 'btn-default') + ' set-keberadaan" data-nilai="Ada">Ada</button>'
+                      + '<button type="button" class="btn ' + (it.keberadaan === 'Tidak Ada' ? 'btn-danger' : 'btn-default') + ' set-keberadaan" data-nilai="Tidak Ada">Tidak</button></div>'
+                    : '<span class="label ' + (it.keberadaan === 'Ada' ? 'label-success' : (it.keberadaan === 'Tidak Ada' ? 'label-danger' : 'label-default')) + '">' + esc(it.keberadaan) + '</span>') + '</td>'
+                + '<td>' + (draft ? '<select class="form-control input-sm set-kondisi"' + (it.keberadaan === 'Tidak Ada' ? ' disabled' : '') + '>' + opsi + '</select>' : esc(it.keberadaan === 'Ada' ? it.kondisi_sesudah : '-')) + '</td>'
+                + '<td>' + (draft ? '<input type="text" class="form-control input-sm input-catatan" maxlength="1000" value="' + esc(it.catatan) + '" placeholder="catatan...">' : esc(it.catatan || '')) + '</td>'
+                + '</tr>';
+        });
+        $('#tabel-cek tbody').html(html || '<tr><td colspan="5" class="text-center text-muted" style="padding:25px;">Tidak ada barang yang cocok.</td></tr>');
+        $('#pilih-semua').prop('checked', false);
+        ringkasan();
+    }
+
+    function simpan(ids, data, tombol) {
+        if (!ids.length) { alert('Pilih barang dulu (centang di kiri).'); return; }
+        if (tombol) tombol.prop('disabled', true);
+        $.ajax({ url: urlSimpan, type: 'POST', dataType: 'json', data: $.extend({ cek_id: cekId, item_ids: ids }, data) })
+            .done(function (r) {
+                if (r.status === 'success') { items = r.items; render(); }
+                else alert(r.message);
+            })
+            .fail(function () { alert('Gagal menyimpan. Periksa koneksi lalu ulangi.'); render(); })
+            .always(function () { if (tombol) tombol.prop('disabled', false); });
+    }
+    function idBaris(el) { return +$(el).closest('tr').data('id'); }
+
+    $('#filter-keberadaan .btn').on('click', function () {
+        $('#filter-keberadaan .btn').removeClass('active'); $(this).addClass('active');
+        filter = $(this).data('filter'); render();
+    });
+    $('#cari-barang').on('keyup', function () { clearTimeout(window.__cariCek); window.__cariCek = setTimeout(render, 200); });
+
+    if (draft) {
+        $(document).on('click', '.set-keberadaan', function () {
+            var data = { keberadaan: $(this).data('nilai') };
+            var it = items.filter(function (x) { return x.id == idBaris(this); }, this)[0];
+            if (it && it.keberadaan === data.keberadaan) data.keberadaan = 'Belum'; // klik lagi = batal
+            simpan([idBaris(this)], data);
+        });
+        $(document).on('change', '.set-kondisi', function () { simpan([idBaris(this)], { kondisi: $(this).val(), keberadaan: 'Ada' }); });
+        $(document).on('change', '.input-catatan', function () { simpan([idBaris(this)], { catatan: $(this).val() }); });
+        $(document).on('change', '.pilih-item', function () {
+            var id = idBaris(this);
+            if (this.checked) dipilih[id] = true; else delete dipilih[id];
+            ringkasan();
+        });
+        $('#pilih-semua').on('change', function () {
+            var on = this.checked;
+            $('#tabel-cek .pilih-item').each(function () {
+                this.checked = on; var id = idBaris(this);
+                if (on) dipilih[id] = true; else delete dipilih[id];
+            });
+            ringkasan();
+        });
+        $(document).on('click', '.aksi-massal', function (e) {
+            e.preventDefault();
+            var d = $(this).data(), data = {};
+            if (d.keberadaan) data.keberadaan = d.keberadaan;
+            if (d.kondisi) { data.kondisi = d.kondisi; data.keberadaan = 'Ada'; }
+            simpan(Object.keys(dipilih).map(Number), data, $(this));
+        });
+        $('#btn-catatan-massal').on('click', function () {
+            var ids = Object.keys(dipilih).map(Number);
+            if (!ids.length) { alert('Pilih barang dulu (centang di kiri).'); return; }
+            var teks = prompt('Catatan untuk ' + ids.length + ' barang terpilih:');
+            if (teks !== null) simpan(ids, { catatan: teks }, $(this));
+        });
+        $('#btn-sisanya-ada').on('click', function () {
+            var ids = items.filter(function (x) { return x.keberadaan === 'Belum'; }).map(function (x) { return +x.id; });
+            if (!ids.length) { alert('Semua barang sudah dicek.'); return; }
+            if (confirm('Tandai ' + ids.length + ' barang yang belum dicek sebagai ADA (kondisi tetap)?')) simpan(ids, { keberadaan: 'Ada' }, $(this));
+        });
+        $('#btn-hapus-draft').on('click', function () {
+            if (!confirm('Hapus lembar cek ini? Semua tanda yang sudah diisi akan hilang.')) return;
+            $.post('{?=url([ADMIN,"logistik_non_medis","cekruanghapus"])?}', { cek_id: cekId }, function (r) {
+                if (r.status === 'success') window.location.href = '{$kembali_url}'; else alert(r.message);
+            }, 'json');
+        });
+
+        // Pad tanda tangan (format SIGV1 yang sama dengan TTD SPPB).
+        var strokes = [], stroke = null, drawing = false, canvas = document.getElementById('ttd-canvas');
+        function resetTtd() {
+            strokes = []; stroke = null;
+            canvas.width = Math.max(320, Math.round(canvas.getBoundingClientRect().width || 520)); canvas.height = 160;
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); $('#ttd-hint').show();
+        }
+        function titik(e) {
+            var r = canvas.getBoundingClientRect();
+            return [Math.round((e.clientX - r.left) * canvas.width / r.width * 10) / 10, Math.round((e.clientY - r.top) * canvas.height / r.height * 10) / 10];
+        }
+        canvas.addEventListener('pointerdown', function (e) {
+            e.preventDefault(); canvas.setPointerCapture(e.pointerId); drawing = true;
+            stroke = [titik(e)]; strokes.push(stroke); $('#ttd-hint').hide();
+        });
+        canvas.addEventListener('pointermove', function (e) {
+            if (!drawing || !stroke) return;
+            e.preventDefault(); var next = titik(e), last = stroke[stroke.length - 1];
+            if (Math.abs(next[0] - last[0]) + Math.abs(next[1] - last[1]) < 1.5) return;
+            stroke.push(next);
+            var ctx = canvas.getContext('2d'); ctx.strokeStyle = '#000080'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(next[0], next[1]); ctx.stroke();
+        });
+        var berhenti = function () { drawing = false; stroke = null; };
+        canvas.addEventListener('pointerup', berhenti); canvas.addEventListener('pointercancel', berhenti);
+        $('#ttd-clear').on('click', resetTtd);
+        resetTtd();
+
+        $('#btn-selesai').on('click', function () {
+            var belum = items.filter(function (x) { return x.keberadaan === 'Belum'; }).length;
+            if (belum) { alert(belum + ' barang belum ditandai Ada / Tidak Ada.'); return; }
+            var bersih = [], jumlahTitik = 0;
+            $.each(strokes, function (_, s) { if (s.length >= 2) { bersih.push(s); jumlahTitik += s.length; } });
+            if (!$.trim($('#ttd-nama').val())) { alert('Isi nama perwakilan unit.'); return; }
+            if (jumlahTitik < 3) { alert('Tanda tangan perwakilan unit belum diisi.'); return; }
+            var tombol = $(this).prop('disabled', true);
+            $.post('{?=url([ADMIN,"logistik_non_medis","cekruangselesai"])?}', {
+                cek_id: cekId,
+                catatan_umum: $('#catatan-umum').val(),
+                ttd_nama: $('#ttd-nama').val(),
+                ttd_jabatan: $('#ttd-jabatan').val(),
+                tanda_tangan: JSON.stringify({ version: 1, width: canvas.width, height: canvas.height, strokes: bersih })
+            }, function (r) {
+                alert(r.message);
+                if (r.status === 'success') window.location.reload(); else tombol.prop('disabled', false);
+            }, 'json').fail(function () { alert('Gagal menyimpan. Periksa koneksi lalu ulangi.'); tombol.prop('disabled', false); });
+        });
+    }
+
+    $(document).on('asetKoreksiSelesai', function () { window.location.reload(); });
+    render();
+})();
+</script>

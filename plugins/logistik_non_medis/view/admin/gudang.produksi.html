@@ -106,6 +106,8 @@
 </div>
 
 <script>
+// 1 = halaman Paket VIP (hanya barang berjenis Paket), 0 = Barang Olahan (fotocopy, dll).
+var MODE_VIP = {if: $vip_pack}1{else}0{/if};
 $(document).ready(function () {
     var urlBarang = '{?=url(ADMIN."/logistik_non_medis/ajaxmasterbarang")?}';
 
@@ -149,6 +151,17 @@ $(document).ready(function () {
     initPickerBarang($('#resep-hasil'), '{$hasil_placeholder}');
     initPickerBarang($('#resep-bahan'), '{$bahan_placeholder}');
 
+    // Dibuka dari menu Paket & Barang Ecer (?hasil=KODE&nama=...): barang paket langsung terpilih.
+    (function () {
+        var qs = new URLSearchParams(window.location.search);
+        var kode = qs.get('hasil');
+        if (!kode) return;
+        var nama = qs.get('nama') || '';
+        $('#resep-hasil').append(new Option(kode + (nama ? ' - ' + nama : ''), kode, true, true)).trigger('change');
+        $('.nav-tabs a[href="#tab-resep"]').tab('show');
+        setTimeout(function () { $('#resep-bahan').select2('open'); }, 400);
+    })();
+
     $('#btn-simpan-resep').click(function () {
         var hasil = $('#resep-hasil').val();
         var bahan = $('#resep-bahan').val();
@@ -159,7 +172,8 @@ $(document).ready(function () {
         $.post('{?=url(ADMIN."/logistik_non_medis/saveresepgudangproduksi")?}', {
             kode_item_hasil: hasil,
             kode_item_bahan: bahan,
-            qty_bahan_per_hasil: qty
+            qty_bahan_per_hasil: qty,
+            jenis: MODE_VIP ? 'Paket' : 'Olahan'
         }, function (res) {
             if (res.status === 'success') {
                 $('#resep-bahan').val(null).trigger('change');
@@ -180,7 +194,7 @@ $(document).ready(function () {
     };
 
     function loadResep() {
-        $.post('{?=url(ADMIN."/logistik_non_medis/displayresepgudangproduksi")?}', {}, function (html) {
+        $.post('{?=url(ADMIN."/logistik_non_medis/displayresepgudangproduksi")?}', { vip: MODE_VIP }, function (html) {
             $('#display-resep').html(html);
         });
     }
@@ -188,7 +202,8 @@ $(document).ready(function () {
     window.loadPemakaian = function () {
         $.post('{?=url(ADMIN."/logistik_non_medis/displaypemakaiangudangproduksi")?}', {
             tgl_awal: $('#pakai-awal').val(),
-            tgl_akhir: $('#pakai-akhir').val()
+            tgl_akhir: $('#pakai-akhir').val(),
+            vip: MODE_VIP
         }, function (html) {
             $('#display-pemakaian').html(html);
         });

@@ -159,7 +159,28 @@
         <div class="dash-icon"><i class="fa fa-check-square-o"></i></div>
         <div class="dash-value">{$dash_butuh_persetujuan}</div>
         <div class="dash-label">Butuh Persetujuan</div>
-        <div class="dash-sub">Dari Bawahan Anda</div>
+        <div class="dash-sub">Persetujuan Permintaan Non Rutin</div>
+        <div class="dash-sub" style="margin-top:2px;">{$dash_persetujuan_struktural} dari unit bawahan{if: $dash_persetujuan_label_umum} &bull; {$dash_persetujuan_umum} tahap {$dash_persetujuan_label_umum}{/if}</div>
+        <i class="fa fa-chevron-right dash-arrow"></i>
+    </a>
+    {/if}
+
+    {if: $dash_rkbu.tampil}
+    <a class="dash-card {?=($dash_rkbu['jumlah'] > 0) ? 'red' : 'purple'?}" href="{$dash_rkbu.url}">
+        <div class="dash-icon"><i class="fa fa-calendar-check-o"></i></div>
+        <div class="dash-value">{$dash_rkbu.jumlah}</div>
+        <div class="dash-label">Persetujuan Pengadaan Rutin</div>
+        <div class="dash-sub">{if: $dash_rkbu.jumlah > 0}RKBU menunggu {$dash_rkbu.tahap} &bull; Rp {?=number_format($dash_rkbu['nilai'],0,',','.')?}{else}Tidak ada RKBU menunggu Anda{/if}</div>
+        <i class="fa fa-chevron-right dash-arrow"></i>
+    </a>
+    {/if}
+
+    {if: $role == 'keuangan' || $role == 'admin'}
+    <a class="dash-card {?=($dash_dana_menunggu > 0) ? 'red' : 'green'?}" href="{?=url([ADMIN,'logistik_non_medis','distribusinonrutin'])?}">
+        <div class="dash-icon"><i class="fa fa-university"></i></div>
+        <div class="dash-value">{$dash_dana_menunggu}</div>
+        <div class="dash-label">Persetujuan Dana</div>
+        <div class="dash-sub">Non Rutin menunggu &bull; Rp {?=number_format($dash_dana_nilai,0,',','.')?}</div>
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
     {/if}
@@ -212,24 +233,46 @@
     {/if}
     {if: $perm_distribusinonrutin}
     <a class="dash-card orange" href="{?=url([ADMIN,'logistik_non_medis','distribusinonrutin'])?}">
+        {if: !empty($dash_nonrutin_riwayat_mode)}
+        <div class="dash-icon"><i class="fa fa-history"></i></div>
+        <div class="dash-value">{?=$dash_total_nonrutin?}</div>
+        <div class="dash-label">Riwayat Persetujuan</div>
+        <div class="dash-sub" style="font-size: 12px; margin-top: 5px;">
+            <span style="color:#7f8c8d;">Permintaan bulan ini yang sudah Anda putuskan</span>
+            <div style="color:#95a5a6; font-size:11px; margin-top:3px;">{$dash_nonrutin_periode} &bull; {$dash_nonrutin_lingkup}</div>
+        </div>
+        {else}
         <div class="dash-icon"><i class="fa fa-exclamation-triangle"></i></div>
         <div class="dash-value">{?=$dash_total_nonrutin?}</div>
         <div class="dash-label">Permintaan Pengadaan</div>
         <div class="dash-sub" style="font-size: 12px; margin-top: 5px;">
             <span style="color:#f39c12; font-weight:bold;"><i class="fa fa-clock-o"></i> {$dash_nonrutin_proses} Diproses</span> &nbsp;
             <span style="color:#27ae60; font-weight:bold;"><i class="fa fa-check"></i> {$dash_nonrutin_selesai} Selesai</span>
+            <div style="color:#95a5a6; font-size:11px; margin-top:3px;">{$dash_nonrutin_periode} &bull; {$dash_nonrutin_lingkup}</div>
         </div>
+        {/if}
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
     {elseif: $perm_pengadaanperencanaan}
     <a class="dash-card orange" href="{?=url([ADMIN,'logistik_non_medis','pengadaanperencanaan'])?}">
+        {if: !empty($dash_nonrutin_riwayat_mode)}
+        <div class="dash-icon"><i class="fa fa-history"></i></div>
+        <div class="dash-value">{?=$dash_total_nonrutin?}</div>
+        <div class="dash-label">Riwayat Persetujuan</div>
+        <div class="dash-sub" style="font-size: 12px; margin-top: 5px;">
+            <span style="color:#7f8c8d;">Permintaan bulan ini yang sudah Anda putuskan</span>
+            <div style="color:#95a5a6; font-size:11px; margin-top:3px;">{$dash_nonrutin_periode} &bull; {$dash_nonrutin_lingkup}</div>
+        </div>
+        {else}
         <div class="dash-icon"><i class="fa fa-calendar-check-o"></i></div>
         <div class="dash-value">{?=$dash_total_nonrutin?}</div>
         <div class="dash-label">Permintaan Pengadaan</div>
         <div class="dash-sub" style="font-size: 12px; margin-top: 5px;">
             <span style="color:#f39c12; font-weight:bold;"><i class="fa fa-clock-o"></i> {$dash_nonrutin_proses} Diproses</span> &nbsp;
             <span style="color:#27ae60; font-weight:bold;"><i class="fa fa-check"></i> {$dash_nonrutin_selesai} Selesai</span>
+            <div style="color:#95a5a6; font-size:11px; margin-top:3px;">{$dash_nonrutin_periode} &bull; {$dash_nonrutin_lingkup}</div>
         </div>
+        {/if}
         <i class="fa fa-chevron-right dash-arrow"></i>
     </a>
     {/if}
@@ -418,9 +461,9 @@
                         <a href="{?=url([ADMIN,'logistik_non_medis','pengadaanperencanaan'])?}" class="panel-body text-center">
                             <div class="panel-thumb">
                                 <i class="fa fa-calendar-check-o"></i>
-                                <div class="desc">Input Rencana Belanja Bulanan Unit</div>
+                                <div class="desc">{$rkbu_menu_desc}</div>
                             </div>
-                            <h4><b>Pengadaan Rutin</b></h4>
+                            <h4><b>{$rkbu_menu_label}</b></h4>
                         </a>
                     </div>
                 </li>
@@ -434,7 +477,7 @@
                 </li>
                 {/if}
 
-                {if: $perm_distribusinonrutin}
+                {if: $perm_distribusinonrutin && !in_array($role, ['kepala_sie', 'kepala_bidang', 'keuangan'])}
                 <li class="module">
                     <div class="panel panel-default">
                         <a href="{?=url([ADMIN,'logistik_non_medis','permintaannonrutin'])?}" class="panel-body text-center">
@@ -616,9 +659,9 @@
                 {if: $perm_gudangkomposisivip}
                 <li class="module">
                     <div class="panel panel-default">
-                        <a href="{?=url([ADMIN,'logistik_non_medis','gudangkomposisivip'])?}" class="panel-body text-center">
-                            <div class="panel-thumb"><i class="fa fa-gift"></i><div class="desc">Atur isi dan pengurangan stok VIP Pack</div></div>
-                            <h4><b>Komposisi VIP Pack</b></h4>
+                        <a href="{?=url([ADMIN,'logistik_non_medis','gudangproduksipaket'])?}" class="panel-body text-center">
+                            <div class="panel-thumb"><i class="fa fa-gift"></i><div class="desc">Welcome/VIP Pack, barang olahan (fotocopy, kertas potong), dan satuan ecer</div></div>
+                            <h4><b>Paket &amp; Barang Ecer</b></h4>
                         </a>
                     </div>
                 </li>
@@ -816,6 +859,20 @@
                                 <div class="desc">Sensus &amp; Stock Opname Semua Inventaris</div>
                             </div>
                             <h4><b>Sensus &amp; Verifikasi</b></h4>
+                        </a>
+                    </div>
+                </li>
+                {/if}
+
+                {if: $perm_asetcekruang}
+                <li class="module">
+                    <div class="panel panel-default">
+                        <a href="{?=url([ADMIN,'logistik_non_medis','cekasetruang'])?}" class="panel-body text-center">
+                            <div class="panel-thumb">
+                                <i class="fa fa-check-square-o"></i>
+                                <div class="desc">Cek ada / tidak ada &amp; kondisi inventaris per ruangan</div>
+                            </div>
+                            <h4><b>Cek Aset Ruangan</b></h4>
                         </a>
                     </div>
                 </li>

@@ -43,9 +43,18 @@
               <td style="white-space:nowrap;">Rp. {?=number_format($value.harga_tampil,0,',','.')?}<br><small class="text-muted">{$value.sumber_harga_tampil}</small></td>
               <td style="white-space:nowrap;">
                 <button type="button" class="btn btn-success btn-xs btn-simpan-kondisi-group" data-id="{$value.id}" title="Simpan kondisi"><i class="fa fa-save"></i></button>
-                <a href="{?=url([ADMIN,'logistik_non_medis','asetformpage'])?}&id={$value.id}&group_id={$group.id}" class="btn btn-default btn-xs" title="Edit"><i class="fa fa-edit"></i></a>
-                <a href="{?=url([ADMIN,'logistik_non_medis','asetprintlabel',$value['kode_aset']])?}" target="_blank" class="btn btn-warning btn-xs" title="Cetak label"><i class="fa fa-print"></i></a>
-                <a href="{?=url([ADMIN,'logistik_non_medis','asetdetailpage'])?}&id={$value.id}&group_id={$group.id}" class="btn btn-info btn-xs" title="Detail lengkap"><i class="fa fa-eye"></i></a>
+                <div class="btn-group aset-aksi">
+                  <a href="{?=url([ADMIN,'logistik_non_medis','asetdetailpage'])?}&id={$value.id}&group_id={$group.id}" class="btn btn-info btn-xs" title="Detail lengkap"><i class="fa fa-eye"></i> Detail</a>
+                  <button type="button" class="btn btn-info btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Aksi lain"><span class="caret"></span></button>
+                  <ul class="dropdown-menu dropdown-menu-right">
+                    <li><a href="{?=url([ADMIN,'logistik_non_medis','asetformpage'])?}&id={$value.id}&group_id={$group.id}"><i class="fa fa-edit fa-fw"></i> Edit</a></li>
+                    <li><a href="{?=url([ADMIN,'logistik_non_medis','asetprintlabel',$value['kode_aset']])?}" target="_blank"><i class="fa fa-print fa-fw"></i> Cetak label</a></li>
+                    {if: $boleh_koreksi}
+                    <li role="separator" class="divider"></li>
+                    <li><a href="#" class="btn-koreksi-aset text-danger" data-id="{$value.id}" data-kode="{$value.kode_aset|e}" data-nama="{$group.nama_group|e} ({$value.nomor_inventaris|e})" data-unit="{$group.nama_unit|e}{if: !empty($value.lokasi_fisik)} / {$value.lokasi_fisik|e}{/if}"><i class="fa fa-ban fa-fw"></i> Koreksi (tidak ada fisik)</a></li>
+                    {/if}
+                  </ul>
+                </div>
               </td>
             </tr>
             {/loop}
@@ -60,8 +69,10 @@
     </div>
   </div>
 </article>
+{$koreksi_modal}
 <script>
 (function(){
+  $(document).on('asetKoreksiSelesai', function(){ window.location.reload(); });
   function cariAsetGroup() {
     var next = new URL(window.location.href);
     var keyword = $('#cari-detail-group-aset').val().trim();

@@ -106,7 +106,45 @@
                     </table>
                 </div>
             </div>
-            
+
+            <!-- Link QR: halaman yang terbuka saat label QR dipindai, tanpa perlu scan -->
+            <div class="row" style="margin-top: 15px;">
+                <div class="col-md-12">
+                    <div class="panel panel-default" style="margin-bottom:0;">
+                        <div class="panel-body" style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+                            <a href="{$qr_image_url}" target="_blank" title="Buka gambar QR">
+                                <img src="{$qr_image_url}" alt="QR {$aset.kode_aset|e}" style="width:96px; height:96px; border:1px solid #ddd; border-radius:4px; padding:4px; background:#fff;">
+                            </a>
+                            <div style="flex:1; min-width:240px;">
+                                <div style="font-weight:bold; margin-bottom:4px;"><i class="fa fa-qrcode"></i> Link Hasil Scan QR</div>
+                                <div class="input-group input-group-sm" style="max-width:720px;">
+                                    <input type="text" class="form-control" id="qr-scan-url" value="{$qr_scan_url|e}" readonly onclick="this.select()">
+                                    <span class="input-group-btn">
+                                        <button type="button" class="btn btn-default" id="btn-salin-qr" title="Salin link"><i class="fa fa-copy"></i> Salin</button>
+                                        <a href="{$qr_scan_url}" target="_blank" class="btn btn-primary"><i class="fa fa-external-link"></i> Buka</a>
+                                    </span>
+                                </div>
+                                <small class="text-muted">
+                                    Halaman ini sama dengan yang terbuka saat label QR dipindai (info aset, lapor kerusakan, buku maintenance).
+                                    Data JSON: <a href="{$api_detail_url}" target="_blank">api-inventaris</a> ·
+                                    <a href="{$api_lapor_url}" target="_blank">laporan</a> ·
+                                    <a href="{$api_buku_url}" target="_blank">buku maintenance</a>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+            $('#btn-salin-qr').off('click').on('click', function () {
+                var input = document.getElementById('qr-scan-url'), tombol = $(this);
+                input.select();
+                var selesai = function () { tombol.html('<i class="fa fa-check"></i> Tersalin'); setTimeout(function () { tombol.html('<i class="fa fa-copy"></i> Salin'); }, 1500); };
+                if (navigator.clipboard) { navigator.clipboard.writeText(input.value).then(selesai, function () { document.execCommand('copy'); selesai(); }); }
+                else { document.execCommand('copy'); selesai(); }
+            });
+            </script>
+
             <!-- Spesifikasi Teknis Box -->
             <div class="row" style="margin-top: 15px;">
                 <div class="col-md-12">

@@ -1,9 +1,131 @@
-<div class="row" style="margin-bottom:12px;">
-  <div class="col-md-4"><div class="well well-sm"><strong>Item Diterima</strong><br><span style="font-size:22px">{?=count($rows)?}</span></div></div>
-  <div class="col-md-4"><div class="well well-sm"><strong>Total Realisasi</strong><br><span style="font-size:22px">Rp {?=number_format($total,0,',','.')?}</span></div></div>
-  <div class="col-md-4"><div class="well well-sm"><strong>Periode</strong><br><span style="font-size:22px">{$bulan}/{$tahun}</span></div></div>
+<style>
+  .rb-card { background:#fff; border:1px solid #dfe3e8; border-left:5px solid #337ab7; border-radius:4px; padding:10px 14px; margin-bottom:12px; }
+  .rb-card .rb-label { color:#555; font-weight:600; }
+  .rb-card .rb-nilai { font-size:22px; font-weight:600; color:#1f2d3d; }
+  .rb-card.rb-item { border-left-color:#337ab7; }
+  .rb-card.rb-total { border-left-color:#2e7d32; }
+  .rb-card.rb-total .rb-nilai { color:#2e7d32; }
+  .rb-card.rb-periode { border-left-color:#e69100; }
+  .rb-table > thead > tr > th { background:#1f4e79 !important; color:#fff !important; border-color:#1f4e79 !important; font-weight:600; }
+  .rb-table > tbody > tr > td { color:#222; vertical-align:middle; }
+  .rb-table > tbody > tr:nth-of-type(odd) > td { background:#f5f8fb; }
+  .rb-table .rb-kategori { color:#1f4e79; font-weight:600; font-size:11px; }
+  .rb-table .rb-uang { color:#2e7d32; font-weight:600; }
+  .rb-rekap { border:1px solid #2e7d32; border-radius:4px; overflow:hidden; }
+  .rb-rekap .rb-rekap-head { background:#2e7d32; color:#fff; padding:10px 14px; font-weight:600; }
+  .rb-rekap table { margin-bottom:0; }
+  .rb-rekap td { color:#222; }
+  .rb-rekap tfoot th { background:#2e7d32 !important; color:#fff !important; font-size:15px; }
+  .rb-card.rb-sisa { border-left-color:#c62828; }
+  .rb-card.rb-sisa .rb-nilai { color:#c62828; }
+  .rb-card.rb-persen { border-left-color:#6a1b9a; }
+  .rb-card.rb-persen .rb-nilai { color:#6a1b9a; }
+  .rb-section { border:1px solid #1f4e79; border-radius:4px; margin-bottom:22px; }
+  .rb-section-head { background:#1f4e79; color:#fff; padding:10px 14px; font-weight:600; font-size:15px; }
+  .rb-section-body { padding:14px; background:#fff; }
+  .rb-progress { height:20px; margin:0 0 12px; background:#e3e8ee; }
+  .rb-progress .progress-bar { background:#2e7d32; color:#fff; font-weight:600; line-height:20px; }
+  .rb-status { display:inline-block; padding:3px 8px; border-radius:3px; color:#fff; font-size:11px; font-weight:600; white-space:nowrap; }
+  .rb-st-belum { background:#616161; }
+  .rb-st-po { background:#1565c0; }
+  .rb-st-sebagian { background:#e65100; }
+  .rb-st-selesai { background:#2e7d32; }
+  .rb-st-tolak { background:#c62828; }
+  .rb-batch { color:#1f2d3d; margin-bottom:10px; }
+  .rb-batch code { color:#1f4e79; background:#e8f0f8; }
+  .rb-tabs { border-bottom:3px solid #1f4e79; margin-bottom:14px; }
+  .rb-tabs > li > a { font-size:15px; font-weight:600; color:#1f4e79; padding:10px 18px; border-radius:4px 4px 0 0; }
+  .rb-tabs > li.active > a, .rb-tabs > li.active > a:hover, .rb-tabs > li.active > a:focus { background:#1f4e79; color:#fff; border-color:#1f4e79; }
+  .rb-tabs .rb-tab-nilai { display:block; font-size:12px; font-weight:400; opacity:.9; }
+</style>
+<ul class="nav nav-tabs rb-tabs" id="rb-tabs">
+  <li><a href="#rb-tab-rkbu" data-toggle="tab"><i class="fa fa-calendar-check-o"></i> RKBU &middot; Belanja Rutin Bulanan<span class="rb-tab-nilai">Dana Rp {?=number_format($rkbu['ringkas']['dana'],0,',','.')?} &middot; terealisasi {?=number_format($rkbu['ringkas']['persen'],1,',','.')?}%</span></a></li>
+  <li><a href="#rb-tab-nonrutin" data-toggle="tab"><i class="fa fa-money"></i> Non Rutin &middot; Pengajuan Dana<span class="rb-tab-nilai">{?=$nonrutin['ringkas']['menunggu']?} menunggu &middot; disetujui Rp {?=number_format($nonrutin['ringkas']['nilai_disetujui'],0,',','.')?}</span></a></li>
+  <li><a href="#rb-tab-penerimaan" data-toggle="tab"><i class="fa fa-truck"></i> Penerimaan Barang<span class="rb-tab-nilai">{?=count($rows)?} item &middot; Rp {?=number_format($total,0,',','.')?}</span></a></li>
+</ul>
+<div class="tab-content">
+<div class="tab-pane" id="rb-tab-rkbu">
+<div class="rb-section">
+  <div class="rb-section-head"><i class="fa fa-balance-scale"></i> Realisasi RKBU Disetujui (Dana vs Belanja) &mdash; {$bulan}/{$tahun}</div>
+  <div class="rb-section-body">
+  {if: empty($rkbu['batches'])}
+    <div class="text-muted" style="padding:8px 0"><i class="fa fa-info-circle"></i> Belum ada RKBU yang disetujui Keuangan untuk periode ini.</div>
+  {else}
+    <div class="rb-batch"><strong>Batch disetujui:</strong>
+      {loop: $rkbu['batches'] as $bt}<code>{$bt.no_batch}</code>{if: !empty($bt.tgl_setuju_keuangan)} <small class="text-muted">(ACC Keuangan {?=date('d/m/Y H:i', strtotime($bt['tgl_setuju_keuangan']))?})</small>{/if} &nbsp; {/loop}
+    </div>
+    <div class="row">
+      <div class="col-md-3 col-sm-6"><div class="rb-card rb-item"><div class="rb-label">Dana Disetujui</div><div class="rb-nilai">Rp {?=number_format($rkbu['ringkas']['dana'],0,',','.')?}</div></div></div>
+      <div class="col-md-3 col-sm-6"><div class="rb-card rb-total"><div class="rb-label">Sudah Dibelanjakan</div><div class="rb-nilai">Rp {?=number_format($rkbu['ringkas']['realisasi'],0,',','.')?}</div></div></div>
+      <div class="col-md-3 col-sm-6"><div class="rb-card rb-sisa"><div class="rb-label">Sisa Dana</div><div class="rb-nilai">Rp {?=number_format($rkbu['ringkas']['sisa'],0,',','.')?}</div></div></div>
+      <div class="col-md-3 col-sm-6"><div class="rb-card rb-persen"><div class="rb-label">Realisasi</div><div class="rb-nilai">{?=number_format($rkbu['ringkas']['persen'],1,',','.')?}%</div>
+        <small class="text-muted">{?=$rkbu['ringkas']['selesai']?} terealisasi &middot; {?=$rkbu['ringkas']['sebagian']?} sebagian &middot; {?=$rkbu['ringkas']['proses']?} PO &middot; {?=$rkbu['ringkas']['belum_po']?} belum PO</small></div></div>
+    </div>
+    <div class="progress rb-progress"><div class="progress-bar" style="width:{?=min(100, max(0, $rkbu['ringkas']['persen']))?}%; min-width:2.5em;">{?=number_format($rkbu['ringkas']['persen'],1,',','.')?}%</div></div>
+    <div class="table-responsive"><table class="table table-bordered table-condensed rb-table" style="margin-bottom:0"><thead><tr><th>No</th><th>Barang</th><th>Satuan</th><th class="text-right">Qty Rencana</th><th class="text-right">Dana Disetujui</th><th>No. PO</th><th class="text-right">Qty Diterima</th><th class="text-right">Nilai Realisasi</th><th class="text-right">Sisa</th><th class="text-right">%</th><th>Status</th></tr></thead><tbody>
+    {loop: $rkbu['items'] as $i => $it}<tr>
+      <td>{?=$i+1?}</td>
+      <td><span class="rb-kategori">{$it.kategori}</span><br>{$it.nama_barang}</td>
+      <td>{$it.satuan}</td>
+      <td class="text-right">{?=number_format($it['qty_rencana'],2,',','.')?}</td>
+      <td class="text-right"><strong>Rp {?=number_format($it['nilai_rencana'],0,',','.')?}</strong></td>
+      <td>{if: !empty($it.daftar_po)}{$it.daftar_po}{else}<span class="text-muted">-</span>{/if}</td>
+      <td class="text-right">{?=number_format($it['qty_realisasi'],2,',','.')?}</td>
+      <td class="text-right rb-uang">Rp {?=number_format($it['nilai_realisasi'],0,',','.')?}</td>
+      <td class="text-right" style="color:#c62828;font-weight:600">Rp {?=number_format($it['sisa_dana'],0,',','.')?}</td>
+      <td class="text-right">{?=number_format($it['persen'],1,',','.')?}%</td>
+      <td><span class="rb-status {?=['Belum PO'=>'rb-st-belum','PO, belum diterima'=>'rb-st-po','Diterima sebagian'=>'rb-st-sebagian','Terealisasi'=>'rb-st-selesai'][$it['status']] ?? 'rb-st-belum'?}">{$it.status}</span></td>
+    </tr>{/loop}
+    </tbody></table></div>
+  {/if}
+  </div>
+</div>
+</div>
+<div class="tab-pane" id="rb-tab-nonrutin">
+<div class="rb-section" style="border-color:#e65100">
+  <div class="rb-section-head" style="background:#e65100"><i class="fa fa-money"></i> Pengajuan Dana Non Rutin (disetujui Kabid Umum) &mdash; {$bulan}/{$tahun}</div>
+  <div class="rb-section-body">
+  {if: empty($nonrutin['rows'])}
+    <div class="text-muted" style="padding:8px 0"><i class="fa fa-info-circle"></i> Tidak ada permintaan Non Rutin yang masuk tahap pengajuan dana pada periode ini.</div>
+  {else}
+    <div class="row">
+      <div class="col-md-3 col-sm-6"><div class="rb-card rb-item"><div class="rb-label">Menunggu Keuangan</div><div class="rb-nilai">{?=$nonrutin['ringkas']['menunggu']?} <small style="font-size:14px">SPPB</small></div><small class="text-muted">Rp {?=number_format($nonrutin['ringkas']['nilai_menunggu'],0,',','.')?}</small></div></div>
+      <div class="col-md-3 col-sm-6"><div class="rb-card rb-periode"><div class="rb-label">Dana Disetujui</div><div class="rb-nilai">Rp {?=number_format($nonrutin['ringkas']['nilai_disetujui'],0,',','.')?}</div><small class="text-muted">{?=$nonrutin['ringkas']['disetujui']?} SPPB &middot; {?=$nonrutin['ringkas']['siap_po']?} belum PO</small></div></div>
+      <div class="col-md-3 col-sm-6"><div class="rb-card rb-total"><div class="rb-label">Sudah Dibelanjakan</div><div class="rb-nilai">Rp {?=number_format($nonrutin['ringkas']['realisasi'],0,',','.')?}</div><small class="text-muted">{?=$nonrutin['ringkas']['po']?} SPPB sudah PO</small></div></div>
+      <div class="col-md-3 col-sm-6"><div class="rb-card rb-sisa"><div class="rb-label">Dana Tidak Disetujui</div><div class="rb-nilai">{?=$nonrutin['ringkas']['ditolak']?} <small style="font-size:14px">SPPB</small></div></div></div>
+    </div>
+    {if: $nonrutin['ringkas']['siap_po'] > 0}
+    <div style="margin-bottom:10px"><a class="btn btn-warning btn-sm" href="{?=url([ADMIN,'logistik_non_medis','pengadaanpo'])?}#po-nonrutin"><i class="fa fa-shopping-cart"></i> Buat PO untuk {?=$nonrutin['ringkas']['siap_po']?} permintaan yang dananya sudah disetujui</a></div>
+    {/if}
+    <div class="table-responsive"><table class="table table-bordered table-condensed rb-table" style="margin-bottom:0"><thead><tr><th>No</th><th>Tanggal</th><th>No. SPPB</th><th>Unit</th><th>Barang</th><th class="text-right">Nilai Pengajuan</th><th>Keputusan Dana</th><th>No. PO</th><th class="text-right">Realisasi</th><th>Tahap</th></tr></thead><tbody>
+    {loop: $nonrutin['rows'] as $i => $n}<tr>
+      <td>{?=$i+1?}</td>
+      <td>{$n.tgl_sppb_fmt}</td>
+      <td><strong>{$n.no_sppb}</strong></td>
+      <td>{$n.nama_unit}</td>
+      <td><small>{$n.daftar_barang}</small></td>
+      <td class="text-right"><strong>Rp {?=number_format($n['nilai_pengajuan'],0,',','.')?}</strong></td>
+      <td><small>{if: $n.tahap == 'Menunggu Keuangan'}-{elseif: !empty($n.tgl_verifikasi)}{?=date('d/m/Y', strtotime($n['tgl_verifikasi']))?} oleh {$n.user_verifikasi}{else}-{/if}{if: !empty($n.alasan_penolakan)}<br><span style="color:#c62828">{$n.alasan_penolakan}</span>{/if}</small></td>
+      <td>{if: !empty($n.no_po)}{$n.no_po}{else}<span class="text-muted">-</span>{/if}</td>
+      <td class="text-right rb-uang">Rp {?=number_format($n['realisasi'],0,',','.')?}</td>
+      <td><span class="rb-status {$n.tahap_kelas}">{$n.tahap}</span></td>
+    </tr>{/loop}
+    </tbody></table></div>
+  {/if}
+  </div>
+</div>
+</div>
+<div class="tab-pane" id="rb-tab-penerimaan">
+<h4 style="color:#1f4e79;font-weight:600;margin:0 0 10px"><i class="fa fa-truck"></i> Penerimaan Barang Selesai Periode Ini</h4>
+<div class="row">
+  <div class="col-md-4"><div class="rb-card rb-item"><div class="rb-label">Item Diterima</div><div class="rb-nilai">{?=count($rows)?}</div></div></div>
+  <div class="col-md-4"><div class="rb-card rb-total"><div class="rb-label">Total Realisasi</div><div class="rb-nilai">Rp {?=number_format($total,0,',','.')?}</div></div></div>
+  <div class="col-md-4"><div class="rb-card rb-periode"><div class="rb-label">Periode</div><div class="rb-nilai">{$bulan}/{$tahun}</div></div></div>
 </div>
 <div class="row">
-  <div class="col-md-8"><div class="table-responsive"><table class="table table-bordered table-striped table-condensed"><thead><tr class="info"><th>No</th><th>Tanggal</th><th>No. Penerimaan</th><th>PO</th><th>Vendor</th><th>Barang</th><th>Satuan</th><th class="text-right">Qty</th><th class="text-right">Harga</th><th class="text-right">Total</th></tr></thead><tbody>{if: !empty($rows)}{loop: $rows}<tr><td>{?=$key+1?}</td><td>{$value.tgl_penerimaan}</td><td>{$value.no_penerimaan}</td><td>{if: !empty($value.no_po)}{$value.no_po}{else}-{/if}</td><td>{$value.nama_vendor}</td><td><small class="text-muted">{$value.kategori}</small><br>{$value.nama_barang}</td><td>{$value.satuan}</td><td class="text-right">{?=number_format($value.qty_terima,2,',','.')?}</td><td class="text-right">Rp {?=number_format($value.harga,0,',','.')?}</td><td class="text-right">Rp {?=number_format($value.total,0,',','.')?}</td></tr>{/loop}{else}<tr><td colspan="10" class="text-center text-muted">Tidak ada penerimaan selesai pada periode ini.</td></tr>{/if}</tbody></table></div></div>
-  <div class="col-md-4"><div class="panel panel-success"><div class="panel-heading"><strong>Rekap per Kategori</strong></div><table class="table table-condensed"><tbody>{if: !empty($kategori)}{loop: $kategori as $nama=>$nilai}<tr><td>{$nama}</td><td class="text-right">Rp {?=number_format($nilai,0,',','.')?}</td></tr>{/loop}{else}<tr><td class="text-muted">Belum ada realisasi.</td></tr>{/if}</tbody><tfoot><tr class="success"><th>Total</th><th class="text-right">Rp {?=number_format($total,0,',','.')?}</th></tr></tfoot></table></div></div>
+  <div class="col-md-8"><div class="table-responsive"><table class="table table-bordered table-condensed rb-table"><thead><tr><th>No</th><th>Tanggal</th><th>No. Penerimaan</th><th>PO</th><th>Vendor</th><th>Barang</th><th>Satuan</th><th class="text-right">Qty</th><th class="text-right">Harga</th><th class="text-right">Total</th></tr></thead><tbody>{if: !empty($rows)}{loop: $rows}<tr><td>{?=$key+1?}</td><td>{$value.tgl_penerimaan}</td><td>{$value.no_penerimaan}</td><td>{if: !empty($value.no_po)}{$value.no_po}{else}-{/if}</td><td>{$value.nama_vendor}</td><td><span class="rb-kategori">{$value.kategori}</span><br>{$value.nama_barang}</td><td>{$value.satuan}</td><td class="text-right">{?=number_format($value.qty_terima,2,',','.')?}</td><td class="text-right">Rp {?=number_format($value.harga,0,',','.')?}</td><td class="text-right rb-uang">Rp {?=number_format($value.total,0,',','.')?}</td></tr>{/loop}{else}<tr><td colspan="10" class="text-center text-muted">Tidak ada penerimaan selesai pada periode ini.</td></tr>{/if}</tbody></table></div></div>
+  <div class="col-md-4"><div class="rb-rekap"><div class="rb-rekap-head"><i class="fa fa-pie-chart"></i> Rekap per Kategori</div><table class="table table-condensed"><tbody>{if: !empty($kategori)}{loop: $kategori as $nama=>$nilai}<tr><td>{$nama}</td><td class="text-right rb-uang">Rp {?=number_format($nilai,0,',','.')?}</td></tr>{/loop}{else}<tr><td class="text-muted">Belum ada realisasi.</td></tr>{/if}</tbody><tfoot><tr><th>Total</th><th class="text-right">Rp {?=number_format($total,0,',','.')?}</th></tr></tfoot></table></div></div>
+</div>
+
+</div>
 </div>

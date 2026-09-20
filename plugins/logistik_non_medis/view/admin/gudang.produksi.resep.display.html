@@ -1,6 +1,6 @@
 {if: !empty($grup)}
 <div class="table-responsive">
-    <table class="table table-bordered table-striped">
+    <table class="table table-bordered">
         <thead>
             <tr class="bg-info">
                 <th>Barang Hasil</th>
@@ -14,9 +14,9 @@
             {loop: $data.bahan as $i => $b}
             <tr>
                 {if: $i == 0}
-                <td rowspan="{count: $data.bahan}" style="vertical-align: middle;">
+                <td rowspan="{$data.jumlah}" style="vertical-align: top; background:#fff; border-right:2px solid #d5dfeb;">
                     <strong>{$data.nama_hasil}</strong><br>
-                    <small class="text-muted">{$kode_hasil}{if: !empty($data.satuan_hasil)} &middot; per {$data.satuan_hasil}{/if}</small>
+                    <small class="text-muted">{$kode_hasil}{if: !empty($data.satuan_hasil)} &middot; per {$data.satuan_hasil}{/if}<br>{$data.jumlah} isi</small>
                 </td>
                 {/if}
                 <td>

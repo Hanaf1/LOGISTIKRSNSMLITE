@@ -1,0 +1,136 @@
+<style>
+    .rkbu-batch-table > tbody > tr > td { color: #333; vertical-align: middle; }
+    .rkbu-batch-table .rkbu-no { color: #1f3b57; font-weight: 700; }
+    .rkbu-batch-table > tbody > tr.rkbu-giliran > td { background: #fffaf0; }
+    .rkbu-batch-table > tbody > tr.rkbu-giliran > td:first-child { box-shadow: inset 4px 0 0 #f0ad4e; }
+    .rkbu-batch-table > tbody > tr.rkbu-giliran:hover > td { background: #fff3dc; }
+    .rkbu-batch-table > tbody > tr.rkbu-draft > td:first-child { box-shadow: inset 4px 0 0 #b0bec5; }
+    .rkbu-giliran-tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 700; color: #8a6d3b; background: #fcf1d6; vertical-align: middle; }
+    .rkbu-lalu { white-space: nowrap; }
+    .rkbu-lalu .sumber { font-size: 11px; color: #888; }
+    .rkbu-lalu .naik { color: #c0392b; font-weight: 600; }
+    .rkbu-lalu .turun { color: #2e7d32; font-weight: 600; }
+    .rkbu-lalu-edit { cursor: pointer; color: #337ab7; }
+    .rkbu-lalu-form input { width: 130px; display: inline-block; }
+</style>
+<div class="row" style="margin-bottom:10px">
+    <div class="col-sm-4"><div class="panel panel-warning" style="margin-bottom:10px"><div class="panel-body" style="padding:10px 15px"><small class="text-muted" style="text-transform:uppercase;font-weight:700">Menunggu Keputusan Saya</small><h3 style="margin:4px 0 0">{$menunggu_saya}</h3></div></div></div>
+    <div class="col-sm-4"><div class="panel panel-info" style="margin-bottom:10px"><div class="panel-body" style="padding:10px 15px"><small class="text-muted" style="text-transform:uppercase;font-weight:700">Batch {$periode_label}</small><h3 style="margin:4px 0 0">{?=count($batches)?}</h3></div></div></div>
+    <div class="col-sm-4"><div class="panel panel-success" style="margin-bottom:10px"><div class="panel-body" style="padding:10px 15px"><small class="text-muted" style="text-transform:uppercase;font-weight:700">Total Disetujui Keuangan</small><h3 style="margin:4px 0 0">Rp {$total_disetujui_fmt}</h3></div></div></div>
+</div>
+<div class="table-responsive">
+    <table class="table table-hover table-bordered rkbu-batch-table">
+        <thead>
+            <tr class="active">
+                <th>No. RKBU</th>
+                <th>Periode</th>
+                <th class="text-center">Item</th>
+                <th class="text-right">Total Belanja</th>
+                <th class="text-right">Belanja Bulan Lalu</th>
+                <th>Alur Persetujuan</th>
+                <th class="text-center" style="width:150px">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+        {if: !empty($batches)}
+            {loop: $batches}
+            <tr class="{if: $value.can_putuskan}rkbu-giliran{elseif: $value.status == 'Draft'}rkbu-draft{/if}">
+                <td>
+                    <span class="rkbu-no">{$value.no_batch|e}</span>{if: $value.can_putuskan}<span class="rkbu-giliran-tag">Giliran Anda</span>{/if}
+                    {if: !empty($value.keterangan)}<br><small class="text-muted">{$value.keterangan|e}</small>{/if}
+                </td>
+                <td>{$value.periode}</td>
+                <td class="text-center">{$value.jumlah_item}</td>
+                <td class="text-right"><strong>Rp {$value.total_fmt}</strong></td>
+                <td class="text-right rkbu-lalu" data-batch="{$value.no_batch|e}" data-nilai="{?=$value['belanja_lalu_manual'] ? (int)$value['belanja_lalu'] : ''?}">
+                    <div class="rkbu-lalu-view">
+                        {if: $value.belanja_lalu > 0}
+                            Rp {$value.belanja_lalu_fmt}
+                            {if: $value.selisih_persen !== null}
+                                <br><small class="{if: $value.selisih_persen > 0}naik{else}turun{/if}">{if: $value.selisih_persen > 0}&#9650; +{else}&#9660; {/if}{$value.selisih_persen}% dari bulan lalu</small>
+                            {/if}
+                        {else}
+                            <span class="text-muted">-</span>
+                        {/if}
+                        <br><span class="sumber">{$value.periode_lalu} · {if: $value.belanja_lalu_manual}input manual{else}dari PO{/if}</span>
+                        {if: $can_compose} <a class="rkbu-lalu-edit" title="Ubah belanja bulan lalu"><i class="fa fa-pencil"></i></a>{/if}
+                    </div>
+                    {if: $can_compose}
+                    <div class="rkbu-lalu-form" style="display:none">
+                        <input type="text" inputmode="numeric" class="form-control input-sm text-right" placeholder="Rp">
+                        <div style="margin-top:4px">
+                            <button type="button" class="btn btn-xs btn-primary rkbu-lalu-simpan">Simpan</button>
+                            <button type="button" class="btn btn-xs btn-default rkbu-lalu-batal">Batal</button>
+                        </div>
+                        <small class="text-muted">Kosongkan = pakai data PO (Rp {$value.belanja_lalu_po_fmt})</small>
+                    </div>
+                    {/if}
+                </td>
+                <td>
+                    <div class="rkbu-alur">
+                        {if: $value.status == 'Draft'}
+                            <span class="label label-default">Draft · belum dikirim</span>
+                        {elseif: $value.status == 'Ditolak'}
+                            <span class="label label-danger">Ditolak {$value.ditolak_pada}</span>
+                            <br><small class="text-danger">{?=htmlspecialchars((string)$value['alasan_tolak'],ENT_QUOTES,'UTF-8')?}</small>
+                        {else}
+                            <span class="rkbu-step {if: $value.status != 'Menunggu Kasie Umum'}done{else}now{/if}">Kasie Umum</span>
+                            <i class="fa fa-angle-right text-muted"></i>
+                            <span class="rkbu-step {if: in_array($value['status'], ['Menunggu Keuangan','Disetujui'])}done{elseif: $value.status == 'Menunggu Kabid Umum'}now{/if}">Kabid Umum</span>
+                            <i class="fa fa-angle-right text-muted"></i>
+                            <span class="rkbu-step {if: $value.status == 'Disetujui'}done{elseif: $value.status == 'Menunggu Keuangan'}now{/if}">Keuangan</span>
+                        {/if}
+                    </div>
+                </td>
+                <td class="text-center" style="white-space:nowrap">
+                    {if: $value.can_putuskan}
+                        <button class="btn btn-sm btn-warning" onclick="rkbuDetail('{$value.no_batch}', true)"><i class="fa fa-pencil-square-o"></i> Putuskan</button>
+                    {else}
+                        <button class="btn btn-xs btn-info" onclick="rkbuDetail('{$value.no_batch}', false)" title="Detail & riwayat"><i class="fa fa-eye"></i> Detail</button>
+                    {/if}
+                    {if: $value.can_edit}
+                        <button class="btn btn-xs btn-default" onclick="rkbuSusun('{$value.no_batch}', '{$value.bulan}', '{$value.tahun}')" title="Ubah item / kirim"><i class="fa fa-edit"></i></button>
+                        <button class="btn btn-xs btn-danger" onclick="rkbuHapusBatch('{$value.no_batch}')" title="Hapus batch"><i class="fa fa-trash"></i></button>
+                    {/if}
+                </td>
+            </tr>
+            {/loop}
+        {else}
+            <tr><td colspan="7" class="text-center text-muted" style="padding:30px"><i class="fa fa-inbox fa-2x"></i><br>Belum ada RKBU bulanan pada {$periode_label}.{if: $can_compose} Klik <b>Susun RKBU Bulanan</b> untuk memulai.{/if}</td></tr>
+        {/if}
+        </tbody>
+    </table>
+</div>
+<script>
+(function () {
+    if (window.__rkbuLaluReady) return;
+    window.__rkbuLaluReady = true;
+    var rupiah = function (v) { return v ? Number(v).toLocaleString('id-ID') : ''; };
+    $(document).on('click', '.rkbu-lalu-edit', function () {
+        var td = $(this).closest('.rkbu-lalu');
+        td.find('.rkbu-lalu-view').hide();
+        td.find('.rkbu-lalu-form').show().find('input').val(rupiah(td.data('nilai'))).focus();
+    });
+    $(document).on('click', '.rkbu-lalu-batal', function () {
+        var td = $(this).closest('.rkbu-lalu');
+        td.find('.rkbu-lalu-form').hide(); td.find('.rkbu-lalu-view').show();
+    });
+    $(document).on('input', '.rkbu-lalu-form input', function () {
+        var angka = this.value.replace(/[^0-9]/g, '');
+        this.value = angka ? Number(angka).toLocaleString('id-ID') : '';
+    });
+    $(document).on('keydown', '.rkbu-lalu-form input', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); $(this).closest('.rkbu-lalu').find('.rkbu-lalu-simpan').click(); }
+        if (e.key === 'Escape') { $(this).closest('.rkbu-lalu').find('.rkbu-lalu-batal').click(); }
+    });
+    $(document).on('click', '.rkbu-lalu-simpan', function () {
+        var td = $(this).closest('.rkbu-lalu'), btn = $(this).prop('disabled', true);
+        $.post('{?=url([ADMIN,"logistik_non_medis","belanjalaluperencanaan"])?}', {
+            no_batch: td.data('batch'), nilai: td.find('input').val()
+        }, function (r) {
+            if (r.status === 'success') { if (window.rkbuMuatBatch) rkbuMuatBatch(); }
+            else { alert(r.message); btn.prop('disabled', false); }
+        }, 'json').fail(function () { alert('Gagal menyimpan.'); btn.prop('disabled', false); });
+    });
+})();
+</script>

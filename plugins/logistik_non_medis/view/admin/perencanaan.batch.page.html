@@ -1,0 +1,409 @@
+<style>
+    .rkbu-page .kartu { border: 1px solid #e3e3e3; border-radius: 4px; padding: 10px 14px; background: #fff; margin-bottom: 12px; }
+    .rkbu-page .kartu small { color: #777; text-transform: uppercase; font-weight: 700; font-size: 11px; }
+    .rkbu-page .kartu h3 { margin: 4px 0 0; font-size: 22px; color: #1f3b57; }
+    .rkbu-page .kartu .sub { font-size: 12px; color: #888; }
+    .rkbu-kelompok { border: 1px solid #dde3ea; border-radius: 4px; margin-bottom: 14px; background: #fff; }
+    .rkbu-kelompok-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; background: #f3f6f9; border-bottom: 1px solid #dde3ea; cursor: pointer; }
+    .rkbu-kelompok-head .nama { font-weight: 700; color: #1f3b57; flex: 1; min-width: 160px; }
+    .rkbu-kelompok-head .subtotal { font-weight: 700; color: #1f3b57; white-space: nowrap; }
+    .rkbu-kelompok table { margin: 0; }
+    .rkbu-kelompok table td, .rkbu-kelompok table th { vertical-align: middle !important; }
+    .rkbu-kelompok tr.tidak-dipilih td { color: #aaa; background: #fafafa; }
+    .rkbu-kelompok tr.kurang td { background: #fff7e6; }
+    .rkbu-kelompok.tertutup table { display: none; }
+    .rkbu-abc, .rkbu-ven { display: inline-block; min-width: 18px; padding: 1px 4px; font-size: 10px; font-weight: 700; text-align: center; color: #fff; }
+    .rkbu-abc { border-radius: 3px 0 0 3px; } .rkbu-ven { border-radius: 0 3px 3px 0; }
+    .rkbu-abc-A { background: #8e44ad; } .rkbu-abc-B { background: #2980b9; } .rkbu-abc-C { background: #95a5a6; }
+    .rkbu-ven-V { background: #c0392b; } .rkbu-ven-E { background: #e67e22; } .rkbu-ven-N { background: #7f8c8d; }
+    .rkbu-footer { position: sticky; bottom: 0; z-index: 10; background: #fff; border-top: 2px solid #1f3b57; padding: 10px 15px calc(10px + env(safe-area-inset-bottom, 0px)); margin: 0 -15px -15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .rkbu-footer .grand { flex: 1; min-width: 220px; }
+    .rkbu-footer .grand strong { font-size: 22px; color: #1f3b57; }
+    #rkbu-ringkas-kelompok td { padding: 5px 8px; }
+    .rkbu-bar { height: 6px; background: #e8edf2; border-radius: 3px; overflow: hidden; }
+    .rkbu-bar div { height: 100%; background: #2980b9; }
+    .rkbu-kelompok tr.dicoret td { text-decoration: line-through; color: #a94442; background: #fdf2f2; }
+    .rkbu-kelompok tr.dicoret td:first-child { text-decoration: none; }
+    .rkbu-keputusan { border: 1px solid #f0ad4e; border-radius: 4px; background: #fffaf0; padding: 12px 14px; margin: 6px 0 14px; }
+    .rkbu-abcven-tabel th, .rkbu-abcven-tabel td { font-size: 11px; text-align: center; padding: 3px !important; }
+</style>
+
+<article class="row rkbu-page">
+    <div class="col-md-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <a href="{$kembali_url}" class="btn btn-default btn-sm pull-right"><i class="fa fa-arrow-left"></i> Kembali</a>
+                <h3 class="panel-title" style="margin-top:5px;">
+                    <i class="fa fa-calendar-check-o"></i>
+                    {if: $boleh_susun}{if: $no_batch}Ubah RKBU Bulanan{else}Susun RKBU Bulanan{/if}{else}Detail RKBU Bulanan{/if}
+                    {if: $no_batch}<code style="margin-left:6px;">{$no_batch|e}</code>{/if}
+                    <span class="label {if: $status == 'Disetujui'}label-success{elseif: $status == 'Ditolak'}label-danger{elseif: $status == 'Draft'}label-default{else}label-warning{/if}" style="margin-left:6px;">{$status|e}</span>
+                </h3>
+                <div class="clearfix"></div>
+            </div>
+            <div class="panel-body">
+                {if: $status == 'Ditolak' && !empty($batch.alasan_tolak)}
+                <div class="alert alert-danger"><strong>Ditolak {$batch.ditolak_pada|e}:</strong> {$batch.alasan_tolak|e}</div>
+                {/if}
+                {if: $can_putuskan}
+                <div class="alert alert-warning" style="padding:8px 12px;"><i class="fa fa-gavel"></i> Batch ini menunggu keputusan Anda sebagai <b>{$tahap_label|e}</b>. Centang <b>Coret</b> untuk mengeluarkan barang dari batch (kembali ke Logistik untuk direvisi), lalu isi catatan &amp; tanda tangan di bawah.</div>
+                {/if}
+
+                <div class="row">
+                    <div class="col-sm-3">
+                        <div class="form-group">
+                            <label>Periode</label>
+                            {if: $boleh_susun && !$no_batch}
+                            <div class="row">
+                                <div class="col-xs-7" style="padding-right:4px;">
+                                    <select id="rkbu-bulan" class="form-control">
+                                        {loop: $bulan_list}<option value="{?=sprintf('%02d', $key)?}" {if: sprintf('%02d', $key) == $bulan}selected{/if}>{$value}</option>{/loop}
+                                    </select>
+                                </div>
+                                <div class="col-xs-5" style="padding-left:4px;"><input type="number" id="rkbu-tahun" class="form-control" value="{$tahun}"></div>
+                            </div>
+                            {else}
+                            <input type="hidden" id="rkbu-bulan" value="{$bulan}"><input type="hidden" id="rkbu-tahun" value="{$tahun}">
+                            <p class="form-control-static"><strong>{$periode}</strong></p>
+                            {/if}
+                        </div>
+                    </div>
+                    <div class="col-sm-9">
+                        <div class="form-group">
+                            <label>Catatan dari Logistik <small class="text-muted">(dibaca Kasie Umum, Kabid Umum, Keuangan)</small></label>
+                            {if: $boleh_susun}
+                            <textarea id="rkbu-keterangan" class="form-control" rows="2" maxlength="500" placeholder="Contoh: kebutuhan rutin ATK, cetakan rekam medis, dan kebersihan. Tinta naik karena printer baru di pendaftaran.">{$batch.keterangan|e}</textarea>
+                            {else}
+                            <p class="form-control-static" style="white-space:pre-wrap;">{if: !empty($batch.keterangan)}{$batch.keterangan|e}{else}<span class="text-muted">-</span>{/if}</p>
+                            {/if}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-sm-3 col-xs-6"><div class="kartu"><small>Grand Total</small><h3 id="k-grand">Rp 0</h3><div class="sub" id="k-grand-sub">&nbsp;</div></div></div>
+                    <div class="col-sm-3 col-xs-6"><div class="kartu"><small>Jumlah Item</small><h3 id="k-item">0</h3><div class="sub" id="k-item-sub">&nbsp;</div></div></div>
+                    <div class="col-sm-3 col-xs-6"><div class="kartu"><small>Kelompok Barang</small><h3 id="k-kelompok">0</h3><div class="sub">terbesar: <span id="k-kelompok-top">-</span></div></div></div>
+                    <div class="col-sm-3 col-xs-6"><div class="kartu"><small>Belanja {$periode_lalu}</small><h3>Rp {?=number_format($belanja_lalu, 0, ',', '.')?}</h3><div class="sub"><span id="k-selisih"></span> {$belanja_lalu_sumber}</div></div></div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="row" style="margin-bottom:8px;">
+                            <div class="col-sm-6"><input type="text" id="rkbu-cari" class="form-control input-sm" placeholder="Cari barang / kode..."></div>
+                            <div class="col-sm-6 text-right">
+                                <button type="button" class="btn btn-default btn-xs" id="btn-buka-semua"><i class="fa fa-expand"></i> Buka semua</button>
+                                <button type="button" class="btn btn-default btn-xs" id="btn-tutup-semua"><i class="fa fa-compress"></i> Tutup semua</button>
+                            </div>
+                        </div>
+                        <div id="rkbu-kelompok-wrap"><div class="text-center text-muted" style="padding:40px;"><i class="fa fa-spinner fa-spin fa-2x"></i></div></div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="kartu" style="position:sticky;top:env(safe-area-inset-top, 0px);">
+                            <small>Total per Kelompok</small>
+                            <table class="table table-condensed" id="rkbu-ringkas-kelompok" style="margin:8px 0 0;"><tbody></tbody></table>
+                        </div>
+                        {if: $no_batch && !$boleh_susun}
+                        <div class="kartu">
+                            <small>Total Belanja {$periode}</small>
+                            <h3 id="k-bulan-ini">Rp 0</h3>
+                            <div class="sub" id="k-bulan-ini-sub">&nbsp;</div>
+                        </div>
+                        <div class="kartu">
+                            <small>Matriks ABC-VEN</small> <span class="sub">(A = 70% nilai teratas)</span>
+                            <div id="rkbu-abcven" style="margin-top:8px;"></div>
+                        </div>
+                        <div class="kartu">
+                            <small>Riwayat Persetujuan</small>
+                            <div id="rkbu-riwayat" style="margin-top:8px;"><span class="text-muted">-</span></div>
+                        </div>
+                        {/if}
+                    </div>
+                </div>
+
+                {if: $can_putuskan}
+                <div class="rkbu-keputusan">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <label>Catatan {$tahap_label|e} <small class="text-muted">(wajib bila Tolak atau ada barang dicoret)</small></label>
+                            <textarea id="rkbu-catatan" class="form-control" rows="4" maxlength="1000" placeholder="Contoh: tinta dicoret, stok masih cukup sampai bulan depan."></textarea>
+                        </div>
+                        <div class="col-sm-6">
+                            <label>Tanda tangan {$tahap_label|e} <small class="text-muted">(wajib untuk ACC)</small></label>
+                            <div style="position:relative;border:1px solid #bbb;border-radius:3px;background:#fff;overflow:hidden">
+                                <canvas id="rkbu-ttd-canvas" height="140" style="display:block;width:100%;height:140px;touch-action:none;cursor:crosshair"></canvas>
+                                <span id="rkbu-ttd-hint" class="text-muted" style="position:absolute;left:0;right:0;top:60px;text-align:center;pointer-events:none">Tanda tangan dengan jari, pen, atau mouse</span>
+                            </div>
+                            <button type="button" class="btn btn-default btn-xs" id="rkbu-ttd-clear" style="margin-top:6px"><i class="fa fa-eraser"></i> Hapus tanda tangan</button>
+                        </div>
+                    </div>
+                </div>
+                {/if}
+
+                <div class="rkbu-footer">
+                    <div class="grand">Grand total {if: $boleh_susun}terpilih{/if}{if: $can_putuskan}setelah coret{/if} (<span id="f-coret" class="text-danger"></span><span id="f-item">0</span> item, <span id="f-kelompok">0</span> kelompok): <strong id="f-grand">Rp 0</strong></div>
+                    <a href="{$kembali_url}" class="btn btn-default">{if: $boleh_susun}Batal{else}Kembali{/if}</a>
+                    {if: $boleh_susun}
+                    <button type="button" class="btn btn-default" onclick="rkbuSimpan(false)"><i class="fa fa-floppy-o"></i> Simpan Draft</button>
+                    <button type="button" class="btn btn-primary" onclick="rkbuSimpan(true)"><i class="fa fa-paper-plane"></i> Kirim ke Kasie Umum</button>
+                    {/if}
+                    {if: $can_putuskan}
+                    <button type="button" class="btn btn-danger btn-keputusan" onclick="rkbuPutuskan('tolak')"><i class="fa fa-times"></i> Tolak Batch</button>
+                    <button type="button" class="btn btn-success btn-keputusan" onclick="rkbuPutuskan('acc')"><i class="fa fa-check"></i> ACC &amp; TTD</button>
+                    {/if}
+                </div>
+            </div>
+        </div>
+    </div>
+</article>
+
+<script>
+(function () {
+    var noBatch = '{$no_batch|e}';
+    var bolehSusun = {?=$boleh_susun ? 'true' : 'false'?};
+    var bisaPutuskan = {?=$can_putuskan ? 'true' : 'false'?};
+    var tahapLabel = '{$tahap_label|e}';
+    var bulanIni = null, totalAwal = 0;
+    var belanjaLalu = {?=(float)$belanja_lalu?};
+    var urlBase = '{?=url([ADMIN,"logistik_non_medis","__"])?}';
+    var kembali = '{$kembali_url}';
+    var items = [], tertutup = {};
+
+    function endpoint(nama) { return urlBase.replace('__', nama); }
+    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
+    function rp(n) { return 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID'); }
+    function angka(n) { return (Number(n) || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 }); }
+    function kelompokDari(it) { return $.trim(it.kelompok_barang || '') || 'Lain-lain'; }
+    // Kunci kelompok tidak peka huruf besar/kecil ("Label" dan "label" satu kelompok).
+    function kunciKelompok(it) { return kelompokDari(it).toLowerCase(); }
+
+    function muat() {
+        var req = bolehSusun
+            ? $.post(endpoint('kandidatbatchperencanaan'), { bulan: $('#rkbu-bulan').val(), tahun: $('#rkbu-tahun').val(), no_batch: noBatch })
+            : $.post(endpoint('detailbatchperencanaan'), { no_batch: noBatch });
+        req.done(function (res) {
+            if (!res || res.status !== 'success') {
+                $('#rkbu-kelompok-wrap').html('<div class="alert alert-danger">' + esc(res && res.message || 'Data gagal dimuat.') + '</div>');
+                return;
+            }
+            items = $.map(res.items, function (it) {
+                it.dipilih = bolehSusun ? (noBatch ? !!it.terpilih : true) : true;
+                return it;
+            });
+            if (!bolehSusun) {
+                renderRiwayat(res.riwayat || []);
+                bulanIni = res.bulan_ini || null;
+                totalAwal = 0;
+                $.each(items, function (_, it) { totalAwal += Number(it.nilai) || 0; });
+            }
+            render();
+        }).fail(function () { $('#rkbu-kelompok-wrap').html('<div class="alert alert-danger">Data gagal dimuat.</div>'); });
+    }
+
+    function kelompokkan() {
+        var peta = {}, urutan = [];
+        $.each(items, function (i, it) {
+            var k = kunciKelompok(it);
+            if (!peta[k]) { peta[k] = { kunci: k, nama: kelompokDari(it), item: [], total: 0, dipilih: 0, jumlah: 0 }; urutan.push(k); }
+            peta[k].item.push(i);
+            peta[k].jumlah++;
+            if (it.dipilih) { peta[k].total += Number(it.nilai) || 0; peta[k].dipilih++; }
+        });
+        urutan.sort(function (a, b) { return a.localeCompare(b, 'id'); });
+        return $.map(urutan, function (k) { return peta[k]; });
+    }
+
+    function render() {
+        var cari = $.trim($('#rkbu-cari').val()).toLowerCase(), grup = kelompokkan(), html = '';
+        $.each(grup, function (_, g) {
+            var baris = '';
+            $.each(g.item, function (_, i) {
+                var it = items[i];
+                if (cari && (it.nama_barang + ' ' + it.kode_item).toLowerCase().indexOf(cari) === -1) return;
+                var kurang = !(it.harga_referensi > 0 && it.total_qty > 0);
+                baris += '<tr class="' + (it.dipilih ? '' : (bisaPutuskan ? 'dicoret' : 'tidak-dipilih')) + (kurang ? ' kurang' : '') + '">'
+                    + (bolehSusun ? '<td class="text-center" style="width:34px;"><input type="checkbox" class="cek-item" data-i="' + i + '"' + (it.dipilih ? ' checked' : '') + '></td>' : '')
+                    + (bisaPutuskan ? '<td class="text-center" style="width:44px;"><input type="checkbox" class="cek-coret" data-i="' + i + '" title="Coret barang ini"' + (it.dipilih ? '' : ' checked') + '></td>' : '')
+                    + '<td><span class="rkbu-abc rkbu-abc-' + esc(it.abc) + '">' + esc(it.abc) + '</span><span class="rkbu-ven rkbu-ven-' + esc(it.ven) + '">' + esc(it.ven) + '</span> '
+                    + esc(it.nama_barang) + '<br><small class="text-muted">' + esc(it.kode_item)
+                    + (it.status === 'Ditolak' && it.catatan_keputusan ? ' · <span class="text-danger">' + esc(it.catatan_keputusan) + '</span>' : '') + '</small></td>'
+                    + '<td class="text-right" style="white-space:nowrap;">' + angka(it.total_qty) + ' ' + esc(it.satuan) + '</td>'
+                    + '<td class="text-right" style="white-space:nowrap;">' + (it.harga_referensi > 0 ? rp(it.harga_referensi) : '<span class="text-danger">belum ada</span>') + '</td>'
+                    + '<td class="text-right" style="white-space:nowrap;"><strong>' + rp(it.nilai) + '</strong></td></tr>';
+            });
+            if (!baris) return;
+            var semua = g.dipilih === g.jumlah;
+            html += '<div class="rkbu-kelompok' + (tertutup[g.kunci] && !cari ? ' tertutup' : '') + '" data-kelompok="' + esc(g.kunci) + '">'
+                + '<div class="rkbu-kelompok-head">'
+                + (bolehSusun ? '<input type="checkbox" class="cek-kelompok"' + (semua ? ' checked' : '') + ' title="Pilih semua di kelompok ini">' : '')
+                + (bisaPutuskan ? '<label class="text-danger" style="margin:0;font-weight:normal;font-size:12px;"><input type="checkbox" class="cek-coret-kelompok"' + (g.dipilih === 0 ? ' checked' : '') + '> coret semua</label>' : '')
+                + '<i class="fa fa-caret-' + (tertutup[g.kunci] && !cari ? 'right' : 'down') + ' text-muted"></i>'
+                + '<span class="nama">' + esc(g.nama) + ' <small class="text-muted">(' + (bolehSusun || bisaPutuskan ? g.dipilih + '/' : '') + g.jumlah + ' item)</small></span>'
+                + '<span class="subtotal">Subtotal ' + rp(g.total) + '</span></div>'
+                + '<div class="table-responsive"><table class="table table-condensed table-hover"><thead><tr class="active">'
+                + (bolehSusun ? '<th></th>' : '') + (bisaPutuskan ? '<th class="text-center">Coret</th>' : '') + '<th>Barang</th><th class="text-right">Qty</th><th class="text-right">Harga</th><th class="text-right">Subtotal</th></tr></thead>'
+                + '<tbody>' + baris + '</tbody></table></div></div>';
+        });
+        $('#rkbu-kelompok-wrap').html(html || '<div class="alert alert-info">'
+            + (items.length ? 'Tidak ada barang yang cocok.' : 'Tidak ada item usulan untuk periode ini. Tambahkan lewat tab <b>Item Usulan</b>.') + '</div>');
+        ringkas(grup);
+    }
+
+    function ringkas(grup) {
+        var grand = 0, nItem = 0, nKelompok = 0, top = null, kurang = 0, html = '';
+        $.each(grup, function (_, g) {
+            grand += g.total; nItem += g.dipilih;
+            if (g.dipilih) nKelompok++;
+            if (g.dipilih && (!top || g.total > top.total)) top = g;
+        });
+        $.each(items, function (_, it) { if (it.dipilih && !(it.harga_referensi > 0 && it.total_qty > 0)) kurang++; });
+        $.each(grup.slice().sort(function (a, b) { return b.total - a.total; }), function (_, g) {
+            if (!g.dipilih) return;
+            var persen = grand ? Math.round(g.total / grand * 100) : 0;
+            html += '<tr><td>' + esc(g.nama) + '<div class="rkbu-bar"><div style="width:' + persen + '%"></div></div></td>'
+                + '<td class="text-right" style="white-space:nowrap;"><strong>' + rp(g.total) + '</strong><br><small class="text-muted">' + g.dipilih + ' item · ' + persen + '%</small></td></tr>';
+        });
+        html += '<tr class="active"><td><strong>Grand total</strong></td><td class="text-right"><strong>' + rp(grand) + '</strong></td></tr>';
+        $('#rkbu-ringkas-kelompok tbody').html(html);
+        $('#k-grand, #f-grand').text(rp(grand));
+        $('#k-grand-sub').text(nItem ? 'rata-rata ' + rp(grand / nItem) + ' / item' : '');
+        $('#k-item, #f-item').text(nItem);
+        $('#k-item-sub').html(kurang ? '<span class="text-danger">' + kurang + ' item belum lengkap harga/qty</span>' : (bolehSusun ? 'dari ' + items.length + ' usulan' : '&nbsp;'));
+        $('#k-kelompok, #f-kelompok').text(nKelompok);
+        if (!bolehSusun && noBatch) {
+            var nCoret = items.length - nItem;
+            $('#f-coret').text(nCoret ? nCoret + ' dicoret −' + rp(totalAwal - grand) + ', ' : '');
+            if (bisaPutuskan && nCoret) $('#k-item-sub').html('<span class="text-danger">' + nCoret + ' dicoret (−' + rp(totalAwal - grand) + ')</span>');
+            if (bulanIni) {
+                $('#k-bulan-ini').text(rp(grand + bulanIni.disetujui_lain));
+                $('#k-bulan-ini-sub').text('batch ini ' + rp(grand) + ' + RKBU lain disetujui ' + rp(bulanIni.disetujui_lain)
+                    + (bulanIni.proses_lain ? ' · masih diproses ' + rp(bulanIni.proses_lain) : ''));
+            }
+            $('#rkbu-abcven').html(matriksAbcVen($.grep(items, function (it) { return it.dipilih; })));
+        }
+        $('#k-kelompok-top').text(top ? top.nama : '-');
+        if (belanjaLalu > 0) {
+            var selisih = Math.round((grand - belanjaLalu) / belanjaLalu * 100);
+            $('#k-selisih').html('<span style="color:' + (selisih > 0 ? '#c0392b' : '#2e7d32') + ';font-weight:600;">' + (selisih > 0 ? '▲ +' : '▼ ') + selisih + '%</span> ·');
+        }
+    }
+
+    function matriksAbcVen(daftar) {
+        var m = {}, html = '<table class="table table-condensed table-bordered rkbu-abcven-tabel" style="margin:0"><tr class="active"><th></th><th>V</th><th>E</th><th>N</th></tr>';
+        $.each(daftar, function (_, it) { var k = it.abc + it.ven; m[k] = m[k] || { n: 0, nilai: 0 }; m[k].n++; m[k].nilai += Number(it.nilai) || 0; });
+        $.each(['A', 'B', 'C'], function (_, a) {
+            html += '<tr><th class="active">' + a + '</th>';
+            $.each(['V', 'E', 'N'], function (_, v) { var c = m[a + v]; html += '<td>' + (c ? c.n + ' item<br><small>' + rp(c.nilai) + '</small>' : '<span class="text-muted">-</span>') + '</td>'; });
+            html += '</tr>';
+        });
+        return html + '</table>';
+    }
+
+    function renderRiwayat(riwayat) {
+        if (!riwayat.length) return;
+        var label = { KASIE_UMUM: 'Kasie Umum', KABID_UMUM: 'Kabid Umum', KEUANGAN: 'Keuangan' }, html = '';
+        $.each(riwayat, function (_, r) {
+            html += '<div style="border-left:3px solid ' + (r.keputusan === 'acc' ? '#5cb85c' : '#d9534f') + ';padding:2px 0 6px 8px;margin-bottom:6px;">'
+                + '<strong>' + esc(label[r.tahap] || r.tahap) + '</strong> — ' + (r.keputusan === 'acc' ? 'ACC' : 'Tolak') + ' · ' + esc(r.nama)
+                + '<br><small class="text-muted">' + esc(r.waktu) + ' · ' + rp(r.total_estimasi) + (r.item_dicoret.length ? ' · ' + r.item_dicoret.length + ' item dicoret' : '') + '</small>'
+                + (r.catatan ? '<br><small>' + esc(r.catatan) + '</small>' : '') + '</div>';
+        });
+        $('#rkbu-riwayat').html(html);
+    }
+
+    $(document).on('click', '.rkbu-kelompok-head', function (e) {
+        if ($(e.target).is('input')) return;
+        var k = $(this).closest('.rkbu-kelompok').data('kelompok');
+        tertutup[k] = !tertutup[k];
+        render();
+    });
+    $(document).on('change', '.cek-item', function () { items[$(this).data('i')].dipilih = this.checked; render(); });
+    $(document).on('change', '.cek-kelompok', function () {
+        var k = $(this).closest('.rkbu-kelompok').data('kelompok'), on = this.checked;
+        $.each(items, function (_, it) { if (kunciKelompok(it) === k) it.dipilih = on; });
+        render();
+    });
+    $(document).on('change', '.cek-coret', function () { items[$(this).data('i')].dipilih = !this.checked; render(); });
+    $(document).on('change', '.cek-coret-kelompok', function () {
+        var k = $(this).closest('.rkbu-kelompok').data('kelompok'), coret = this.checked;
+        $.each(items, function (_, it) { if (kunciKelompok(it) === k) it.dipilih = !coret; });
+        render();
+    });
+    $('#rkbu-cari').on('keyup', function () { clearTimeout(window.__rkbuCari); window.__rkbuCari = setTimeout(render, 200); });
+    $('#btn-buka-semua').on('click', function () { tertutup = {}; render(); });
+    $('#btn-tutup-semua').on('click', function () { $.each(items, function (_, it) { tertutup[kunciKelompok(it)] = true; }); render(); });
+    $('#rkbu-bulan, #rkbu-tahun').on('change', muat);
+
+    window.rkbuSimpan = function (kirim) {
+        var ids = $.map(items, function (it) { return it.dipilih ? it.id : null; });
+        if (!ids.length) { alert('Centang minimal satu item.'); return; }
+        if (kirim && !confirm('Kirim RKBU ' + $('#rkbu-bulan option:selected').text() + ' (' + ids.length + ' item, ' + $('#f-grand').text() + ') ke Kasie Umum?')) return;
+        $('.rkbu-footer .btn').prop('disabled', true);
+        $.post(endpoint('simpanbatchperencanaan'), {
+            no_batch: noBatch, bulan: $('#rkbu-bulan').val(), tahun: $('#rkbu-tahun').val(),
+            keterangan: $('#rkbu-keterangan').val(), item_ids: ids, kirim: kirim ? 1 : 0
+        }, function (res) {
+            alert(res.message);
+            if (res.status === 'success') window.location.href = kembali;
+            else $('.rkbu-footer .btn').prop('disabled', false);
+        }, 'json').fail(function () { alert('Server gagal menyimpan RKBU.'); $('.rkbu-footer .btn').prop('disabled', false); });
+    };
+
+    if (bisaPutuskan) {
+        var canvas = document.getElementById('rkbu-ttd-canvas'), strokes = [], stroke = null, drawing = false;
+        var resetTtd = function () {
+            strokes = []; stroke = null; drawing = false;
+            canvas.width = Math.max(300, Math.round(canvas.getBoundingClientRect().width || 600));
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            $('#rkbu-ttd-hint').show();
+        };
+        var titik = function (e) {
+            var r = canvas.getBoundingClientRect();
+            return [Math.round((e.clientX - r.left) * canvas.width / r.width * 10) / 10, Math.round((e.clientY - r.top) * canvas.height / r.height * 10) / 10];
+        };
+        canvas.addEventListener('pointerdown', function (e) { e.preventDefault(); canvas.setPointerCapture(e.pointerId); drawing = true; stroke = [titik(e)]; strokes.push(stroke); $('#rkbu-ttd-hint').hide(); });
+        canvas.addEventListener('pointermove', function (e) {
+            if (!drawing || !stroke) return;
+            e.preventDefault();
+            var next = titik(e), last = stroke[stroke.length - 1];
+            if (Math.abs(next[0] - last[0]) + Math.abs(next[1] - last[1]) < 1.5) return;
+            stroke.push(next);
+            var ctx = canvas.getContext('2d'); ctx.strokeStyle = '#000080'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(next[0], next[1]); ctx.stroke();
+        });
+        var berhenti = function () { drawing = false; stroke = null; };
+        canvas.addEventListener('pointerup', berhenti); canvas.addEventListener('pointercancel', berhenti);
+        $('#rkbu-ttd-clear').on('click', resetTtd);
+        resetTtd();
+        var ttdPayload = function () {
+            var bersih = [], n = 0;
+            $.each(strokes, function (_, st) { if (st.length >= 2) { bersih.push(st); n += st.length; } });
+            return n >= 3 ? JSON.stringify({ version: 1, width: canvas.width, height: canvas.height, strokes: bersih }) : '';
+        };
+
+        window.rkbuPutuskan = function (keputusan) {
+            var catatan = $.trim($('#rkbu-catatan').val());
+            var coret = $.map(items, function (it) { return it.dipilih ? null : it.id; });
+            var data = { no_batch: noBatch, keputusan: keputusan, catatan: catatan, coret: coret };
+            if (keputusan === 'tolak') {
+                if (!catatan) { alert('Isi catatan alasan penolakan.'); $('#rkbu-catatan').focus(); return; }
+                if (!confirm('Tolak seluruh batch ' + noBatch + ' dan kembalikan ke Logistik?')) return;
+            } else {
+                if (coret.length && !catatan) { alert('Isi catatan alasan barang yang dicoret.'); $('#rkbu-catatan').focus(); return; }
+                if (coret.length && coret.length === items.length) { alert('Semua barang dicoret. Gunakan Tolak Batch.'); return; }
+                data.tanda_tangan = ttdPayload();
+                if (!data.tanda_tangan) { alert('Tanda tangan wajib diisi untuk ACC.'); return; }
+                if (!confirm('ACC ' + tahapLabel + ' untuk ' + noBatch + ' dengan total ' + $('#f-grand').text() + (coret.length ? ' (' + coret.length + ' barang dicoret)' : '') + '?')) return;
+            }
+            $('.btn-keputusan').prop('disabled', true);
+            $.post(endpoint('keputusanbatchperencanaan'), data, function (res) {
+                alert(res.message);
+                if (res.status === 'success') window.location.href = kembali;
+                else $('.btn-keputusan').prop('disabled', false);
+            }, 'json').fail(function () { alert('Server gagal menyimpan keputusan.'); $('.btn-keputusan').prop('disabled', false); });
+        };
+    }
+
+    muat();
+})();
+</script>

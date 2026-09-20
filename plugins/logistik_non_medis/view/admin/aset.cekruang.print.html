@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Berita Acara Cek Aset {$cek.no_cek|e}</title>
+<style>
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; margin: 24px; }
+    .kop { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+    .kop img { height: 48px; }
+    h1 { font-size: 15px; text-align: center; margin: 6px 0 12px; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; }
+    .info td { padding: 2px 4px; }
+    .data th, .data td { border: 1px solid #555; padding: 4px; vertical-align: top; }
+    .data th { background: #eee; }
+    .tidak { background: #fbe3e3; }
+    .ubah { background: #fff4d6; }
+    .ringkas { margin: 10px 0; }
+    .ringkas span { display: inline-block; margin-right: 14px; }
+    .ttd { margin-top: 24px; width: 100%; }
+    .ttd td { width: 50%; text-align: center; vertical-align: top; }
+    .ttd img { max-height: 90px; max-width: 220px; }
+    .muted { color: #666; }
+    @media print { body { margin: 10mm; } .no-print { display: none; } }
+</style>
+</head>
+<body>
+<div class="no-print" style="text-align:right;margin-bottom:10px;"><button onclick="window.print()">Cetak</button></div>
+<div class="kop">
+    {if: !empty($logo)}<img src="{?=url($logo)?}" alt="">{/if}
+    <div><strong style="font-size:14px;">{$nama_instansi|e}</strong><br><span class="muted">Logistik Non Medis — Inventaris</span></div>
+</div>
+<h1>Berita Acara Pemeriksaan Aset Ruangan</h1>
+
+<table class="info">
+    <tr><td style="width:120px;">No. Cek</td><td>: {$cek.no_cek|e}</td><td style="width:120px;">Tanggal</td><td>: {?=date('d-m-Y', strtotime($cek['tanggal']))?}</td></tr>
+    <tr><td>Ruangan</td><td>: {$cek.nama_ruangan|e} ({$cek.kode_unit|e})</td><td>Area</td><td>: {if: !empty($cek.nama_area)}{$cek.nama_area|e}{else}-{/if}</td></tr>
+    <tr><td>Pemeriksa</td><td>: {$cek.nama_pemeriksa|e}</td><td>Status</td><td>: {$cek.status|e}</td></tr>
+</table>
+
+<div class="ringkas">
+    <span>Jumlah barang: <strong>{$ringkas.total}</strong></span>
+    <span>Ada: <strong>{$ringkas.ada}</strong></span>
+    <span>Tidak ada: <strong>{$ringkas.tidak_ada}</strong></span>
+    <span>Kondisi berubah: <strong>{$ringkas.berubah}</strong></span>
+    {if: $ringkas.belum > 0}<span>Belum dicek: <strong>{$ringkas.belum}</strong></span>{/if}
+</div>
+
+<table class="data">
+    <thead>
+        <tr><th style="width:28px;">No</th><th>Nama Barang</th><th style="width:120px;">No. Inventaris</th><th style="width:70px;">Ada?</th><th style="width:150px;">Kondisi</th><th>Catatan</th></tr>
+    </thead>
+    <tbody>
+        {loop: $items}
+        <tr class="{if: $value.keberadaan == 'Tidak Ada'}tidak{elseif: $value.berubah}ubah{/if}">
+            <td style="text-align:center;">{$value.no}</td>
+            <td>{$value.nama_aset|e}{if: !empty($value.merk_type)} <span class="muted">({$value.merk_type|e})</span>{/if}</td>
+            <td>{$value.nomor_inventaris|e}</td>
+            <td>{$value.keberadaan|e}</td>
+            <td>{if: $value.keberadaan == 'Ada'}{if: $value.berubah}{$value.kondisi_sebelum|e} &rarr; <strong>{$value.kondisi_sesudah|e}</strong>{else}{$value.kondisi_sesudah|e}{/if}{else}-{/if}</td>
+            <td>{$value.catatan|e}</td>
+        </tr>
+        {/loop}
+    </tbody>
+</table>
+
+<p><strong>Catatan umum:</strong><br><span style="white-space:pre-wrap;">{if: !empty($cek.catatan_umum)}{$cek.catatan_umum|e}{else}-{/if}</span></p>
+
+<table class="ttd">
+    <tr>
+        <td>Pemeriksa<br><br><br><br><br><strong>{$cek.nama_pemeriksa|e}</strong></td>
+        <td>Perwakilan Unit{if: !empty($cek.ttd_jabatan)} ({$cek.ttd_jabatan|e}){/if}<br>
+            {if: !empty($ttd_gambar)}<img src="{$ttd_gambar}" alt="Tanda tangan">{else}<br><br><br><br>{/if}<br>
+            <strong>{if: !empty($cek.ttd_nama)}{$cek.ttd_nama|e}{else}( ........................ ){/if}</strong><br>
+            {if: !empty($cek.ttd_waktu)}<span class="muted">{?=date('d-m-Y H:i', strtotime($cek['ttd_waktu']))?}{if: !$ttd_valid} — tanda tangan tidak valid{/if}</span>{/if}
+        </td>
+    </tr>
+</table>
+</body>
+</html>

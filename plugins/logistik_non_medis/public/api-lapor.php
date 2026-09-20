@@ -25,6 +25,14 @@
  *   tindakan        opsional, wajib bila status Selesai
  *   kondisi_akhir   opsional: Baik, Rusak Ringan, Rusak Berat
  *
+ * Untuk helpdesk cukup POST (tanpa PATCH):
+ *   GET  api-lapor.php?daftar=unit[&area=UNT-...]     pilihan unit/ruangan di form lapor
+ *   GET  api-lapor.php?daftar=barang&unit=44          pilihan barang di unit itu
+ *   POST {kode_aset, keluhan, pelapor, ...}           tombol Lapor
+ *   POST {nomor, hasil, teknisi, tindakan?, tiket_helpdesk?}   teknisi selesai
+ *        hasil: diperbaiki -> kondisi Baik | tidak_bisa_diperbaiki -> kondisi Rusak Berat
+ *   Saringan daftar: area, unit (boleh 44,49), kode_aset, nomor_inventaris, barang, status, prioritas, sejak.
+ *
  * PATCH inilah yang menutup putaran: IPSRS menutup tiket di helpdesk, lalu
  * helpdesk memanggil endpoint ini sehingga laporan di sini ikut tertutup,
  * kondisi aset diperbarui, dan pekerjaannya masuk buku maintenance.
@@ -74,8 +82,13 @@ function satu_laporan(PDO $pdo, $kolom, $gabung, $nomor)
 // ---------------------------------------------------------------------------
 // POST: buat laporan baru.
 // ---------------------------------------------------------------------------
-if ($metode === 'POST') {
-    $data = masukan();
+// POST berisi "hasil" (atau "nomor") = teknisi menyelesaikan laporan, supaya helpdesk
+// cukup memakai POST untuk semua aksi. PATCH tetap didukung.
+$data = in_array($metode, ['POST', 'PATCH'], true) ? masukan() : [];
+$aksi_selesai = $metode === 'PATCH'
+    || ($metode === 'POST' && (isian($data, 'hasil') !== '' || isian($data, 'nomor') !== ''));
+
+if ($metode === 'POST' && !$aksi_selesai) {
     $kode_aset = isian($data, 'kode_aset');
     $keluhan = isian($data, 'keluhan');
     $deskripsi = isian($data, 'deskripsi');
@@ -200,8 +213,7 @@ if ($metode === 'POST') {
 // PATCH: perbarui status laporan, biasanya dipanggil helpdesk saat tiket
 // berpindah status atau ditutup.
 // ---------------------------------------------------------------------------
-if ($metode === 'PATCH') {
-    $data = masukan();
+if ($aksi_selesai) {
     $nomor = isian($data, 'nomor') ?: trim($_GET['nomor'] ?? '');
     $status = isian($data, 'status');
     $tiket = isian($data, 'tiket_helpdesk');
@@ -210,6 +222,24 @@ if ($metode === 'PATCH') {
     $kondisi = isian($data, 'kondisi_akhir');
 
     $salah = [];
+    // Hasil kerja teknisi cukup dua pilihan; status & kondisi akhir mengikuti.
+    $hasil = strtolower(str_replace([' ', '-'], '_', (string) isian($data, 'hasil')));
+    if ($hasil !== '') {
+        $peta_hasil = [
+            'diperbaiki' => ['Baik', 'Sudah diperbaiki, barang berfungsi baik.'],
+            'tidak_bisa_diperbaiki' => ['Rusak Berat', 'Tidak bisa diperbaiki.'],
+        ];
+        if (!isset($peta_hasil[$hasil])) {
+            $salah['hasil'] = 'Pilih: diperbaiki, tidak_bisa_diperbaiki.';
+        } else {
+            $status = 'Selesai';
+            $kondisi = $peta_hasil[$hasil][0];
+            $tindakan = $tindakan !== '' ? $tindakan : $peta_hasil[$hasil][1];
+        }
+        if (mb_strlen($teknisi) < 2) {
+            $salah['teknisi'] = 'Wajib diisi, nama teknisi yang mengerjakan.';
+        }
+    }
     if ($nomor === '') {
         $salah['nomor'] = 'Wajib diisi.';
     }
@@ -308,6 +338,8 @@ if ($metode !== 'GET') {
     balas(['error' => 'Metode tidak didukung. Gunakan GET, POST, atau PATCH.'], 405);
 }
 
+balas_daftar_pilihan($pdo);
+
 // ---------------------------------------------------------------------------
 // GET satu laporan.
 // ---------------------------------------------------------------------------
@@ -332,14 +364,7 @@ if (($status = trim($_GET['status'] ?? '')) !== '') {
     $syarat[] = 'p.status = ?';
     $isi[] = $status;
 }
-if (($kode_aset = trim($_GET['kode_aset'] ?? '')) !== '') {
-    $syarat[] = 'p.kode_aset = ?';
-    $isi[] = $kode_aset;
-}
-if (($unit = trim($_GET['unit'] ?? '')) !== '') {
-    $syarat[] = 'a.kode_unit = ?';
-    $isi[] = $unit;
-}
+saring_unit_barang($pdo, $syarat, $isi);
 if (($prioritas = trim($_GET['prioritas'] ?? '')) !== '') {
     if (!in_array($prioritas, PRIORITAS_SAH, true)) {
         balas(['error' => 'Prioritas tidak dikenal. Pilih: '.implode(', ', PRIORITAS_SAH).'.'], 400);

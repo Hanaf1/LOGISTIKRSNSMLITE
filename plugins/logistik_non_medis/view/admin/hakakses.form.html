@@ -25,6 +25,12 @@
             <p class="help-block"><small>* Khusus role <strong>Unit</strong>, mereka wajib terhubung ke salah satu unit kerja di atas untuk memfilter data permintaan mereka. Bisa pilih lebih dari satu unit.</small></p>
         </div>
 
+        <div class="checkbox" style="background:#fff3e0;border:1px solid #e65100;border-radius:4px;padding:8px 10px 8px 30px;">
+            <label><input type="hidden" name="rangkap_keuangan" value="0"><input type="checkbox" name="rangkap_keuangan" value="1" {if: !empty($user.rangkap_keuangan)}checked{/if}>
+                <strong>Rangkap tugas Keuangan / Bendahara</strong></label>
+            <p class="help-block" style="margin-bottom:0"><small>Role utama tetap berlaku (mis. Kasie tetap menyetujui unit di bawahnya), dan user ini <b>juga</b> bisa menyetujui dana Non Rutin, tahap Keuangan pada RKBU, serta menerima notifikasi Keuangan. Cabut centang bila bendahara sudah dipegang orang lain.</small></p>
+        </div>
+
         <hr>
         <div class="form-group">
             <label for="nomor_wa"><i class="fa fa-whatsapp" style="color:#25d366"></i> Nomor WhatsApp Notifikasi</label>

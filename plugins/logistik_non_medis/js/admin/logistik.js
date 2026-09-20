@@ -965,19 +965,27 @@ $(document).ready(function () {
             url: baseURL + '/logistik_non_medis/savemasterunit?t=' + mlite.token,
             type: 'POST',
             data: formData,
+            dataType: 'json',
+            timeout: 30000,
             success: function (response) {
-                var res = (typeof response === 'object') ? response : JSON.parse(response);
-                if (res.status == 'success') {
+                if (response.status == 'success') {
                     $('#modal-form-unit').modal('hide');
                     loadMasterUnit();
-                    alert('Data berhasil disimpan!');
+                    showLogistikToast('success', 'Berhasil', response.message || 'Data Unit berhasil disimpan.');
                 } else {
-                    alert('Error: ' + (res.message || 'Gagal menyimpan data unit.'));
+                    showLogistikToast('error', 'Gagal menyimpan', response.message || 'Gagal menyimpan data Unit.');
                 }
-                btn.prop('disabled', false).text('Simpan');
             },
-            error: function () {
-                alert('Gagal terhubung ke server.');
+            error: function (xhr, textStatus) {
+                var message = 'Gagal terhubung ke server.';
+                if (textStatus === 'timeout') {
+                    message = 'Penyimpanan melewati batas waktu. Silakan periksa daftar Unit sebelum mencoba kembali.';
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+                showLogistikToast('error', 'Gagal menyimpan', message, 7000);
+            },
+            complete: function () {
                 btn.prop('disabled', false).text('Simpan');
             },
             cache: false,

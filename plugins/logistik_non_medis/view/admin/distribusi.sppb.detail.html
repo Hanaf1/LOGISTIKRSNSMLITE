@@ -175,40 +175,35 @@
         <!-- Step 5 -->
         <div class="stepper-item {if: $stepper_step > 5}completed{elseif: $stepper_step == 5 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-users"></i></div>
-            <div class="stepper-title">Kasie Umum</div>
+            <div class="stepper-title">Kasie Umum{if: !empty($skip_kasie_umum_repeat)}<br><small>Tidak diulang</small>{/if}</div>
         </div>
         <!-- Step 6 -->
         <div class="stepper-item {if: $stepper_step > 6}completed{elseif: $stepper_step == 6 && !$stepper_rejected}active{/if}">
-            <div class="stepper-circle"><i class="fa fa-check-square-o"></i></div>
-            <div class="stepper-title">Verifikasi</div>
-        </div>
-        <!-- Step 7 -->
-        <div class="stepper-item {if: $stepper_step > 7}completed{elseif: $stepper_step == 7 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-shopping-cart"></i></div>
             <div class="stepper-title">Logistik & Rekap</div>
         </div>
-        <!-- Step 8 -->
-        <div class="stepper-item {if: $stepper_step > 8}completed{elseif: $stepper_step == 8 && !$stepper_rejected}active{/if}">
+        <!-- Step 7 -->
+        <div class="stepper-item {if: $stepper_step > 7}completed{elseif: $stepper_step == 7 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa {if: $flow_internal}fa-random{else}fa-money{/if}"></i></div>
             <div class="stepper-title">{if: $flow_internal}Pemenuhan Internal{else}Konsul Kabid Umum{/if}</div>
         </div>
-        <!-- Step 9 -->
-        <div class="stepper-item {if: $stepper_step > 9}completed{elseif: $stepper_step == 9 && !$stepper_rejected}active{/if}">
+        <!-- Step 8 -->
+        <div class="stepper-item {if: $stepper_step > 8}completed{elseif: $stepper_step == 8 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa {if: $flow_internal}fa-cubes{else}fa-bank{/if}"></i></div>
             <div class="stepper-title">{if: $flow_internal}Siapkan Barang/Aset{else}Bendahara{/if}</div>
         </div>
-        <!-- Step 10 -->
-        <div class="stepper-item {if: $stepper_step > 10}completed{elseif: $stepper_step == 10 && !$stepper_rejected}active{/if}">
+        <!-- Step 9 -->
+        <div class="stepper-item {if: $stepper_step > 9}completed{elseif: $stepper_step == 9 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa {if: $flow_internal}fa-check-square-o{else}fa-shopping-cart{/if}"></i></div>
             <div class="stepper-title">{if: $flow_internal}Verifikasi Pemenuhan{else}Proses Pengadaan{/if}</div>
         </div>
-        <!-- Step 11 -->
-        <div class="stepper-item {if: $stepper_step > 11}completed{elseif: $stepper_step == 11 && !$stepper_rejected}active{/if}">
+        <!-- Step 10 -->
+        <div class="stepper-item {if: $stepper_step > 10}completed{elseif: $stepper_step == 10 && !$stepper_rejected}active{/if}">
             <div class="stepper-circle"><i class="fa fa-handshake-o"></i></div>
             <div class="stepper-title">Siap Diserahkan</div>
         </div>
-        <!-- Step 12 -->
-        <div class="stepper-item {if: $stepper_step == 12}completed{/if}">
+        <!-- Step 11 -->
+        <div class="stepper-item {if: $stepper_step == 11}completed{/if}">
             <div class="stepper-circle"><i class="fa fa-flag-checkered"></i></div>
             <div class="stepper-title">Diterima/Selesai</div>
         </div>
@@ -468,6 +463,9 @@
         </div>
     </div>
     {/if}
+    {if: $can_approve_sppb && $sppb.jenis_permintaan == 'Non Rutin' && in_array($sppb.status, ['Diajukan','Disetujui Ka. Unit','Disetujui Ka. Sie'])}
+    <div class="alert alert-info" style="padding:8px 12px;margin-bottom:10px;"><i class="fa fa-info-circle"></i> Tidak perlu menyetujui per item. Tombol ACC di bawah berlaku untuk <b>seluruh barang</b> dalam permintaan ini; gunakan <b>Tolak</b> bila permintaan tidak disetujui.</div>
+    {/if}
     <div class="sppb-detail-table-wrap">
     <table class="table table-bordered table-striped sppb-detail-table">
         <thead>
@@ -482,7 +480,7 @@
                 {if: $sppb.jenis_permintaan == 'Non Rutin'}<th width="160">Foto Barang</th>{/if}
                 <th width="100">Jumlah ACC</th>
                 <th width="100">Status Item</th>
-                {if: $can_approve_sppb}
+                {if: $can_approve_sppb && $sppb.jenis_permintaan != 'Non Rutin'}
                 <th width="100">Aksi</th>
                 {/if}
                 <th>Catatan Item</th>
@@ -506,7 +504,7 @@
                     <td>{$value.foto_barang_html}</td>
                     {/if}
                     <td>
-                        {if: $value.status == 'Diajukan' && $can_approve_sppb}
+                        {if: $value.status == 'Diajukan' && $can_approve_sppb && $sppb.jenis_permintaan != 'Non Rutin'}
                             <input type="number" id="acc_{$value.kode_item}" class="form-control input-sm" value="{$value.jumlah}" style="width: 80px;">
                         {elseif: $value.status == 'Diajukan'}
                             {if: $value.jumlah_disetujui > 0}{$value.jumlah_disetujui}{else}-{/if}
@@ -521,7 +519,7 @@
                         {/if}
                     </td>
                     <td><span class="label label-default">{$value.status}</span></td>
-                    {if: $can_approve_sppb}
+                    {if: $can_approve_sppb && $sppb.jenis_permintaan != 'Non Rutin'}
                     <td>
                         {if: $value.status == 'Diajukan' && $sppb.jenis_permintaan != 'Rutin' && $can_approve_sppb}
                             <button class="btn btn-success btn-xs" onclick="setItemStatus('{$value.no_sppb}', '{$value.kode_item}', 'Disetujui Unit')" title="Setujui"><i class="fa fa-check"></i></button>
@@ -537,6 +535,26 @@
         </tbody>
     </table>
     </div>
+    {if: !empty($item_ditolak)}
+    <div class="panel panel-danger" style="margin-top:12px">
+        <div class="panel-heading" style="padding:8px 12px"><i class="fa fa-ban"></i> <b>Barang tidak disetujui Kabid Umum</b> <small>— dikeluarkan dari permintaan ini dan tidak ikut diproses. Ajukan SPPB baru bila masih dibutuhkan.</small></div>
+        <div class="table-responsive"><table class="table table-condensed table-bordered" style="margin:0">
+            <thead><tr class="active"><th>Nama Barang</th><th class="text-right">Jumlah</th><th class="text-right">Estimasi</th><th>Alasan</th><th>Oleh</th><th>Waktu</th></tr></thead>
+            <tbody>
+            {loop: $item_ditolak as $d}
+                <tr>
+                    <td><strong>{?=htmlspecialchars($d['nama_barang'],ENT_QUOTES,'UTF-8')?}</strong>{if: !empty($d['spesifikasi'])}<br><small class="text-muted">{?=htmlspecialchars($d['spesifikasi'],ENT_QUOTES,'UTF-8')?}</small>{/if}</td>
+                    <td class="text-right" style="white-space:nowrap">{?=rtrim(rtrim(number_format((float)$d['jumlah'],2,',','.'),'0'),',')?} {?=htmlspecialchars((string)$d['satuan'],ENT_QUOTES,'UTF-8')?}</td>
+                    <td class="text-right" style="white-space:nowrap">Rp {?=number_format((float)$d['jumlah'] * (float)$d['estimasi_harga'],0,',','.')?}</td>
+                    <td>{?=htmlspecialchars((string)$d['alasan'],ENT_QUOTES,'UTF-8')?}</td>
+                    <td>{?=htmlspecialchars($d['nama_user'],ENT_QUOTES,'UTF-8')?}</td>
+                    <td style="white-space:nowrap">{?=date('d/m/Y H:i', strtotime($d['waktu']))?}</td>
+                </tr>
+            {/loop}
+            </tbody>
+        </table></div>
+    </div>
+    {/if}
 </div>
 <div class="modal-footer">
     <button type="button" class="btn btn-default" {if: !empty($inline_mode)}onclick="tutupEditorSPPB(); return false;"{else}data-dismiss="modal"{/if}>Tutup</button>
@@ -560,9 +578,10 @@
     {/if}
     {if: in_array($sppb.status, ['Diserahkan ke Kasie Umum','Verifikasi Kasie Umum','Diteruskan ke Logistik Umum','Rekap Logistik','Logistik Umum & Rekap']) && $sppb.jenis_permintaan == 'Non Rutin' && ($role == 'admin' || $role == 'logistik')}
         {if: $sppb.status == 'Logistik Umum & Rekap'}
-            <a href="{$sppb.pemenuhan_url}" class="btn btn-primary"><i class="fa fa-random"></i> Pilih Sumber Pemenuhan</a>
+            <button type="button" class="btn btn-primary" onclick="tindakLanjutCepat('{$sppb.no_sppb}')"><i class="fa fa-random"></i> Tindak Lanjut</button>
+        {else}
+            <button type="button" class="btn btn-warning" onclick="lanjutAlurNonRutin('{$sppb.no_sppb}')"><i class="fa fa-arrow-right"></i> Lanjutkan Tahap</button>
         {/if}
-        <button type="button" class="btn btn-warning" onclick="lanjutAlurNonRutin('{$sppb.no_sppb}')"><i class="fa fa-arrow-right"></i> Lanjutkan Tahap (PO/Beli)</button>
     {/if}
     {if: in_array($sppb.status, ['Konsultasi Dana','Konsul Pengajuan ke Kabid Umum']) && $sppb.jenis_permintaan == 'Non Rutin' && !empty($can_decide_konsul_kabid)}
         <button type="button" class="btn btn-success" onclick="keputusanDanaSppb('{$sppb.no_sppb}', 'acc')"><i class="fa fa-check"></i> ACC Konsul Kabid Umum</button>
@@ -574,8 +593,9 @@
     {if: $sppb.status == 'Proses Pengadaan' && $sppb.jenis_permintaan != 'Non Rutin' && ($role == 'admin' || $role == 'logistik')}
         <button type="button" class="btn btn-success" onclick="siapAmbil('{$sppb.no_sppb}')"><i class="fa fa-check-circle"></i> Tandai Siap Ambil</button>
     {/if}
-    {if: in_array($sppb.status, ['Diserahkan ke Keuangan','Pengajuan Dana ke Bendahara']) && $sppb.jenis_permintaan == 'Non Rutin' && ($role == 'admin' || $role == 'logistik')}
-        <button type="button" class="btn btn-success" onclick="siapAmbil('{$sppb.no_sppb}')"><i class="fa fa-shopping-cart"></i> Proses Pengadaan</button>
+    {if: in_array($sppb.status, ['Diserahkan ke Keuangan','Pengajuan Dana ke Bendahara']) && $sppb.jenis_permintaan == 'Non Rutin' && ($role == 'admin' || $role == 'keuangan')}
+        <button type="button" class="btn btn-success" onclick="persetujuanDanaSppb('{$sppb.no_sppb}', 'setuju')"><i class="fa fa-check"></i> Setujui Dana</button>
+        <button type="button" class="btn btn-danger" onclick="persetujuanDanaSppb('{$sppb.no_sppb}', 'tolak')"><i class="fa fa-times"></i> Tolak Dana</button>
     {/if}
     {if: $sppb.status == 'Proses Pengadaan' && $sppb.jenis_permintaan == 'Non Rutin' && ($role == 'admin' || $role == 'logistik')}
         {if: empty($sppb.sumber_pemenuhan)}

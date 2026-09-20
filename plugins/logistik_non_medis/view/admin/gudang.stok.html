@@ -87,7 +87,7 @@
                 <hr>
 
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="form-group">
                             <label>Cari Barang</label>
                             <input type="text" id="cari-stok" class="form-control" placeholder="Nama barang atau kode...">
@@ -104,7 +104,21 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-5 text-right" style="padding-top: 25px;">
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Status Stok</label>
+                            <select id="status-filter-stok" class="form-control" style="width: 100%;">
+                                <option value="">Semua Status</option>
+                                <option value="normal">Normal</option>
+                                <option value="reorder">Perlu Reorder</option>
+                                <option value="kritis">Kritis</option>
+                                <option value="habis">Habis (0)</option>
+                                <option value="dekat_exp">Dekat Expired (&lt; 30 hari)</option>
+                                <option value="expired">Expired</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-right" style="padding-top: 25px;">
                         <a href="{?=url([ADMIN, 'logistik_non_medis', 'masterbarang'])?}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Data</a>
                         <button class="btn btn-info" id="btn-refresh-stok"><i class="fa fa-refresh"></i> Refresh</button>
                         <button class="btn btn-success" id="btn-export-stok"><i class="fa fa-file-excel-o"></i> Export Excel</button>
@@ -251,7 +265,7 @@ $(document).ready(function() {
         loadStok(1);
     });
 
-    $('#kategori-filter-stok').change(function() {
+    $('#kategori-filter-stok, #status-filter-stok').change(function() {
         loadStok(1);
     });
 
@@ -294,7 +308,8 @@ $(document).ready(function() {
             halaman: halaman,
             cari: cari,
             lokasi: lokasiAwal,
-            kategori: kategori
+            kategori: kategori,
+            status_stok: $('#status-filter-stok').val() || ''
         }, function(data) {
             $('#display-stok').html(data);
             $('.batch-popover').popover(); // Initialize popovers

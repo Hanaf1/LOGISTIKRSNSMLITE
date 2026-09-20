@@ -1,0 +1,116 @@
+<style>
+  .pe-tabel th { background:#1f4e79 !important; color:#fff !important; }
+  .pe-tabs > li > a { font-size:15px; font-weight:600; }
+  .pe-cara { background:#f4f7fb; border:1px solid #d5dfeb; border-radius:6px; padding:10px 14px; margin-bottom:12px; }
+  .pe-cara ol { margin:4px 0 0; padding-left:20px; }
+</style>
+<article class="row">
+  <div class="col-md-12"><div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title"><i class="fa fa-cubes"></i> Paket &amp; Barang Ecer</h3></div>
+    <div class="panel-body">
+      <ul class="nav nav-tabs pe-tabs">
+        <li class="active"><a href="#pe-paket" data-toggle="tab"><i class="fa fa-gift"></i> Paket ({?=count($paket)?})</a></li>
+        <li><a href="#pe-fotocopy" data-toggle="tab"><i class="fa fa-copy"></i> Fotocopy ({?=count($olahan)?})</a></li>
+        <li><a href="#pe-ecer" data-toggle="tab"><i class="fa fa-balance-scale"></i> Ecer ({?=count($ecer)?})</a></li>
+      </ul>
+      <div class="tab-content" style="margin-top:14px">
+
+        <div class="tab-pane active" id="pe-paket">
+          <div class="pe-cara"><b>Cara pengeluaran paket</b>
+            <ol>
+              <li>Stok &amp; beli <b>isinya</b> (tas, sandal, handuk…), bukan paketnya.</li>
+              <li>Unit minta <b>paketnya</b> lewat SPPB Rutin biasa, mis. "Paket VIP Pack × 2".</li>
+              <li>Saat diserahkan, stok isinya berkurang otomatis dan Cost Unit tercatat harga paket.</li>
+            </ol>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered table-condensed pe-tabel">
+              <thead><tr><th width="40">No</th><th>Paket</th><th>Isi</th><th class="text-right">Harga</th><th>Stok cukup untuk</th><th width="120" class="text-center">Aksi</th></tr></thead>
+              <tbody>
+                {if: !empty($paket)}
+                  {loop: $paket as $i => $pk}<tr>
+                    <td>{?=$i+1?}</td>
+                    <td><b>{$pk.nama_barang}</b></td>
+                    <td>{if: $pk.jumlah_isi > 0}<small>{$pk.isi}</small>{else}<span class="label label-danger">Belum ada isi</span>{/if}</td>
+                    <td class="text-right" style="white-space:nowrap">Rp {?=number_format((float)$pk['harga_referensi'],0,',','.')?}</td>
+                    <td>{if: $pk.bisa_dipenuhi !== null}<b>{$pk.bisa_dipenuhi}</b> paket{if: $pk.bisa_dipenuhi < 5}<br><small class="text-danger">kurang: {$pk.pembatas}</small>{/if}{else}<span class="text-muted">-</span>{/if}</td>
+                    <td class="text-center"><a class="btn btn-xs btn-primary" href="{$pk.url_ubah}"><i class="fa fa-pencil"></i> Ubah Isi</a></td>
+                  </tr>{/loop}
+                {else}
+                  <tr><td colspan="6" class="text-center text-muted">Belum ada paket.</td></tr>
+                {/if}
+              </tbody>
+            </table>
+          </div>
+          <a class="btn btn-default btn-sm" href="{?=url([ADMIN,'logistik_non_medis','gudangkomposisivip'])?}"><i class="fa fa-plus"></i> Tambah / atur paket</a>
+        </div>
+
+        <div class="tab-pane" id="pe-fotocopy">
+          <div class="pe-cara"><b>Cara barang fotocopy</b>
+            <ol>
+              <li>Unit minta <b>formulirnya</b> lewat SPPB, mis. "Form rujuk × 50".</li>
+              <li>Saat diserahkan, stok <b>kertasnya</b> (Kertas F4) yang berkurang sesuai jumlah lembar per formulir.</li>
+              <li>Formulir yang lebih dari 1 lembar: klik <b>Ubah Kertas</b> lalu ganti jumlah lembarnya (mis. Bendel OP = 4).</li>
+              <li>Harga formulir diisi manual di Data Barang (sudah termasuk jasa fotocopy).</li>
+            </ol>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered table-condensed pe-tabel">
+              <thead><tr><th width="40">No</th><th>Formulir / fotocopy</th><th>Kertas yang dipakai</th><th class="text-right">Harga</th><th width="120" class="text-center">Aksi</th></tr></thead>
+              <tbody>
+                {if: !empty($olahan)}
+                  {loop: $olahan as $i => $o}<tr>
+                    <td>{?=$i+1?}</td>
+                    <td>{$o.nama_barang}</td>
+                    <td>{if: $o.jumlah_isi > 0}<small>{$o.isi}</small>{else}<span class="label label-danger">Belum diatur</span>{/if}</td>
+                    <td class="text-right" style="white-space:nowrap">Rp {?=number_format((float)$o['harga_referensi'],0,',','.')?}</td>
+                    <td class="text-center"><a class="btn btn-xs btn-warning" href="{$o.url_ubah}"><i class="fa fa-pencil"></i> Ubah Kertas</a></td>
+                  </tr>{/loop}
+                {else}
+                  <tr><td colspan="5" class="text-center text-muted">Belum ada barang fotocopy.</td></tr>
+                {/if}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="pe-ecer">
+          <div class="pe-cara"><b>Cara barang ecer</b>
+            <ol>
+              <li>Satuan dasar = satuan <b>terkecil</b> yang dikeluarkan (Lembar, Biji, ml).</li>
+              <li>Satuan besar diberi angka konversi, mis. 1 Rim = 500 Lembar.</li>
+              <li>Beli per Rim/Box, unit minta per Lembar/Biji; stok selalu dihitung dalam satuan terkecil.</li>
+            </ol>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered table-condensed pe-tabel">
+              <thead><tr><th width="40">No</th><th>Barang</th><th>Satuan Dasar (keluar)</th><th>Konversi</th><th width="120" class="text-center">Aksi</th></tr></thead>
+              <tbody>
+                {if: !empty($ecer)}
+                  {loop: $ecer as $i => $e}<tr><td>{?=$i+1?}</td><td>{$e.nama_barang}</td><td><b>{$e.satuan_dasar}</b></td><td>{$e.konversi}</td><td class="text-center">{if: $bisa_satuan}<a class="btn btn-xs btn-success" href="{$e.url_ubah}"><i class="fa fa-pencil"></i> Ubah Satuan</a>{else}-{/if}</td></tr>{/loop}
+                {else}
+                  <tr><td colspan="5" class="text-center text-muted">Belum ada barang ecer.</td></tr>
+                {/if}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div></div>
+</article>
+<script>
+// Buka tab sesuai alamat (#pe-paket / #pe-fotocopy / #pe-ecer) dan simpan tab terakhir di alamat.
+$(function () {
+    var tab = window.location.hash;
+    if (tab && $('.pe-tabs a[href="' + tab + '"]').length) {
+        $('.pe-tabs a[href="' + tab + '"]').tab('show');
+    }
+    $('.pe-tabs a').on('shown.bs.tab', function (e) {
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState(null, document.title, $(e.target).attr('href'));
+        }
+    });
+});
+</script>

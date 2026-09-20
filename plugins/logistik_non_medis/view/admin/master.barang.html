@@ -186,3 +186,14 @@
         </div>
     </div>
 </div>
+<script>
+// Dibuka dari menu Paket & Barang Ecer (?edit=KODE): langsung buka form edit barang tersebut.
+$(function () {
+    var kode = new URLSearchParams(window.location.search).get('edit');
+    if (!kode) return;
+    $.post('{?=url(ADMIN."/logistik_non_medis/formmasterbarang")?}', { kode_item: kode }, function (data) {
+        $('#form-barang-content').html(data);
+        $('#modal-form-barang').modal('show');
+    });
+});
+</script>

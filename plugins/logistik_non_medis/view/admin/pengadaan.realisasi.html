@@ -1,12 +1,33 @@
+<style>
+  .rb-filter { background:#f4f7fb; border:1px solid #d5dfeb; border-radius:6px; padding:14px 16px; margin-bottom:16px; }
+  .rb-filter-judul { font-size:13px; font-weight:600; color:#1f4e79; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+  .rb-bulan { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .rb-bulan .btn { min-width:88px; font-size:15px; font-weight:600; padding:9px 12px; border:2px solid #1f4e79; color:#1f4e79; background:#fff; }
+  .rb-bulan .btn:hover { background:#e8f0f8; }
+  .rb-bulan .btn.aktif { background:#1f4e79; color:#fff; }
+  .rb-bulan .btn.sekarang:not(.aktif) { border-style:dashed; }
+  .rb-tahun { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .rb-tahun .btn-tahun { font-size:16px; font-weight:700; width:42px; }
+  .rb-tahun #realisasi-tahun { width:100px; font-size:18px; font-weight:700; text-align:center; height:40px; }
+  .rb-periode-label { font-size:22px; font-weight:700; color:#1f4e79; margin-left:10px; }
+</style>
 <article class="row">
   <div class="col-md-12"><div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title"><i class="fa fa-line-chart"></i> Realisasi Belanja BHP</h3></div>
+    <div class="panel-heading"><h3 class="panel-title"><i class="fa fa-line-chart"></i> Realisasi Belanja</h3></div>
     <div class="panel-body">
-      <div class="alert alert-info">Data diambil dari Penerimaan Barang yang berstatus <strong>Selesai</strong> dan stoknya sudah diposting. Nilai memakai qty dan harga satuan dasar; nomor PO ditampilkan bila ada.</div>
-      <div class="row" style="margin-bottom:15px;">
-        <div class="col-md-2"><label>Bulan</label><select id="realisasi-bulan" class="form-control"><option value="01">Januari</option><option value="02">Februari</option><option value="03">Maret</option><option value="04">April</option><option value="05">Mei</option><option value="06">Juni</option><option value="07">Juli</option><option value="08">Agustus</option><option value="09">September</option><option value="10">Oktober</option><option value="11">November</option><option value="12">Desember</option></select></div>
-        <div class="col-md-2"><label>Tahun</label><input id="realisasi-tahun" type="number" class="form-control" value="{?=date('Y')?}" min="2000" max="2099"></div>
-        <div class="col-md-4" style="padding-top:25px;"><button id="btn-tampil-realisasi" class="btn btn-primary"><i class="fa fa-search"></i> Tampilkan</button> <button id="btn-export-realisasi" class="btn btn-success"><i class="fa fa-file-excel-o"></i> Export XLSX</button></div>
+      <div class="rb-filter">
+        <div class="rb-filter-judul"><i class="fa fa-calendar"></i> Pilih Bulan</div>
+        <div class="rb-bulan" id="rb-bulan">{loop: $bulan_list}<button type="button" class="btn{if: $value.selected} aktif sekarang{/if}" data-bulan="{$value.kode}">{?=substr($value['nama'], 0, 3)?}</button>{/loop}</div>
+        <input type="hidden" id="realisasi-bulan" value="{$bulan_aktif}">
+        <div class="rb-tahun">
+          <button type="button" class="btn btn-default btn-tahun" data-geser="-1" title="Tahun sebelumnya"><i class="fa fa-chevron-left"></i></button>
+          <input id="realisasi-tahun" type="number" class="form-control" value="{$tahun_aktif}" min="2000" max="2099">
+          <button type="button" class="btn btn-default btn-tahun" data-geser="1" title="Tahun berikutnya"><i class="fa fa-chevron-right"></i></button>
+          <span class="rb-periode-label" id="rb-periode-label"></span>
+          <span style="flex:1"></span>
+          <button id="btn-export-rkbu" class="btn btn-primary"><i class="fa fa-file-excel-o"></i> Export RKBU vs Realisasi</button>
+          <button id="btn-export-realisasi" class="btn btn-success"><i class="fa fa-file-excel-o"></i> Export Penerimaan</button>
+        </div>
       </div>
       <div id="display-realisasi"><div class="text-center text-muted" style="padding:25px"><i class="fa fa-spinner fa-spin"></i> Memuat realisasi...</div></div>
     </div>
@@ -14,10 +35,41 @@
 </article>
 <script>
 $(function () {
-  $('#realisasi-bulan').val('{?=date('m')?}');
-  function loadRealisasi() { $('#display-realisasi').load('{?=url([ADMIN,"logistik_non_medis","displayrealisasibelanja"])?}', {bulan:$('#realisasi-bulan').val(), tahun:$('#realisasi-tahun').val()}); }
-  $('#btn-tampil-realisasi').on('click', loadRealisasi);
-  $('#btn-export-realisasi').on('click', function () { var base = '{?=url([ADMIN,"logistik_non_medis","exportrealisasibelanja"])?}'; window.location.href = base + (base.indexOf('?') === -1 ? '?' : '&') + $.param({bulan:$('#realisasi-bulan').val(), tahun:$('#realisasi-tahun').val()}); });
+  var namaBulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  var tabAktif = '#rb-tab-rkbu';
+  try { tabAktif = localStorage.getItem('realisasi-tab') || tabAktif; } catch (e) {}
+
+  function periode() { return {bulan: $('#realisasi-bulan').val() || '{$bulan_aktif}', tahun: $('#realisasi-tahun').val() || '{$tahun_aktif}'}; }
+  function tampilLabel() { var p = periode(); $('#rb-periode-label').text(namaBulan[parseInt(p.bulan, 10) - 1] + ' ' + p.tahun); }
+  function loadRealisasi() {
+    tampilLabel();
+    $('#display-realisasi').html('<div class="text-center text-muted" style="padding:25px"><i class="fa fa-spinner fa-spin"></i> Memuat realisasi...</div>');
+    $('#display-realisasi').load('{?=url([ADMIN,"logistik_non_medis","displayrealisasibelanja"])?}', periode(), function () {
+      // Tetap di tab yang sama saat ganti bulan/tahun.
+      var $a = $('#rb-tabs a[href="' + tabAktif + '"]');
+      ($a.length ? $a : $('#rb-tabs a:first')).tab('show');
+    });
+  }
+
+  $('#rb-bulan').on('click', '.btn', function () {
+    $('#rb-bulan .btn').removeClass('aktif');
+    $(this).addClass('aktif');
+    $('#realisasi-bulan').val($(this).data('bulan'));
+    loadRealisasi();
+  });
+  $('.btn-tahun').on('click', function () {
+    var t = (parseInt($('#realisasi-tahun').val(), 10) || {$tahun_aktif}) + parseInt($(this).data('geser'), 10);
+    $('#realisasi-tahun').val(t);
+    loadRealisasi();
+  });
+  $('#realisasi-tahun').on('change', loadRealisasi);
+  $('#display-realisasi').on('shown.bs.tab', '#rb-tabs a', function (e) {
+    tabAktif = $(e.target).attr('href');
+    try { localStorage.setItem('realisasi-tab', tabAktif); } catch (err) {}
+  });
+
+  $('#btn-export-realisasi').on('click', function () { var base = '{?=url([ADMIN,"logistik_non_medis","exportrealisasibelanja"])?}'; window.location.href = base + (base.indexOf('?') === -1 ? '?' : '&') + $.param(periode()); });
+  $('#btn-export-rkbu').on('click', function () { var base = '{?=url([ADMIN,"logistik_non_medis","exportrkburealisasibelanja"])?}'; window.location.href = base + (base.indexOf('?') === -1 ? '?' : '&') + $.param(periode()); });
   loadRealisasi();
 });
 </script>

@@ -1,44 +1,398 @@
 <style>
-.nr-kpi .panel-body{min-height:92px}.nr-kpi small{text-transform:uppercase;font-weight:700;color:#666}.nr-kpi h3{margin:7px 0 0}.nr-table th{white-space:nowrap}.nr-table td{vertical-align:top!important}
+.nrk .kartu{border:1px solid #e3e3e3;border-radius:4px;padding:10px 14px;background:#fff;margin-bottom:12px}
+.nrk .kartu small{color:#777;text-transform:uppercase;font-weight:700;font-size:11px}
+.nrk .kartu h3{margin:4px 0 0;font-size:22px;color:#1f3b57}
+.nrk .kartu .sub{font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nrk-kelompok{border:1px solid #dde3ea;border-radius:4px;margin-bottom:14px;background:#fff}
+.nrk-kelompok-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;background:#f3f6f9;border-bottom:1px solid #dde3ea;cursor:pointer;user-select:none}
+.nrk-kelompok-head .nama{font-weight:700;color:#1f3b57;flex:1;min-width:160px}
+.nrk-kelompok-head .subtotal{font-weight:700;color:#1f3b57;white-space:nowrap}
+.nrk-kelompok table{margin:0}
+.nrk-kelompok table td,.nrk-kelompok table th{vertical-align:middle!important}
+.nrk-kelompok.tertutup .table-responsive{display:none}
+.nrk-kelompok.tertutup .nrk-caret:before{content:"\f0da"}
+.nrk-ringkas td{padding:5px 8px!important}
+.nrk-bar{height:6px;background:#e8edf2;border-radius:3px;overflow:hidden}
+.nrk-bar div{height:100%;background:#2980b9}
+.nrk-bar.unit div{background:#16a085}
+.nrk-footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:2px solid #1f3b57;padding:10px 4px 0;margin-top:4px}
+.nrk-footer .grand{flex:1;min-width:220px}
+.nrk-footer .grand strong{font-size:22px;color:#1f3b57}
+.nrk tr.nrk-doc.pilih-acc td{background:#f0f9f0}
+.nrk tr.nrk-doc.pilih-tidak td{background:#fdf2f2}
+.nrk .nrk-alasan.wajib{border-color:#d9534f}
+.nrk tr.nrk-item.ditolak td{background:#fdf2f2;color:#a94442}
+.nrk tr.nrk-item.ditolak td strong{text-decoration:line-through}
+.nrk tr.nrk-item.dikurangi td{background:#fff7e6}
+.nrk-keputusan-panel{border:1px solid #f0ad4e;border-radius:4px;background:#fffaf0;padding:12px 14px;margin:14px 0 0}
+.nrk-sticky{position:sticky;bottom:0;z-index:10;background:#fff;border-top:2px solid #1f3b57;padding:10px 4px calc(10px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.nrk-sticky .grand{flex:1;min-width:220px}
 </style>
-<div class="row nr-kpi">
-  <div class="col-sm-3"><div class="panel panel-primary"><div class="panel-body"><small>Dokumen SPPB</small><h3>{$total_dokumen}</h3></div></div></div>
-  <div class="col-sm-3"><div class="panel panel-info"><div class="panel-body"><small>Unit Peminta</small><h3>{$total_unit}</h3></div></div></div>
-  <div class="col-sm-3"><div class="panel panel-success"><div class="panel-body"><small>Detail Barang</small><h3>{$total_item}</h3></div></div></div>
-  <div class="col-sm-3"><div class="panel panel-warning"><div class="panel-body"><small>Total Estimasi</small><h3>Rp {?=number_format($total_nilai,0,',','.')?}</h3></div></div></div>
+<div class="nrk">
+<div class="row">
+  <div class="col-sm-3 col-xs-6"><div class="kartu"><small>Grand Total</small><h3 class="nrk-k-grand">Rp {?=number_format($total_nilai,0,',','.')?}</h3><div class="sub nrk-k-rata">{if: $total_item > 0}rata-rata Rp {?=number_format($rata_item,0,',','.')?} / item{else}&nbsp;{/if}</div></div></div>
+  <div class="col-sm-3 col-xs-6"><div class="kartu"><small>Jumlah Item</small><h3 class="nrk-k-item">{$total_item}</h3><div class="sub">dari {$total_dokumen} dokumen SPPB</div></div></div>
+  <div class="col-sm-3 col-xs-6"><div class="kartu"><small>Kelompok Barang</small><h3>{?=count($kelompok)?}</h3><div class="sub" title="{?=htmlspecialchars($kelompok_top,ENT_QUOTES,'UTF-8')?}">terbesar: {?=htmlspecialchars($kelompok_top,ENT_QUOTES,'UTF-8')?}</div></div></div>
+  <div class="col-sm-3 col-xs-6"><div class="kartu"><small>Unit Peminta</small><h3>{$total_unit}</h3><div class="sub" title="{?=htmlspecialchars($unit_top,ENT_QUOTES,'UTF-8')?}">terbesar: {?=htmlspecialchars($unit_top,ENT_QUOTES,'UTF-8')?}</div></div></div>
 </div>
 {if: !empty($embedded) && !empty($documents)}
-<div class="panel panel-default" style="margin-bottom:15px">
-  <div class="panel-heading"><strong><i class="fa fa-check-square-o"></i> Dokumen yang Memerlukan Tinjauan</strong><span class="text-muted"> — buka detail sebelum ACC/Tidak ACC</span></div>
-  <div class="table-responsive"><table class="table table-bordered table-hover" style="margin-bottom:0"><thead><tr class="active"><th>No. SPPB</th><th>Tanggal</th><th>Unit Peminta</th><th class="text-center">Item</th><th class="text-right">Total Estimasi</th><th>Status</th><th class="text-center">Aksi</th></tr></thead><tbody>
-  {loop: $documents}<tr><td><strong>{?=htmlspecialchars($value['no_sppb'],ENT_QUOTES,'UTF-8')?}</strong></td><td>{$value.tgl_sppb_format}</td><td>{?=htmlspecialchars($value['nama_unit'],ENT_QUOTES,'UTF-8')?}</td><td class="text-center">{$value.jumlah_item}</td><td class="text-right">Rp {?=number_format($value['total_nilai'],0,',','.')?}</td><td><span class="label {?=$value['status']==='Konsul Pengajuan ke Kabid Umum'?'label-warning':'label-default'?}">{?=htmlspecialchars($value['status'],ENT_QUOTES,'UTF-8')?}</span></td><td class="text-center" style="white-space:nowrap"><button type="button" class="btn btn-xs btn-info" onclick="detailSPPB('{?=htmlspecialchars($value['no_sppb'],ENT_QUOTES,'UTF-8')?}')"><i class="fa fa-eye"></i> Detail</button>{if: $value.status == 'Konsul Pengajuan ke Kabid Umum'} <button type="button" class="btn btn-xs btn-success" onclick="keputusanDanaSppb('{?=htmlspecialchars($value['no_sppb'],ENT_QUOTES,'UTF-8')?}','acc')"><i class="fa fa-check"></i> ACC</button> <button type="button" class="btn btn-xs btn-danger" onclick="keputusanDanaSppb('{?=htmlspecialchars($value['no_sppb'],ENT_QUOTES,'UTF-8')?}','tidak_acc')"><i class="fa fa-times"></i></button>{/if}</td></tr>{/loop}
+<div class="panel panel-default nrk-putusan" style="margin-bottom:15px">
+  <div class="panel-heading clearfix"><div class="pull-left"><strong><i class="fa fa-gavel"></i> Keputusan Konsul Kabid Umum</strong><span class="text-muted"> — pilih ACC / Tidak ACC per dokumen langsung di tabel ini, lalu tanda tangan sekali di bawah</span></div>{if: $total_menunggu > 0}<div class="pull-right"><button type="button" class="btn btn-success btn-sm nrk-acc-sisa"><i class="fa fa-check"></i> ACC semua yang belum</button></div>{/if}</div>
+  <div class="table-responsive"><table class="table table-bordered table-hover" style="margin-bottom:0"><thead><tr class="active"><th>No. SPPB</th><th>Tanggal</th><th>Unit Peminta</th><th class="text-center">Item</th><th class="text-right">Total Estimasi</th><th>Status</th><th style="min-width:330px">Keputusan</th><th class="text-center">Aksi</th></tr></thead><tbody>
+  {loop: $documents}<tr class="{if: $value.status == 'Konsul Pengajuan ke Kabid Umum'}nrk-doc{/if}" data-no="{?=htmlspecialchars($value['no_sppb'],ENT_QUOTES,'UTF-8')?}" data-total="{?=(float)$value['total_nilai']?}" data-items="{?=htmlspecialchars($value['draft_items'],ENT_QUOTES,'UTF-8')?}">
+    <td><strong>{?=htmlspecialchars($value['no_sppb'],ENT_QUOTES,'UTF-8')?}</strong></td>
+    <td>{$value.tgl_sppb_format}</td>
+    <td>{?=htmlspecialchars($value['nama_unit'],ENT_QUOTES,'UTF-8')?}</td>
+    <td class="text-center">{$value.jumlah_item}<div class="nrk-doc-ubah"></div></td>
+    <td class="text-right nrk-doc-total" style="white-space:nowrap">Rp {?=number_format($value['total_nilai'],0,',','.')?}</td>
+    <td><span class="label {?=$value['status']==='Konsul Pengajuan ke Kabid Umum'?'label-warning':'label-default'?}">{?=htmlspecialchars($value['status'],ENT_QUOTES,'UTF-8')?}</span>{if: $value.draft_keputusan != ''}<br><span class="label label-info" style="display:inline-block;margin-top:4px"><i class="fa fa-floppy-o"></i> Tersimpan sementara</span>{/if}{if: in_array($value['status'], ['Logistik Umum & Rekap','Rekap Logistik'])}<br><small class="text-muted"><i class="fa fa-hourglass-half"></i> Masih dipilah Logistik</small>{/if}</td>
+    <td>{if: $value.status == 'Konsul Pengajuan ke Kabid Umum'}
+      <div class="btn-group btn-group-xs nrk-pilih" style="margin-bottom:4px">
+        <button type="button" class="btn {if: $value.draft_keputusan == 'acc'}btn-success{else}btn-default{/if}" data-v="acc"><i class="fa fa-check"></i> ACC</button>
+        <button type="button" class="btn {if: $value.draft_keputusan == 'tidak_acc'}btn-danger{else}btn-default{/if}" data-v="tidak_acc"><i class="fa fa-times"></i> Tidak ACC</button>
+        <button type="button" class="btn btn-default" data-v="" title="Kosongkan pilihan"><i class="fa fa-undo"></i></button>
+      </div>
+      <input type="hidden" class="nrk-keputusan" value="{$value.draft_keputusan}">
+      <input type="text" class="form-control input-sm nrk-alasan" maxlength="1000" placeholder="Catatan (wajib jika Tidak ACC)" value="{?=htmlspecialchars($value['draft_alasan'],ENT_QUOTES,'UTF-8')?}">
+    {else}<span class="text-muted">-</span>{/if}</td>
+    <td class="text-center" style="white-space:nowrap"><button type="button" class="btn btn-xs btn-default nrk-lihat" title="Tampilkan barang SPPB ini di daftar bawah"><i class="fa fa-list"></i> Barang</button> <button type="button" class="btn btn-xs btn-info" onclick="detailSPPB('{?=htmlspecialchars($value['no_sppb'],ENT_QUOTES,'UTF-8')?}')"><i class="fa fa-eye"></i></button></td>
+  </tr>{/loop}
   </tbody></table></div>
 </div>
 {/if}
-<div class="table-responsive">
-  <table class="table table-bordered table-striped table-hover nr-table">
-    <thead><tr class="active"><th>No</th><th>Tanggal / No. SPPB</th><th>Nama Barang</th><th>Unit Peminta</th><th>Sumber</th><th>Satuan</th><th class="text-right">Jumlah</th><th class="text-right">Harga</th><th class="text-right">Nilai</th><th>Keterangan / Rencana</th><th>Status</th></tr></thead>
-    <tbody>
-    {if: !empty($rows)}
-      {loop: $rows}
-      <tr>
-        <td>{?=$key+1?}</td>
-        <td>{?=htmlspecialchars($value['tgl_sppb_format'],ENT_QUOTES,'UTF-8')?}<br><small>{?=htmlspecialchars($value['no_sppb'],ENT_QUOTES,'UTF-8')?}</small></td>
-        <td><strong>{?=htmlspecialchars($value['nama_barang'],ENT_QUOTES,'UTF-8')?}</strong>{if: $value.spesifikasi != '-'}<br><small class="text-muted">{?=htmlspecialchars($value['spesifikasi'],ENT_QUOTES,'UTF-8')?}</small>{/if}</td>
-        <td><span class="label label-info">{?=htmlspecialchars($value['nama_unit'],ENT_QUOTES,'UTF-8')?}</span></td>
-        <td><span class="label {?=$value['sumber_permintaan']==='Mendesak'?'label-danger':'label-default'?}">{?=htmlspecialchars($value['sumber_permintaan'],ENT_QUOTES,'UTF-8')?}</span></td>
-        <td>{?=htmlspecialchars($value['satuan'],ENT_QUOTES,'UTF-8')?}</td>
-        <td class="text-right">{?=number_format($value['jumlah_rekap'],2,',','.')?}</td>
-        <td class="text-right">Rp {?=number_format($value['harga'],0,',','.')?}</td>
-        <td class="text-right"><strong>Rp {?=number_format($value['nilai'],0,',','.')?}</strong></td>
-        <td><small>{?=htmlspecialchars($value['keterangan'],ENT_QUOTES,'UTF-8')?}<br><span class="text-muted">Rencana: {?=htmlspecialchars($value['rencana_pembelanjaan'],ENT_QUOTES,'UTF-8')?}</span></small></td>
-        <td><span class="label {?=in_array($value['status'],['Selesai','Disetujui Kabid'],true)?'label-success':($value['status']==='Ditolak'?'label-danger':'label-warning')?}">{?=htmlspecialchars($value['status'],ENT_QUOTES,'UTF-8')?}</span></td>
-      </tr>
-      {/loop}
-    {else}
-      <tr><td colspan="11" class="text-center text-muted" style="padding:35px"><i class="fa fa-inbox fa-2x"></i><br>Tidak ada detail permintaan Non Rutin pada filter ini.</td></tr>
-    {/if}
-    </tbody>
-    {if: !empty($rows)}<tfoot><tr class="info"><th colspan="8" class="text-right">TOTAL ESTIMASI</th><th class="text-right">Rp {?=number_format($total_nilai,0,',','.')?}</th><th colspan="2"></th></tr></tfoot>{/if}
-  </table>
+{if: !empty($kelompok)}
+<div class="row">
+  <div class="col-md-8">
+    <div class="row" style="margin-bottom:8px">
+      <div class="col-sm-6"><input type="text" class="form-control input-sm nrk-cari" placeholder="Cari barang / unit / SPPB..."></div>
+      <div class="col-sm-6 text-right">
+        <button type="button" class="btn btn-default btn-xs nrk-buka-semua"><i class="fa fa-expand"></i> Buka semua</button>
+        <button type="button" class="btn btn-default btn-xs nrk-tutup-semua"><i class="fa fa-compress"></i> Tutup semua</button>
+      </div>
+    </div>
+    {loop: $kelompok as $g}
+    <div class="nrk-kelompok">
+      <div class="nrk-kelompok-head">
+        <i class="fa fa-caret-down text-muted nrk-caret"></i>
+        <span class="nama">{?=htmlspecialchars($g['nama'],ENT_QUOTES,'UTF-8')?} <small class="text-muted">({?=$g['jumlah']?} item)</small></span>
+        <span class="subtotal nrk-g-subtotal">Subtotal Rp {?=number_format($g['total'],0,',','.')?}</span>
+      </div>
+      <div class="table-responsive"><table class="table table-condensed table-hover">
+        <thead><tr class="active"><th>Barang</th><th>Unit Peminta / SPPB</th><th class="text-right">Qty</th><th class="text-right">Harga</th><th class="text-right">Subtotal</th><th>Status</th></tr></thead>
+        <tbody>
+        {loop: $g['rows'] as $r}
+          <tr data-kel="{?=htmlspecialchars($g['nama'],ENT_QUOTES,'UTF-8')?}" data-unitnama="{?=htmlspecialchars($r['nama_unit'],ENT_QUOTES,'UTF-8')?}" class="nrk-row{if: !empty($embedded) && $r['status'] === 'Konsul Pengajuan ke Kabid Umum'} nrk-item{/if}" data-cari="{?=htmlspecialchars(mb_strtolower($r['nama_barang'].' '.$r['nama_unit'].' '.$r['no_sppb']),ENT_QUOTES,'UTF-8')?}" data-item="{?=(int)$r['item_id']?}" data-no="{?=htmlspecialchars($r['no_sppb'],ENT_QUOTES,'UTF-8')?}" data-harga="{?=(float)$r['harga']?}" data-asal="{?=(float)$r['jumlah_rekap']?}" data-minta="{?=(float)$r['jumlah_minta']?}">
+            <td><strong>{?=htmlspecialchars($r['nama_barang'],ENT_QUOTES,'UTF-8')?}</strong>{if: $r['sumber_permintaan'] === 'Mendesak'} <span class="label label-danger">Mendesak</span>{/if}
+              {if: $r['spesifikasi'] !== '-'}<br><small class="text-muted">{?=htmlspecialchars($r['spesifikasi'],ENT_QUOTES,'UTF-8')?}</small>{/if}
+              {if: $r['keterangan'] !== '-' || $r['rencana_pembelanjaan'] !== '-'}<br><small class="text-muted"><i class="fa fa-comment-o"></i> {if: $r['keterangan'] !== '-'}{?=htmlspecialchars($r['keterangan'],ENT_QUOTES,'UTF-8')?}{/if}{if: $r['keterangan'] !== '-' && $r['rencana_pembelanjaan'] !== '-'} · {/if}{if: $r['rencana_pembelanjaan'] !== '-'}Rencana: {?=htmlspecialchars($r['rencana_pembelanjaan'],ENT_QUOTES,'UTF-8')?}{/if}</small>{/if}</td>
+            <td><span class="label label-info">{?=htmlspecialchars($r['nama_unit'],ENT_QUOTES,'UTF-8')?}</span><br><small class="text-muted">{?=htmlspecialchars($r['no_sppb'],ENT_QUOTES,'UTF-8')?} · {$r.tgl_sppb_format}</small></td>
+            <td class="text-right" style="white-space:nowrap">{if: !empty($embedded) && $r['status'] === 'Konsul Pengajuan ke Kabid Umum'}
+              <input type="number" class="form-control input-sm nrk-qty" min="0" step="any" max="{?=(float)$r['jumlah_minta']?}" value="{?=(float)$r['jumlah_rekap']?}" title="Qty ACC (diminta {?=(float)$r['jumlah_minta']?})" style="width:80px;display:inline-block;text-align:right"> {?=htmlspecialchars($r['satuan'],ENT_QUOTES,'UTF-8')?}
+              <br><label class="text-danger" style="font-weight:normal;font-size:12px;margin:3px 0 0;cursor:pointer"><input type="checkbox" class="nrk-tolak"> Tolak barang</label>
+            {else}{?=rtrim(rtrim(number_format($r['jumlah_rekap'],2,',','.'),'0'),',')?} {?=htmlspecialchars($r['satuan'],ENT_QUOTES,'UTF-8')?}{/if}</td>
+            <td class="text-right" style="white-space:nowrap">{if: $r['harga'] > 0}Rp {?=number_format($r['harga'],0,',','.')?}{else}<span class="text-danger">belum ada</span>{/if}</td>
+            <td class="text-right nrk-nilai" style="white-space:nowrap"><strong>Rp {?=number_format($r['nilai'],0,',','.')?}</strong></td>
+            <td><span class="label {?=in_array($r['status'],['Selesai','Disetujui Kabid'],true)?'label-success':($r['status']==='Ditolak'?'label-danger':'label-warning')?}">{?=htmlspecialchars($r['status'],ENT_QUOTES,'UTF-8')?}</span></td>
+          </tr>
+        {/loop}
+        </tbody>
+      </table></div>
+    </div>
+    {/loop}
+    <div class="alert alert-info nrk-kosong" style="display:none">Tidak ada barang yang cocok.</div>
+  </div>
+  <div class="col-md-4">
+    <div class="kartu">
+      <small>Total per Kelompok</small>
+      <table class="table table-condensed nrk-ringkas" style="margin:8px 0 0"><tbody class="nrk-ring-kel">
+        {loop: $ringkas_kelompok as $g}
+        <tr><td>{?=htmlspecialchars($g['nama'],ENT_QUOTES,'UTF-8')?}<div class="nrk-bar"><div style="width:{?=$g['persen']?}%"></div></div></td><td class="text-right" style="white-space:nowrap"><strong>Rp {?=number_format($g['total'],0,',','.')?}</strong><br><small class="text-muted">{?=$g['jumlah']?} item · {?=$g['persen']?}%</small></td></tr>
+        {/loop}
+        <tr class="active"><td><strong>Grand total</strong></td><td class="text-right"><strong>Rp {?=number_format($total_nilai,0,',','.')?}</strong></td></tr>
+      </tbody></table>
+    </div>
+    <div class="kartu">
+      <small>Total per Unit Peminta</small>
+      <table class="table table-condensed nrk-ringkas" style="margin:8px 0 0"><tbody class="nrk-ring-unit">
+        {loop: $ringkas_unit as $u}
+        <tr><td>{?=htmlspecialchars($u['nama'],ENT_QUOTES,'UTF-8')?}<div class="nrk-bar unit"><div style="width:{?=$u['persen']?}%"></div></div></td><td class="text-right" style="white-space:nowrap"><strong>Rp {?=number_format($u['total'],0,',','.')?}</strong><br><small class="text-muted">{?=$u['jumlah']?} item · {?=$u['persen']?}%</small></td></tr>
+        {/loop}
+      </tbody></table>
+    </div>
+  </div>
 </div>
+<div class="nrk-footer">
+  <div class="grand">Grand total (<span class="nrk-f-info">{$total_item} item, {?=count($kelompok)?} kelompok, {$total_unit} unit</span>): <strong class="nrk-f-grand">Rp {?=number_format($total_nilai,0,',','.')?}</strong></div>
+</div>
+{else}
+<div class="text-center text-muted" style="padding:35px;border:1px solid #e3e3e3;border-radius:4px;background:#fff"><i class="fa fa-inbox fa-2x"></i><br>Tidak ada detail permintaan Non Rutin pada filter ini.</div>
+{/if}
+{if: !empty($embedded) && $total_menunggu > 0}
+<div class="nrk-keputusan-panel">
+  <div class="row">
+    <div class="col-sm-6">
+      <label>Ringkasan keputusan</label>
+      <div class="nrk-ringkas-keputusan" style="line-height:2"></div>
+      <small class="text-muted"><b>Simpan Sementara</b> menyimpan pilihan tanpa TTD dan tanpa mengubah status. <b>Simpan Keputusan</b> memakai satu tanda tangan untuk semua dokumen yang di-ACC. Dokumen yang belum dipilih tidak ikut disimpan.</small>
+    </div>
+    <div class="col-sm-6 nrk-ttd-wrap">
+      <label>Tanda tangan Kabid Umum <small class="text-muted">(wajib bila ada yang di-ACC)</small></label>
+      <div style="position:relative;border:1px solid #bbb;border-radius:3px;background:#fff;overflow:hidden">
+        <canvas class="nrk-ttd-canvas" height="140" style="display:block;width:100%;height:140px;touch-action:none;cursor:crosshair"></canvas>
+        <span class="nrk-ttd-hint text-muted" style="position:absolute;left:0;right:0;top:60px;text-align:center;pointer-events:none">Tanda tangan dengan jari, pen, atau mouse</span>
+      </div>
+      <button type="button" class="btn btn-default btn-xs nrk-ttd-clear" style="margin-top:6px"><i class="fa fa-eraser"></i> Hapus tanda tangan</button>
+    </div>
+  </div>
+</div>
+<div class="nrk-sticky">
+  <div class="grand"><span class="nrk-sticky-info"></span></div>
+  <button type="button" class="btn btn-default nrk-simpan-draft"><i class="fa fa-floppy-o"></i> Simpan Sementara</button>
+  <button type="button" class="btn btn-success nrk-simpan-keputusan"><i class="fa fa-save"></i> Simpan Keputusan</button>
+</div>
+{/if}
+</div>
+<script>
+(function () {
+    // Handler didelegasikan ke document; namespace .nrk mencegah dobel saat display dimuat ulang via AJAX.
+    function saring() {
+        var q = $.trim($('.nrk-cari').val() || '').toLowerCase(), ada = 0;
+        $('.nrk-kelompok').each(function () {
+            var n = 0;
+            $(this).find('.nrk-row').each(function () {
+                var cocok = !q || String($(this).data('cari')).indexOf(q) !== -1;
+                $(this).toggle(cocok);
+                if (cocok) n++;
+            });
+            $(this).toggle(n > 0);
+            if (q && n) $(this).removeClass('tertutup');
+            ada += n;
+        });
+        $('.nrk-kosong').toggle(ada === 0);
+    }
+    $(document).off('.nrk')
+        .on('click.nrk', '.nrk-kelompok-head', function () { $(this).closest('.nrk-kelompok').toggleClass('tertutup'); })
+        .on('click.nrk', '.nrk-buka-semua', function () { $('.nrk-kelompok').removeClass('tertutup'); })
+        .on('click.nrk', '.nrk-tutup-semua', function () { $('.nrk-kelompok').addClass('tertutup'); })
+        .on('keyup.nrk', '.nrk-cari', function () { clearTimeout(window.__nrkCari); window.__nrkCari = setTimeout(saring, 200); })
+        .on('click.nrk', '.nrk-lihat', function () {
+            $('.nrk-cari').val(String($(this).closest('tr').data('no')).toLowerCase());
+            saring();
+            $('html, body').animate({ scrollTop: $('.nrk-cari').offset().top - 120 }, 250);
+        });
+
+    // ---- Keputusan Konsul Kabid Umum langsung di halaman (tanpa pop up) ----
+    if (!$('.nrk-doc').length) return;
+    function rp(n) { return 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID'); }
+    function tandai(tr) {
+        var v = tr.find('.nrk-keputusan').val();
+        tr.toggleClass('pilih-acc', v === 'acc').toggleClass('pilih-tidak', v === 'tidak_acc');
+        tr.find('.nrk-pilih .btn').each(function () {
+            var b = $(this), bv = String(b.data('v'));
+            b.toggleClass('btn-success', bv === 'acc' && v === 'acc')
+             .toggleClass('btn-danger', bv === 'tidak_acc' && v === 'tidak_acc')
+             .toggleClass('btn-default', !(bv === v && bv !== ''));
+        });
+        tr.find('.nrk-alasan').toggleClass('wajib', v === 'tidak_acc');
+    }
+    function ringkas() {
+        var acc = 0, tolak = 0, belum = 0, totalAcc = 0;
+        $('.nrk-doc').each(function () {
+            var v = $(this).find('.nrk-keputusan').val();
+            if (v === 'acc') { acc++; totalAcc += Number($(this).data('total')) || 0; } else if (v === 'tidak_acc') tolak++; else belum++;
+        });
+        $('.nrk-ringkas-keputusan').html('<span class="label label-success" style="font-size:12px">ACC: ' + acc + ' dok · ' + rp(totalAcc) + '</span> '
+            + '<span class="label label-danger" style="font-size:12px">Tidak ACC: ' + tolak + '</span> '
+            + '<span class="label label-warning" style="font-size:12px">Belum: ' + belum + '</span>');
+        $('.nrk-sticky-info').html('ACC <b>' + acc + '</b> · Tidak ACC <b>' + tolak + '</b> · Belum <b>' + belum + '</b> — total di-ACC: <strong style="font-size:18px;color:#1f3b57">' + rp(totalAcc) + '</strong>');
+        $('.nrk-ttd-wrap').css('opacity', acc > 0 ? 1 : .5);
+    }
+    // ---- Keputusan per barang: qty ACC dapat dikurangi atau barang ditolak ----
+    function angka(n) { return (Number(n) || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 }); }
+    function barisDok(no) { return $('.nrk-item').filter(function () { return $(this).attr('data-no') === no; }); }
+    function nilaiBaris(row) {
+        var harga = Number(row.attr('data-harga')) || 0;
+        if (!row.hasClass('nrk-item')) return (Number(row.attr('data-asal')) || 0) * harga;
+        return row.find('.nrk-tolak').prop('checked') ? 0 : (Number(row.find('.nrk-qty').val()) || 0) * harga;
+    }
+    function statusBaris(row) {
+        if (row.find('.nrk-tolak').prop('checked')) return 'ditolak';
+        return Math.abs((Number(row.find('.nrk-qty').val()) || 0) - (Number(row.attr('data-asal')) || 0)) > 0.00001 ? 'dikurangi' : '';
+    }
+    function hitungItem() {
+        $('.nrk-item').each(function () {
+            var row = $(this), st = statusBaris(row);
+            row.toggleClass('ditolak', st === 'ditolak').toggleClass('dikurangi', st === 'dikurangi');
+            row.find('.nrk-qty').prop('disabled', st === 'ditolak');
+            row.find('.nrk-nilai strong').text(rp(nilaiBaris(row)));
+        });
+        $('.nrk-kelompok').each(function () {
+            var total = 0;
+            $(this).find('.nrk-row').each(function () { total += nilaiBaris($(this)); });
+            $(this).find('.nrk-g-subtotal').text('Subtotal ' + rp(total));
+        });
+        $('.nrk-doc').each(function () {
+            var no = $(this).attr('data-no'), total = 0, ditolak = 0, dikurangi = 0;
+            barisDok(no).each(function () {
+                var st = statusBaris($(this));
+                total += nilaiBaris($(this));
+                if (st === 'ditolak') ditolak++; else if (st === 'dikurangi') dikurangi++;
+            });
+            $(this).attr('data-total', total).data('total', total).attr('data-ubah', ditolak + dikurangi);
+            $(this).find('.nrk-doc-total').text(rp(total));
+            $(this).find('.nrk-doc-ubah').html((ditolak ? '<span class="label label-danger">' + ditolak + ' ditolak</span> ' : '')
+                + (dikurangi ? '<span class="label label-warning">' + dikurangi + ' dikurangi</span>' : ''));
+            $(this).find('.nrk-alasan').attr('placeholder', (ditolak + dikurangi) ? 'Catatan (wajib: ada barang ditolak/dikurangi)' : 'Catatan (wajib jika Tidak ACC)');
+        });
+        hitungRingkasan();
+        ringkas();
+    }
+    // Kartu atas, Total per Kelompok/Unit, dan grand total mengikuti barang yang ditolak/dikurangi.
+    function hitungRingkasan() {
+        var grand = 0, nItem = 0, kel = {}, unit = {}, urutKel = [], urutUnit = [];
+        $('.nrk-row').each(function () {
+            var row = $(this), nilai = nilaiBaris(row), k = row.attr('data-kel'), u = row.attr('data-unitnama');
+            if (row.hasClass('nrk-item') && statusBaris(row) === 'ditolak') return;
+            grand += nilai; nItem++;
+            if (!kel[k]) { kel[k] = { nama: k, total: 0, n: 0 }; urutKel.push(kel[k]); }
+            if (!unit[u]) { unit[u] = { nama: u, total: 0, n: 0 }; urutUnit.push(unit[u]); }
+            kel[k].total += nilai; kel[k].n++;
+            unit[u].total += nilai; unit[u].n++;
+        });
+        function baris(daftar, kelasBar) {
+            return $.map(daftar.sort(function (a, b) { return b.total - a.total; }), function (g) {
+                var persen = grand ? Math.round(g.total / grand * 100) : 0;
+                return '<tr><td>' + $('<div>').text(g.nama).html() + '<div class="nrk-bar' + kelasBar + '"><div style="width:' + persen + '%"></div></div></td>'
+                    + '<td class="text-right" style="white-space:nowrap"><strong>' + rp(g.total) + '</strong><br><small class="text-muted">' + g.n + ' item · ' + persen + '%</small></td></tr>';
+            }).join('');
+        }
+        $('.nrk-ring-kel').html(baris(urutKel, '') + '<tr class="active"><td><strong>Grand total</strong></td><td class="text-right"><strong>' + rp(grand) + '</strong></td></tr>');
+        $('.nrk-ring-unit').html(baris(urutUnit, ' unit'));
+        $('.nrk-k-grand, .nrk-f-grand').text(rp(grand));
+        $('.nrk-k-rata').text(nItem ? 'rata-rata ' + rp(grand / nItem) + ' / item' : '');
+        $('.nrk-k-item').text(nItem);
+        $('.nrk-f-info').text(nItem + ' item, ' + urutKel.length + ' kelompok, ' + urutUnit.length + ' unit');
+    }
+    function itemDok(no, data) {
+        var salah = null;
+        barisDok(no).each(function () {
+            var row = $(this), id = row.attr('data-item'), st = statusBaris(row), qty = Number(row.find('.nrk-qty').val()) || 0;
+            if (st === 'ditolak') { data.item[id] = { tolak: 1 }; return; }
+            if (qty <= 0 || qty > (Number(row.attr('data-minta')) || 0)) { salah = row.find('.nrk-qty'); return false; }
+            if (st === 'dikurangi') data.item[id] = { qty: qty };
+        });
+        return salah;
+    }
+    function kumpulkan(wajibAlasan) {
+        var data = { keputusan: {}, alasan: {}, item: {} }, n = 0, salah = null, pesan = '';
+        $('.nrk-doc').each(function () {
+            var no = String($(this).attr('data-no')), v = $(this).find('.nrk-keputusan').val(), al = $.trim($(this).find('.nrk-alasan').val());
+            if (!v) return;
+            if (wajibAlasan && v === 'tidak_acc' && !al) { salah = $(this).find('.nrk-alasan'); pesan = 'Catatan wajib diisi untuk dokumen yang dipilih Tidak ACC.'; return false; }
+            if (v === 'acc') {
+                var qtySalah = itemDok(no, data);
+                if (qtySalah) { salah = qtySalah; pesan = 'Qty ACC harus lebih dari 0 dan tidak melebihi jumlah diminta. Centang "Tolak barang" untuk tidak menyetujui barang.'; return false; }
+                if (wajibAlasan && Number($(this).attr('data-ubah')) > 0 && !al) { salah = $(this).find('.nrk-alasan'); pesan = 'Catatan wajib diisi untuk ' + no + ' karena ada barang yang ditolak atau jumlahnya diubah.'; return false; }
+                if (wajibAlasan && barisDok(no).length && barisDok(no).filter(function () { return statusBaris($(this)) !== 'ditolak'; }).length === 0) { salah = $(this).find('.nrk-pilih .btn').eq(1); pesan = 'Semua barang ' + no + ' ditolak. Gunakan Tidak ACC untuk menolak seluruh permintaan.'; return false; }
+            }
+            data.keputusan[no] = v; data.alasan[no] = al; n++;
+        });
+        if (salah) { salah.focus(); alert(pesan); return null; }
+        if (!n) { alert('Belum ada dokumen yang dipilih ACC / Tidak ACC.'); return null; }
+        return data;
+    }
+    // Pulihkan pilihan per barang dari Simpan Sementara.
+    $('.nrk-doc').each(function () {
+        var simpan; try { simpan = JSON.parse($(this).attr('data-items') || '{}') || {}; } catch (e) { simpan = {}; }
+        $.each(simpan, function (id, p) {
+            var row = $('.nrk-item[data-item="' + id + '"]');
+            if (p.tolak) row.find('.nrk-tolak').prop('checked', true);
+            else if (p.qty !== null && p.qty !== undefined) row.find('.nrk-qty').val(p.qty);
+        });
+    });
+    $('.nrk-qty').on('input change', hitungItem);
+    $('.nrk-tolak').on('change', hitungItem);
+    function muatUlang(res, pesan) {
+        if (typeof showSppbStatusResult === 'function') showSppbStatusResult(res, pesan);
+        else if (typeof showNotif === 'function') showNotif('success', pesan);
+        else alert(pesan);
+        if (typeof loadSppbRekapNonRutin === 'function') loadSppbRekapNonRutin();
+        if (typeof loadDisplay === 'function') loadDisplay();
+    }
+
+    // Tanda tangan: pola sama dengan RKBU bulanan.
+    var canvas = $('.nrk-ttd-canvas')[0], strokes = [], stroke = null, drawing = false;
+    function resetTtd() {
+        strokes = []; stroke = null; drawing = false;
+        canvas.width = Math.max(300, Math.round(canvas.getBoundingClientRect().width || 600));
+        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        $('.nrk-ttd-hint').show();
+    }
+    function titik(e) {
+        var r = canvas.getBoundingClientRect();
+        return [Math.round((e.clientX - r.left) * canvas.width / r.width * 10) / 10, Math.round((e.clientY - r.top) * canvas.height / r.height * 10) / 10];
+    }
+    canvas.addEventListener('pointerdown', function (e) { e.preventDefault(); canvas.setPointerCapture(e.pointerId); drawing = true; stroke = [titik(e)]; strokes.push(stroke); $('.nrk-ttd-hint').hide(); });
+    canvas.addEventListener('pointermove', function (e) {
+        if (!drawing || !stroke) return;
+        e.preventDefault();
+        var next = titik(e), last = stroke[stroke.length - 1];
+        if (Math.abs(next[0] - last[0]) + Math.abs(next[1] - last[1]) < 1.5) return;
+        stroke.push(next);
+        var ctx = canvas.getContext('2d'); ctx.strokeStyle = '#000080'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(next[0], next[1]); ctx.stroke();
+    });
+    function berhenti() { drawing = false; stroke = null; }
+    canvas.addEventListener('pointerup', berhenti); canvas.addEventListener('pointercancel', berhenti);
+    function ttdPayload() {
+        var bersih = [], n = 0;
+        $.each(strokes, function (_, st) { if (st.length >= 2) { bersih.push(st); n += st.length; } });
+        return n >= 3 ? JSON.stringify({ version: 1, width: canvas.width, height: canvas.height, strokes: bersih }) : '';
+    }
+    $('.nrk-ttd-clear').on('click', resetTtd);
+    resetTtd();
+
+    $('.nrk-pilih .btn').on('click', function () {
+        var tr = $(this).closest('tr');
+        tr.find('.nrk-keputusan').val(String($(this).data('v')));
+        tandai(tr); ringkas();
+        if (String($(this).data('v')) === 'tidak_acc') tr.find('.nrk-alasan').focus();
+    });
+    $('.nrk-acc-sisa').on('click', function () {
+        $('.nrk-doc').each(function () {
+            if (!$(this).find('.nrk-keputusan').val()) { $(this).find('.nrk-keputusan').val('acc'); tandai($(this)); }
+        });
+        ringkas();
+    });
+    $('.nrk-simpan-draft').on('click', function () {
+        var data = kumpulkan(false), btn = $(this);
+        if (!data) return;
+        btn.prop('disabled', true);
+        $.post('{?=url(ADMIN."/logistik_non_medis/simpandraftkonsulkabid")?}', data, function (res) {
+            if (res.status === 'success') muatUlang(res, res.message || 'Draft keputusan disimpan.');
+            else { alert(res.message || 'Draft gagal disimpan.'); btn.prop('disabled', false); }
+        }, 'json').fail(function () { alert('Server gagal menyimpan draft.'); btn.prop('disabled', false); });
+    });
+    $('.nrk-simpan-keputusan').on('click', function () {
+        var data = kumpulkan(true), btn = $(this), adaAcc = false, n = 0, belum = 0;
+        if (!data) return;
+        $.each(data.keputusan, function (_, v) { n++; if (v === 'acc') adaAcc = true; });
+        belum = $('.nrk-doc').length - n;
+        if (adaAcc) {
+            data.tanda_tangan = ttdPayload();
+            if (!data.tanda_tangan) { alert('Tanda tangan Kabid Umum wajib diisi untuk keputusan ACC.'); $('html, body').animate({ scrollTop: $(canvas).offset().top - 150 }, 250); return; }
+        }
+        if (!confirm('Simpan keputusan untuk ' + n + ' dokumen?' + (belum ? '\n' + belum + ' dokumen yang belum dipilih tidak ikut disimpan.' : ''))) return;
+        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+        $.post('{?=url(ADMIN."/logistik_non_medis/keputusandanasppb")?}', data, function (res) {
+            if (res.status === 'success') muatUlang(res, res.message || 'Keputusan berhasil disimpan.');
+            else { alert(res.message || 'Keputusan gagal disimpan.'); btn.prop('disabled', false).html('<i class="fa fa-save"></i> Simpan Keputusan'); }
+        }, 'json').fail(function (xhr) {
+            alert((xhr.responseJSON && xhr.responseJSON.message) || 'Server gagal menyimpan keputusan.');
+            btn.prop('disabled', false).html('<i class="fa fa-save"></i> Simpan Keputusan');
+        });
+    });
+    $('.nrk-doc').each(function () { tandai($(this)); });
+    hitungItem();
+})();
+</script>

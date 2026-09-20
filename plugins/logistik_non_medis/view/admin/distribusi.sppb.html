@@ -169,7 +169,127 @@
                     {/if}
                 </div>
                 <div class="panel-body">
-                    {if: !empty($can_manage_distribusi_controls)}
+                    {if: !empty($nonrutin_summary)}
+                    <div class="nonrutin-summary-header">
+                        {if: !empty($nonrutin_summary.basis_posisi)}
+                        <div class="nonrutin-summary-title"><strong><i class="fa fa-user-circle-o"></i> Ringkasan Posisi Anda</strong>
+                        <span class="text-muted">(hanya permintaan Non Rutin yang menjadi tanggung jawab jabatan Anda, semua periode)</span>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;"><i class="fa fa-hand-pointer-o"></i> Klik kartu untuk melihat daftar permintaannya.</div></div>
+                        {else}
+                        <div class="nonrutin-summary-title"><strong><i class="fa fa-calendar"></i> Ringkasan Non Rutin per Bulan</strong>
+                        <span class="text-muted">(periode <span id="nonrutin-summary-periode">{$nonrutin_summary.label_periode}</span>, {$nonrutin_summary.label_lingkup}, berdasarkan tanggal permintaan)</span>
+                        <div class="text-muted" style="font-size:11px;margin-top:2px;"><i class="fa fa-hand-pointer-o"></i> Klik kartu untuk melihat daftar permintaannya.</div></div>
+                        <div class="form-inline nonrutin-summary-period">
+                            <label for="nonrutin-summary-bulan" class="text-muted" style="font-weight:normal;">Bulan</label>
+                            <input type="month" id="nonrutin-summary-bulan" class="form-control input-sm" value="{$nonrutin_summary.bulan}">
+                        </div>
+                        {/if}
+                    </div>
+                    <div id="nonrutin-summary-cards" class="{if: !empty($nonrutin_summary.basis_posisi)}cards-posisi{/if}">
+                        <div class="nonrutin-card-cell">
+                            <div class="panel nonrutin-card nonrutin-card-total" data-card-key="total" title="Gabungan angka kartu di sebelahnya">
+                                <div class="panel-body text-center">
+                                    <h5>{$nonrutin_summary.label_total}</h5>
+                                    <h2 id="nonrutin-summary-total">{$nonrutin_summary.total}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        {loop: $nonrutin_summary.cards}
+                        <div class="nonrutin-card-cell">
+                            <div class="panel nonrutin-card nonrutin-card-{$value.key}" data-card-key="{$value.key}" title="Status: {$value.status}">
+                                <div class="panel-body text-center">
+                                    <h5>{$value.label}</h5>
+                                    <h2 id="nonrutin-summary-{$value.key}">{$value.jumlah}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        {/loop}
+                    </div>
+                    <style>
+                        .nonrutin-summary-header { display:flex; align-items:center; justify-content:space-between; gap:15px; margin-bottom:12px; }
+                        .nonrutin-summary-title { min-width:0; }
+                        .nonrutin-summary-period { flex:0 0 auto; white-space:nowrap; }
+                        #nonrutin-summary-cards { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+                        .nonrutin-card-cell { display:flex; min-width:0; }
+                        #nonrutin-summary-cards .panel { width:100%; min-height:108px; margin:0; border:0; border-radius:3px; box-shadow:0 2px 6px rgba(0,0,0,.10); }
+                        #nonrutin-summary-cards .panel-body { min-height:108px; padding:14px 10px 11px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+                        #nonrutin-summary-cards h5 { min-height:34px; margin:0; display:flex; align-items:center; justify-content:center; font-size:14px; line-height:17px; font-weight:700; }
+                        #nonrutin-summary-cards h2 { margin:4px 0 0; font-size:30px; line-height:34px; font-weight:700; }
+                        .nonrutin-card { background:#f7f7f7; color:#555; }
+                        #nonrutin-summary-cards .nonrutin-card-total { background:#eef2f7; color:#34495e; }
+                        .nonrutin-card-menunggu { background:#fcf8e3; color:#8a6d3b; }
+                        .nonrutin-card-kasie_umum, .nonrutin-card-rekap { background:#eaf3fb; color:#31708f; }
+                        .nonrutin-card-konsultasi, .nonrutin-card-pengajuan_dana { background:#f5effb; color:#6f42a1; }
+                        .nonrutin-card-pengadaan { background:#fff3e6; color:#a15c07; }
+                        .nonrutin-card-siap, .nonrutin-card-selesai { background:#dff0d8; color:#3c763d; }
+                        .nonrutin-card-ditolak { background:#f2dede; color:#a94442; }
+                        .nonrutin-card-aksi { background:#fcf8e3; color:#8a6d3b; box-shadow:0 0 0 2px #f0ad4e inset !important; }
+                        .nonrutin-card-proses { background:#eaf3fb; color:#31708f; }
+                        .nonrutin-card-posisi_pending { background:#fcf8e3; color:#8a6d3b; box-shadow:0 0 0 2px #f0ad4e inset !important; }
+                        .nonrutin-card-posisi_history { background:#eaf3fb; color:#31708f; }
+                        #nonrutin-summary-cards.cards-posisi { grid-template-columns:repeat(3,minmax(0,1fr)); }
+                        #nonrutin-summary-cards .nonrutin-card { cursor:pointer; transition:transform .08s ease; }
+                        #nonrutin-summary-cards .nonrutin-card:hover { transform:translateY(-2px); }
+                        #nonrutin-summary-cards .nonrutin-card.card-active { box-shadow:0 0 0 3px #337ab7 inset !important; }
+                        @media (max-width:991px) {
+                            #nonrutin-summary-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+                            .nonrutin-summary-header { align-items:flex-start; }
+                        }
+                        @media (max-width:600px) {
+                            .nonrutin-summary-header { display:block; }
+                            .nonrutin-summary-period { margin-top:9px; }
+                            #nonrutin-summary-cards { grid-template-columns:1fr; gap:8px; }
+                            #nonrutin-summary-cards .panel, #nonrutin-summary-cards .panel-body { min-height:88px; }
+                            #nonrutin-summary-cards h5 { min-height:20px; }
+                        }
+                    </style>
+                    <script>
+                        window.refreshNonRutinSummary = function () {
+                            $.post('{?=url(ADMIN."/logistik_non_medis/distribusinonrutinsummary")?}', { bulan: $('#nonrutin-summary-bulan').val() }, function (res) {
+                                if (!res || res.status !== 'success') { return; }
+                                $('#nonrutin-summary-periode').text(res.label_periode);
+                                $('#nonrutin-summary-total').text(res.total);
+                                $.each(res.cards, function (_, card) { $('#nonrutin-summary-' + card.key).text(card.jumlah); });
+                                // Badge tab: jumlah baris tab itu sendiri, lintas bulan.
+                                $.each(res.tab_counts || {}, function (tab, jumlah) { $('#sppb-tab-count-' + tab).text(jumlah); });
+                            }, 'json');
+                        };
+                        $(document).on('change', '#nonrutin-summary-bulan', function () {
+                            // Filter kartu terikat pada bulan; ganti bulan berarti muat ulang daftarnya juga.
+                            window.refreshNonRutinSummary();
+                            if (window.sppbCardFilter) { loadDisplay(1); }
+                        });
+                        // Klik kartu memfilter daftar di bawahnya; klik kartu yang sama lagi membatalkan filter.
+                        $(document).on('click', '#nonrutin-summary-cards .nonrutin-card', function () {
+                            var key = $(this).data('card-key');
+                            if (window.sppbCardFilter === key) {
+                                window.clearSppbCardFilter();
+                                return;
+                            }
+                            window.sppbCardFilter = key;
+                            $('#nonrutin-summary-cards .nonrutin-card').removeClass('card-active');
+                            $(this).addClass('card-active');
+                            $('.approval-tab-link, .sppb-main-tab-link').closest('li').removeClass('active');
+                            // Bila sedang di pane Rekap, kembalikan dulu ke daftar agar hasilnya terlihat.
+                            $('#sppb-rekap-pane').hide();
+                            $('#sppb-list-pane').show();
+                            if (sppbListTab === 'rekap') { sppbListTab = 'active'; }
+                            // Kartu posisi = isi tab yang sama, jadi tabnya ikut disorot.
+                            var tabSama = { posisi_pending: 'pending', posisi_history: 'history' }[key];
+                            if (tabSama) {
+                                sppbCurrentTab = tabSama;
+                                $('.approval-tab-link[data-tab="' + tabSama + '"]').closest('li').addClass('active');
+                            }
+                            loadDisplay(1);
+                        });
+                        window.clearSppbCardFilter = function (reload) {
+                            window.sppbCardFilter = '';
+                            $('#nonrutin-summary-cards .nonrutin-card').removeClass('card-active');
+                            $('.approval-tab-link[data-tab="' + sppbCurrentTab + '"]').closest('li').addClass('active');
+                            if (reload !== false) { loadDisplay(1); }
+                        };
+                    </script>
+                    {elseif: !empty($can_manage_distribusi_controls)}
                     <div class="clearfix" style="margin-bottom:8px;">
                         <strong><i class="fa fa-calendar"></i> Ringkasan Jumat–Jumat</strong>
                         <span class="text-muted">({$weekly_period_start} sampai sebelum {$weekly_period_end})</span>
@@ -210,6 +330,7 @@
                     </div>
                     {/if}
                     {if: !empty($jenis_page)}
+                    {if: $role != 'kepala_unit' && $role != 'kepala_sie' && $role != 'kepala_bidang'}
                     <ul class="nav nav-tabs sppb-main-tabs" id="sppbMainTabs">
                         <li class="active">
                             <a href="javascript:void(0)" class="sppb-main-tab-link" data-tab="active">
@@ -230,29 +351,43 @@
                         {/if}
                     </ul>
                     {/if}
-                    <div id="sppb-list-pane">
+                    {/if}
+                    <!-- Tab berada di luar #sppb-list-pane agar tetap terlihat saat pane Rekap dibuka. -->
                     {if: ($role == 'kepala_unit' && $jenis_page != 'Rutin') || $role == 'kepala_sie' || $role == 'kepala_bidang'}
                     <ul class="nav nav-tabs sppb-approval-tabs" id="approvalTabs">
                         <li class="active">
-                            <a href="javascript:void(0)" class="approval-tab-link" data-tab="pending">
+                            <a href="javascript:void(0)" class="approval-tab-link" data-tab="pending"
+                               title="Permintaan yang masih menunggu keputusan Anda, tanpa batas bulan.">
                                 <i class="fa fa-clock-o"></i> Butuh Persetujuan
+                                {if: !empty($nonrutin_tab_counts)}<span class="badge" id="sppb-tab-count-pending">{$nonrutin_tab_counts.pending}</span>{/if}
                             </a>
                         </li>
                         <li>
-                            <a href="javascript:void(0)" class="approval-tab-link" data-tab="history">
-                                <i class="fa fa-history"></i> Riwayat Persetujuan
+                            <a href="javascript:void(0)" class="approval-tab-link" data-tab="history"
+                               title="Hanya permintaan yang pernah Anda setujui atau tanda tangani dan sudah lewat tahap Anda, tanpa batas bulan. Karena itu angkanya berbeda dari kartu ringkasan di atas.">
+                                <i class="fa fa-history"></i> Riwayat Keputusan Saya
+                                {if: !empty($nonrutin_tab_counts)}<span class="badge" id="sppb-tab-count-history">{$nonrutin_tab_counts.history}</span>{/if}
                             </a>
                         </li>
                         {if: $role == 'kepala_unit'}
                         <li>
                             <a href="javascript:void(0)" class="approval-tab-link" data-tab="mine">
-                                <i class="fa fa-user"></i> Permintaan Unit Saya
+                                <i class="fa fa-user"></i> Permintaan Saya
+                                {if: !empty($nonrutin_tab_counts)}<span class="badge" id="sppb-tab-count-mine">{$nonrutin_tab_counts.mine}</span>{/if}
+                            </a>
+                        </li>
+                        {/if}
+                        {if: !empty($can_access_rekap_nonrutin)}
+                        <li>
+                            <a href="javascript:void(0)" class="approval-tab-link" data-tab="rekap">
+                                <i class="fa fa-table"></i> Keputusan Konsul
                             </a>
                         </li>
                         {/if}
                     </ul>
                     <div style="margin-top:15px;"></div>
                     {/if}
+                    <div id="sppb-list-pane">
                     {if: !empty($can_manage_distribusi_controls)}
                     <div class="well well-sm">
                         <div class="row">
@@ -297,10 +432,9 @@
                                     <option value="Disetujui Ka. Sie">ACC KASI (Butuh ACC KABID)</option>
                                     <option value="Disetujui Kabid">Disetujui Kabid</option>
                                     <option value="Diserahkan ke Kasie Umum">Diserahkan ke Kasie Umum</option>
-                                    <option value="Verifikasi Kasie Umum">Verifikasi Kasie Umum</option>
                                     <option value="Logistik Umum & Rekap">Logistik Umum & Rekap</option>
                                     <option value="Konsul Pengajuan ke Kabid Umum">Konsul Pengajuan ke Kabid Umum</option>
-                                    <option value="Pengajuan Dana ke Bendahara">Pengajuan Dana ke Bendahara</option>
+                                    <option value="Pengajuan Dana ke Bendahara" {if: $default_filter_status == 'Pengajuan Dana ke Bendahara'}selected{/if}>Pengajuan Dana ke Bendahara</option>
                                     <option value="Proses Pengadaan">Proses Pengadaan</option>
                                     <option value="Siap Diserahkan">Siap Diserahkan</option>
                                     <option value="Tidak ACC">Tidak ACC</option>
@@ -368,7 +502,7 @@
                             <div class="row">
                                 <div class="col-md-2"><label>Dari Tanggal</label><input type="date" id="sppb-rekap-awal" class="form-control" value="{$rekap_tanggal_awal}"></div>
                                 <div class="col-md-2"><label>Sampai Tanggal</label><input type="date" id="sppb-rekap-akhir" class="form-control" value="{$rekap_tanggal_akhir}"></div>
-                                <div class="col-md-3"><label>Status</label><select id="sppb-rekap-status" class="form-control"><option value="Konsul Pengajuan ke Kabid Umum">Konsul Pengajuan ke Kabid Umum</option><option value="aktif">Semua Aktif / Disetujui / Selesai</option><option value="semua">Semua Status</option><option value="Disetujui Kabid">Disetujui Kabid</option><option value="Diserahkan ke Kasie Umum">Diserahkan ke Kasie Umum</option><option value="Proses Pengadaan">Proses Pengadaan</option><option value="Selesai">Selesai</option></select></div>
+                                <div class="col-md-3"><label>Status</label><select id="sppb-rekap-status" class="form-control"><option value="Konsul Pengajuan ke Kabid Umum">Konsul Pengajuan ke Kabid Umum</option><option value="aktif">Semua Aktif / Disetujui / Selesai</option><option value="semua">Semua Status</option><option value="pengajuan_dana">Pengajuan Dana (Keuangan / Bendahara)</option><option value="Disetujui Kabid">Disetujui Kabid</option><option value="Diserahkan ke Kasie Umum">Diserahkan ke Kasie Umum</option><option value="Proses Pengadaan">Proses Pengadaan</option><option value="Selesai">Selesai</option></select></div>
                                 <div class="col-md-3"><label>Cari Barang / Unit / SPPB</label><input type="text" id="sppb-rekap-cari" class="form-control" placeholder="Ketik kata pencarian"></div>
                                 <div class="col-md-2" style="padding-top:25px;white-space:nowrap"><button type="button" class="btn btn-primary" id="sppb-rekap-tampil"><i class="fa fa-search"></i> Tampil</button> <button type="button" class="btn btn-success" id="sppb-rekap-cetak"><i class="fa fa-print"></i> Cetak</button></div>
                             </div>
@@ -596,8 +730,20 @@ $(document).ready(function() {
     $(document).on('click', '.approval-tab-link', function(e) {
         e.preventDefault();
         sppbCurrentTab = $(this).data('tab');
+        // Memilih tab membatalkan filter kartu: keduanya tidak bisa aktif bersamaan.
+        if (window.clearSppbCardFilter) { window.clearSppbCardFilter(false); }
         $('#approvalTabs li').removeClass('active');
         $(this).closest('li').addClass('active');
+        if (sppbCurrentTab === 'rekap') {
+            sppbListTab = 'rekap';
+            $('#sppb-list-pane').hide();
+            $('#sppb-rekap-pane').show();
+            loadSppbRekapNonRutin();
+            return;
+        }
+        sppbListTab = 'active';
+        $('#sppb-rekap-pane').hide();
+        $('#sppb-list-pane').show();
         loadDisplay();
     });
 
@@ -762,6 +908,12 @@ function loadDisplay(halaman) {
 
     if (!sppbRutinUnitMode && (sppbCurrentRole === 'kepala_unit' || sppbCurrentRole === 'kepala_sie' || sppbCurrentRole === 'kepala_bidang')) {
         postData.approval_tab = sppbCurrentTab;
+    }
+
+    // Filter kartu ringkasan: berlaku se-periode dan mengesampingkan tab persetujuan.
+    if (window.sppbCardFilter) {
+        postData.card_key = window.sppbCardFilter;
+        postData.card_bulan = $('#nonrutin-summary-bulan').val() || '';
     }
 
     $.post('{?=url(ADMIN."/logistik_non_medis/displaysppb")?}', postData, function(data) {
@@ -992,24 +1144,211 @@ function verifikasiLogistik(no_sppb) {
     }
 }
 
-function keputusanDanaSppb(no_sppb, keputusan) {
+function persetujuanDanaSppb(no_sppb, keputusan) {
     var postData = {no_sppb: no_sppb, keputusan: keputusan};
-    if (keputusan !== 'acc') {
-        var alasan = prompt('Masukkan alasan Tidak ACC / konfirmasi ke unit terkait:');
+    if (keputusan === 'setuju') {
+        if (!confirm('Setujui dana untuk ' + no_sppb + '? Permintaan akan masuk Proses Pengadaan.')) return;
+    } else {
+        var alasan = prompt('Alasan pengajuan dana tidak disetujui:');
         if (alasan === null) return;
+        if ($.trim(alasan) === '') { alert('Alasan wajib diisi.'); return; }
         postData.alasan = alasan;
     }
-    $.post('{?=url(ADMIN."/logistik_non_medis/keputusandanasppb")?}', postData, function(data) {
-        var res = JSON.parse(data);
-        if(res.status == 'success') {
-            showSppbStatusResult(res, keputusan === 'acc' ? 'Keputusan ACC berhasil disimpan.' : 'Keputusan Tidak ACC berhasil disimpan.');
-            if (sppbListTab === 'rekap') loadSppbRekapNonRutin(); else loadDisplay();
-            if($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
+    $.post('{?=url(ADMIN."/logistik_non_medis/persetujuandanasppb")?}', postData, function(res) {
+        if (res.status === 'success') {
+            showSppbStatusResult(res, res.message);
+            loadDisplay();
+            if ($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
         } else {
-            alert(res.message);
+            alert(res.message || 'Gagal menyimpan.');
         }
+    }, 'json').fail(function() { alert('Kesalahan server.'); });
+}
+var kabidSignatureStrokes = [], kabidSignatureDrawing = false, kabidSignatureStroke = null;
+
+function kabidEscape(value) {
+    return $('<div>').text(value == null ? '' : String(value)).html();
+}
+function resetKabidSignature() {
+    kabidSignatureStrokes = []; kabidSignatureDrawing = false; kabidSignatureStroke = null;
+    var canvas = document.getElementById('ttd-kabid-canvas');
+    if (!canvas) return;
+    canvas.width = Math.max(320, Math.round(canvas.getBoundingClientRect().width || 520));
+    canvas.height = 150;
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    $('#ttd-kabid-hint').show();
+}
+function initKabidSignature() {
+    var canvas = document.getElementById('ttd-kabid-canvas');
+    if (!canvas) return;
+    resetKabidSignature();
+    if (canvas.dataset.signatureReady === '1') return;
+    canvas.dataset.signatureReady = '1';
+    function point(e) {
+        var rect = canvas.getBoundingClientRect();
+        return [Math.round((e.clientX - rect.left) * canvas.width / rect.width * 10) / 10,
+                Math.round((e.clientY - rect.top) * canvas.height / rect.height * 10) / 10];
+    }
+    canvas.addEventListener('pointerdown', function(e) {
+        e.preventDefault(); canvas.setPointerCapture(e.pointerId); kabidSignatureDrawing = true;
+        kabidSignatureStroke = [point(e)]; kabidSignatureStrokes.push(kabidSignatureStroke); $('#ttd-kabid-hint').hide();
+    });
+    canvas.addEventListener('pointermove', function(e) {
+        if (!kabidSignatureDrawing || !kabidSignatureStroke) return;
+        e.preventDefault();
+        var next = point(e), last = kabidSignatureStroke[kabidSignatureStroke.length - 1];
+        if (Math.abs(next[0] - last[0]) + Math.abs(next[1] - last[1]) < 1.5) return;
+        kabidSignatureStroke.push(next);
+        var ctx = canvas.getContext('2d'); ctx.strokeStyle = '#000080'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(next[0], next[1]); ctx.stroke();
+    });
+    function stop() { kabidSignatureDrawing = false; kabidSignatureStroke = null; }
+    canvas.addEventListener('pointerup', stop); canvas.addEventListener('pointercancel', stop);
+}
+function kabidSignaturePayload() {
+    var canvas = document.getElementById('ttd-kabid-canvas'), clean = [], points = 0;
+    $.each(kabidSignatureStrokes, function(_, stroke) { if (stroke.length >= 2) { clean.push(stroke); points += stroke.length; } });
+    return canvas && points >= 3 ? JSON.stringify({version:1, width:canvas.width, height:canvas.height, strokes:clean}) : '';
+}
+function kabidRupiah(n) { return 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID'); }
+function kabidAngka(n) { return (Number(n) || 0).toLocaleString('id-ID', {maximumFractionDigits: 2}); }
+function openKeputusanKabid(dokumen, keputusanAwal) {
+    if (!dokumen || !dokumen.length) { alert('Centang minimal satu dokumen yang akan diputuskan.'); return; }
+    $('#kabid-keputusan-rows').html('<div class="text-center text-muted" style="padding:25px"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat barang dan estimasi harga...</div>');
+    $('#kabid-ringkasan').empty();
+    $('#modal-keputusan-kabid').modal('show');
+    $.post('{?=url(ADMIN."/logistik_non_medis/detailkonsulkabid")?}', {no_sppb: $.map(dokumen, function(d){ return d.no_sppb; })}, function(res) {
+        if (!res || res.status !== 'success') {
+            $('#kabid-keputusan-rows').html('<div class="alert alert-danger">' + kabidEscape((res && res.message) || 'Detail tidak dapat dimuat.') + '</div>');
+            return;
+        }
+        var html = '';
+        $.each(res.dokumen, function(_, doc) {
+            var bisa = doc.status === 'Konsul Pengajuan ke Kabid Umum' || doc.status === 'Konsultasi Dana';
+            var awal = doc.draft_keputusan || (res.dokumen.length === 1 ? (keputusanAwal || '') : '');
+            var items = '';
+            $.each(doc.items, function(i, it) {
+                items += '<tr><td class="text-center">' + (i + 1) + '</td><td>' + kabidEscape(it.nama_barang) + (it.spesifikasi ? '<br><small class="text-muted">' + kabidEscape(it.spesifikasi) + '</small>' : '') + '</td>' +
+                  '<td class="text-right">' + kabidAngka(it.jumlah) + ' ' + kabidEscape(it.satuan) + '</td><td class="text-right">' + kabidRupiah(it.harga) + '</td><td class="text-right">' + kabidRupiah(it.nilai) + '</td></tr>';
+            });
+            html += '<div class="panel panel-default kabid-decision-row" data-no="' + kabidEscape(doc.no_sppb) + '" data-total="' + (Number(doc.total) || 0) + '" style="margin-bottom:12px">' +
+              '<div class="panel-heading clearfix" style="padding:8px 12px"><div class="pull-left"><strong>' + kabidEscape(doc.no_sppb) + '</strong> <small class="text-muted">— ' + kabidEscape(doc.unit) + '</small>' +
+              (doc.draft_keputusan ? ' <span class="label label-info"><i class="fa fa-floppy-o"></i> Draft</span>' : '') + '</div>' +
+              '<div class="pull-right"><strong>' + kabidRupiah(doc.total) + '</strong></div></div>' +
+              '<table class="table table-condensed table-bordered" style="margin:0;font-size:12px"><thead><tr class="active"><th style="width:32px">#</th><th>Nama Barang</th><th class="text-right" style="width:110px">Jumlah</th><th class="text-right" style="width:120px">Estimasi Harga</th><th class="text-right" style="width:120px">Subtotal</th></tr></thead><tbody>' + items + '</tbody></table>' +
+              '<div class="panel-body" style="padding:8px 12px"><div class="row">' +
+              (bisa
+                ? '<div class="col-sm-4"><select class="form-control input-sm kabid-keputusan"><option value="">-- Belum diputuskan --</option><option value="acc"' + (awal === 'acc' ? ' selected' : '') + '>ACC / Ajukan Dana</option><option value="tidak_acc"' + (awal === 'tidak_acc' ? ' selected' : '') + '>Tidak ACC</option></select></div>' +
+                  '<div class="col-sm-8"><input type="text" class="form-control input-sm kabid-alasan" maxlength="1000" placeholder="Catatan (wajib jika Tidak ACC)" value="' + kabidEscape(doc.draft_alasan || '') + '"></div>'
+                : '<div class="col-sm-12 text-muted"><i class="fa fa-info-circle"></i> Status ' + kabidEscape(doc.status) + ' — tidak dapat diputuskan.</div>') +
+              '</div></div></div>';
+        });
+        $('#kabid-keputusan-rows').html(html || '<div class="alert alert-warning">Dokumen tidak ditemukan.</div>');
+        updateRingkasanKabid();
+    }, 'json').fail(function() {
+        $('#kabid-keputusan-rows').html('<div class="alert alert-danger">Server gagal memuat detail dokumen.</div>');
     });
 }
+function updateRingkasanKabid() {
+    var acc = 0, tolak = 0, belum = 0, totalAcc = 0, totalSemua = 0;
+    $('.kabid-decision-row').each(function() {
+        var sel = $(this).find('.kabid-keputusan'), total = Number($(this).attr('data-total')) || 0;
+        totalSemua += total;
+        if (!sel.length) return;
+        var v = sel.val();
+        $(this).find('.kabid-alasan').toggleClass('required', v === 'tidak_acc');
+        $(this).css('border-color', v === 'acc' ? '#5cb85c' : (v === 'tidak_acc' ? '#d9534f' : ''));
+        if (v === 'acc') { acc++; totalAcc += total; } else if (v === 'tidak_acc') { tolak++; } else { belum++; }
+    });
+    $('#kabid-ringkasan').html(
+        '<span class="label label-default" style="font-size:12px">Total diajukan: ' + kabidRupiah(totalSemua) + '</span> ' +
+        '<span class="label label-success" style="font-size:12px">ACC: ' + acc + ' dok · ' + kabidRupiah(totalAcc) + '</span> ' +
+        '<span class="label label-danger" style="font-size:12px">Tidak ACC: ' + tolak + '</span> ' +
+        '<span class="label label-warning" style="font-size:12px">Belum: ' + belum + '</span>' +
+        (belum > 0 ? ' <button type="button" class="btn btn-xs btn-success" id="kabid-acc-sisa"><i class="fa fa-check"></i> ACC semua yang belum</button>' : ''));
+    $('#kabid-ttd-wrap').toggle(acc > 0);
+}
+function kumpulkanKeputusanKabid() {
+    var data = {keputusan:{}, alasan:{}}, n = 0;
+    $('.kabid-decision-row').each(function() {
+        var sel = $(this).find('.kabid-keputusan');
+        if (!sel.length) return;
+        var no = $(this).attr('data-no');
+        data.keputusan[no] = sel.val(); data.alasan[no] = $.trim($(this).find('.kabid-alasan').val()); n++;
+    });
+    return n ? data : null;
+}
+function keputusanDanaSppb(no_sppb, keputusan) {
+    openKeputusanKabid([{no_sppb:no_sppb, unit:''}], keputusan || 'acc');
+}
+$(document).off('change.kabidDecision', '.kabid-keputusan').on('change.kabidDecision', '.kabid-keputusan', updateRingkasanKabid);
+$(document).off('click.kabidAccSisa', '#kabid-acc-sisa').on('click.kabidAccSisa', '#kabid-acc-sisa', function() {
+    $('.kabid-keputusan').filter(function(){ return !$(this).val(); }).val('acc');
+    updateRingkasanKabid();
+});
+$(document).off('click.kabidDraft', '#btn-keputusan-kabid-draft').on('click.kabidDraft', '#btn-keputusan-kabid-draft', function() {
+    var docs = [];
+    $('.nr-doc-check').filter(function(){ return $(this).attr('data-draft'); }).each(function(){ docs.push({no_sppb:$(this).val(), unit:$(this).attr('data-unit') || ''}); });
+    openKeputusanKabid(docs, '');
+});
+$(document).off('click.kabidSimpanDraft', '#btn-draft-keputusan-kabid').on('click.kabidSimpanDraft', '#btn-draft-keputusan-kabid', function() {
+    var postData = kumpulkanKeputusanKabid();
+    if (!postData) { alert('Tidak ada dokumen yang dapat diputuskan.'); return; }
+    var button = $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+    $.ajax({url:'{?=url(ADMIN."/logistik_non_medis/simpandraftkonsulkabid")?}', type:'POST', data:postData, dataType:'json'})
+      .done(function(res) {
+          if (res.status === 'success') {
+              $('#modal-keputusan-kabid').modal('hide');
+              if (typeof showNotif === 'function') showNotif('success', res.message); else alert(res.message);
+              if (sppbListTab === 'rekap') loadSppbRekapNonRutin(); else loadDisplay();
+          } else alert(res.message || 'Draft gagal disimpan.');
+      }).fail(function() { alert('Server gagal menyimpan draft.'); })
+      .always(function(){ button.prop('disabled', false).html('<i class="fa fa-floppy-o"></i> Simpan Sementara'); });
+});
+$(document).off('change.kabidSelectAll', '#nr-check-all').on('change.kabidSelectAll', '#nr-check-all', function() {
+    $('.nr-doc-check').prop('checked', this.checked);
+});
+$(document).off('change.kabidDocCheck', '.nr-doc-check').on('change.kabidDocCheck', '.nr-doc-check', function() {
+    $('#nr-check-all').prop('checked', $('.nr-doc-check').length > 0 && $('.nr-doc-check:checked').length === $('.nr-doc-check').length);
+});
+$(document).off('click.kabidSelected', '#btn-keputusan-kabid-terpilih').on('click.kabidSelected', '#btn-keputusan-kabid-terpilih', function() {
+    var docs = [];
+    $('.nr-doc-check:checked').each(function(){ docs.push({no_sppb:$(this).val(), unit:$(this).attr('data-unit') || ''}); });
+    openKeputusanKabid(docs, 'acc');
+});
+$(document).off('shown.bs.modal.kabidTtd', '#modal-keputusan-kabid').on('shown.bs.modal.kabidTtd', '#modal-keputusan-kabid', initKabidSignature);
+$(document).off('click.kabidTtd', '#ttd-kabid-clear').on('click.kabidTtd', '#ttd-kabid-clear', resetKabidSignature);
+$(document).off('click.kabidSubmit', '#btn-simpan-keputusan-kabid').on('click.kabidSubmit', '#btn-simpan-keputusan-kabid', function() {
+    var postData = {keputusan:{}, alasan:{}}, valid = true, adaAcc = false, belum = 0;
+    $('.kabid-decision-row').each(function() {
+        var sel = $(this).find('.kabid-keputusan');
+        if (!sel.length) return;
+        var no = $(this).attr('data-no'), keputusan = sel.val(), alasan = $.trim($(this).find('.kabid-alasan').val());
+        if (!keputusan) { belum++; return; }
+        postData.keputusan[no] = keputusan; postData.alasan[no] = alasan;
+        if (keputusan === 'acc') adaAcc = true;
+        if (keputusan === 'tidak_acc' && !alasan) { $(this).find('.kabid-alasan').focus(); valid = false; return false; }
+    });
+    if (!valid) { alert('Alasan wajib diisi untuk dokumen yang dipilih Tidak ACC.'); return; }
+    if ($.isEmptyObject(postData.keputusan)) { alert('Belum ada dokumen yang diputuskan.'); return; }
+    if (belum > 0 && !confirm(belum + ' dokumen belum diputuskan dan tidak ikut disimpan. Lanjutkan?')) return;
+    if (adaAcc) {
+        postData.tanda_tangan = kabidSignaturePayload();
+        if (!postData.tanda_tangan) { alert('Tanda tangan Kabid Umum wajib diisi untuk keputusan ACC.'); return; }
+    }
+    var button = $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
+    $.ajax({url:'{?=url(ADMIN."/logistik_non_medis/keputusandanasppb")?}', type:'POST', data:postData, dataType:'json'})
+      .done(function(res) {
+          if (res.status === 'success') {
+              $('#modal-keputusan-kabid').modal('hide');
+              showSppbStatusResult(res, res.message || 'Keputusan berhasil disimpan.');
+              if (sppbListTab === 'rekap') loadSppbRekapNonRutin(); else loadDisplay();
+              if ($('#modal-detail').hasClass('in')) $('#modal-detail').modal('hide');
+          } else alert(res.message || 'Keputusan gagal disimpan.');
+      }).fail(function(xhr) {
+          alert((xhr.responseJSON && xhr.responseJSON.message) || 'Server gagal menyimpan keputusan.');
+      }).always(function(){ button.prop('disabled', false).html('<i class="fa fa-save"></i> Simpan Keputusan'); });
+});
 function exportSppbAktif() {
     var cari = $('#cari').val() || '';
     var status = $('#filter-status').length ? $('#filter-status').val() : '';
@@ -1030,6 +1369,23 @@ function exportSppbAktif() {
 }
 
 </script>
+
+<div class="modal fade" id="modal-keputusan-kabid" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document"><div class="modal-content">
+        <div class="modal-header bg-primary" style="color:#fff"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title"><i class="fa fa-pencil-square-o"></i> Keputusan Konsul Kabid Umum</h4></div>
+        <div class="modal-body">
+            <div class="alert alert-info" style="padding:8px 12px"><i class="fa fa-info-circle"></i> Periksa barang dan estimasi harga, lalu tentukan ACC / Tidak ACC. <b>Simpan Sementara</b> menyimpan pilihan tanpa TTD dan tanpa mengubah status. <b>Simpan Keputusan</b> memakai satu tanda tangan untuk seluruh dokumen yang di-ACC.</div>
+            <div id="kabid-keputusan-rows" style="max-height:52vh;overflow-y:auto;overflow-x:hidden;padding-right:4px"></div>
+            <div id="kabid-ringkasan" style="margin:10px 0 12px"></div>
+            <div id="kabid-ttd-wrap" class="form-group">
+                <label>Tanda Tangan Kabid Umum <span class="text-danger">*</span></label>
+                <div style="position:relative;border:1px solid #bbb;border-radius:3px;background:#fff;overflow:hidden"><canvas id="ttd-kabid-canvas" height="150" style="display:block;width:100%;height:150px;touch-action:none;cursor:crosshair"></canvas><span id="ttd-kabid-hint" class="text-muted" style="position:absolute;left:0;right:0;top:62px;text-align:center;pointer-events:none">Tanda tangan dengan digital pen, mouse, atau jari</span></div>
+                <button type="button" class="btn btn-default btn-xs" id="ttd-kabid-clear" style="margin-top:6px"><i class="fa fa-eraser"></i> Hapus</button>
+            </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Batal</button><button type="button" class="btn btn-warning" id="btn-draft-keputusan-kabid"><i class="fa fa-floppy-o"></i> Simpan Sementara</button><button type="button" class="btn btn-primary" id="btn-simpan-keputusan-kabid"><i class="fa fa-save"></i> Simpan Keputusan</button></div>
+    </div></div>
+</div>
 
 <div class="modal fade" id="modal-import-sppb" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
@@ -1082,5 +1438,175 @@ function exportSppbAktif() {
         </div>
     </div>
 </div>
+
+<!-- Modal Tindak Lanjut Non Rutin (tahap Logistik & Rekap). SPO tetap: pengadaan tetap lewat Konsul Kabid Umum. -->
+<style>
+    #nonrutin-summary-cards > div > .panel { flex:1; }
+    .tl-opsi { display:block; border:2px solid #e3e6ea; border-radius:6px; padding:12px; margin-bottom:10px; cursor:pointer; min-height:92px; }
+    .tl-opsi:hover, .tl-opsi.active { border-color:#337ab7; background:#f2f8fd; }
+    .tl-opsi.disabled { opacity:.5; cursor:not-allowed; background:#fafafa; }
+    .tl-opsi input { margin-right:6px; }
+    .tl-opsi strong { display:block; margin-bottom:3px; }
+    .tl-opsi .tl-rekom { display:none; float:right; }
+    .tl-opsi.rekomendasi .tl-rekom { display:inline-block; }
+    .tl-aset { display:block; border-bottom:1px solid #eee; padding:6px 4px; font-weight:normal; margin:0; }
+</style>
+<div class="modal fade" id="modal-tindak-lanjut" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title"><i class="fa fa-random"></i> Tindak Lanjut Permintaan Non Rutin <small id="tl-no-sppb"></small></h4>
+            </div>
+            <div class="modal-body">
+                <div id="tl-loading" class="text-center" style="padding:25px"></div>
+                <div id="tl-content" style="display:none">
+                    <h5 style="margin-top:0"><strong>1. Ketersediaan barang</strong></h5>
+                    <div id="tl-items"></div>
+                    <h5><strong>2. Pilih tindak lanjut</strong></h5>
+                    <div class="row">
+                        <div class="col-sm-4"><label class="tl-opsi" data-jalur="stok"><input type="radio" name="tl_jalur" value="stok"><span class="label label-success tl-rekom">Disarankan</span><strong><i class="fa fa-cubes"></i> Ambil dari Gudang</strong><small class="text-muted">Stok gudang logistik cukup. Langsung <b>Siap Diserahkan</b>.</small></label></div>
+                        <div class="col-sm-4"><label class="tl-opsi" data-jalur="mutasi"><input type="radio" name="tl_jalur" value="mutasi"><span class="label label-success tl-rekom">Disarankan</span><strong><i class="fa fa-exchange"></i> Mutasi dari Unit Lain</strong><small class="text-muted">Pakai aset kondisi baik yang tidak terpakai di unit lain.</small></label></div>
+                        <div class="col-sm-4"><label class="tl-opsi" data-jalur="pengadaan"><input type="radio" name="tl_jalur" value="pengadaan"><span class="label label-success tl-rekom">Disarankan</span><strong><i class="fa fa-shopping-cart"></i> Tidak Tersedia &rarr; Ajukan Pengadaan</strong><small class="text-muted">Lanjut sesuai SPO: Konsul Kabid Umum &rarr; Bendahara &rarr; PO.</small></label></div>
+                    </div>
+                    <div id="tl-aset-wrap" style="display:none">
+                        <h5><strong>3. Pilih unit asal</strong> <small class="text-muted">(aset kondisi Baik menurut sistem)</small></h5>
+                        <div id="tl-aset-list" style="max-height:280px;overflow:auto"></div>
+                        <div class="alert alert-warning" style="padding:8px 10px;margin:8px 0 0;font-size:12px">
+                            <i class="fa fa-info-circle"></i> <strong>Jika fisik tidak sesuai sistem</strong> (barang tidak ada, rusak, atau masih dipakai): unit asal/logistik <b>menolak mutasi</b> dengan alasan di menu Mutasi Aset.
+                            Permintaan otomatis <b>kembali ke Logistik &amp; Rekap</b> untuk pilih unit lain atau ajukan pengadaan, dan temuan dicatat di aset untuk dicek saat sensus.
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:12px">
+                        <label>Catatan</label>
+                        <textarea id="tl-catatan" class="form-control" rows="2" placeholder="Contoh: kipas bekas dari Marwa 3 masih layak / aset perlu diperbaiki dulu"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary" id="tl-submit" disabled><i class="fa fa-check"></i> Proses</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    var esc = function (v) { return $('<div>').text(v == null ? '' : v).html(); };
+    var current = '';
+    var loadingHtml = '<i class="fa fa-spinner fa-spin fa-2x"></i><br>Memeriksa stok gudang dan aset unit lain...';
+
+    window.tindakLanjutCepat = function (noSppb) {
+        current = noSppb;
+        $('#tl-no-sppb').text(noSppb);
+        $('#tl-loading').show().html(loadingHtml);
+        $('#tl-content').hide();
+        $('#tl-catatan').val('');
+        $('#tl-submit').prop('disabled', true).html('<i class="fa fa-check"></i> Proses');
+        if ($('#modal-detail').hasClass('in')) { $('#modal-detail').modal('hide'); }
+        $('#modal-tindak-lanjut').modal('show');
+        $.post('{?=url(ADMIN."/logistik_non_medis/kandidatpemenuhannonrutin")?}', { no_sppb: noSppb }, function (res) {
+            if (!res || res.status !== 'success') {
+                $('#tl-loading').html('<div class="alert alert-danger">' + esc((res && res.message) || 'Data tidak dapat dimuat.') + '</div>');
+                return;
+            }
+            var stokCukup = true, asetCukup = true, rows = '', aset = '';
+            $.each(res.items, function (_, it) {
+                var butuh = Number(it.jumlah) || 0;
+                var baik = $.grep(it.aset, function (a) { return a.status_kondisi === 'Baik'; });
+                var okStok = butuh > 0 && Number(it.stok) >= butuh;
+                var okAset = butuh > 0 && baik.length >= Math.ceil(butuh);
+                stokCukup = stokCukup && okStok;
+                asetCukup = asetCukup && okAset;
+                rows += '<tr><td>' + esc(it.nama_barang) + '</td><td class="text-center">' + esc(butuh + ' ' + it.satuan) + '</td>'
+                    + '<td class="text-center ' + (okStok ? 'text-success' : 'text-danger') + '"><i class="fa ' + (okStok ? 'fa-check' : 'fa-times') + '"></i> ' + esc(it.stok) + '</td>'
+                    + '<td class="text-center ' + (okAset ? 'text-success' : 'text-muted') + '">' + baik.length + ' aset</td></tr>';
+                var perUnit = {}, urutan = [];
+                $.each(baik, function (_, a) {
+                    if (!perUnit[a.kode_unit]) { perUnit[a.kode_unit] = { nama: a.nama_unit, aset: [] }; urutan.push(a.kode_unit); }
+                    perUnit[a.kode_unit].aset.push(a);
+                });
+                aset += '<div style="margin:6px 0 4px"><strong>' + esc(it.nama_barang) + '</strong> <span class="text-muted">(butuh ' + esc(Math.ceil(butuh)) + ')</span></div>';
+                if (!urutan.length) { aset += '<div class="text-muted" style="padding:4px 0 8px">Tidak ada aset kondisi Baik di unit mana pun.</div>'; return; }
+                aset += '<table class="table table-condensed table-bordered" style="margin-bottom:8px"><thead><tr><th>Unit</th><th class="text-center" width="110">Tersedia</th><th class="text-center" width="120">Ambil</th></tr></thead><tbody>';
+                $.each(urutan, function (_, kode) {
+                    var u = perUnit[kode], kodeList = $.map(u.aset, function (a) { return a.kode_aset; });
+                    aset += '<tr><td><i class="fa fa-building-o text-info"></i> ' + esc(u.nama) + ' <small class="text-muted">(' + esc(kode) + ')</small>'
+                        + '<br><a href="javascript:void(0)" class="tl-lihat" style="font-size:11px">lihat kode aset</a><div class="tl-kode text-muted" style="display:none;font-size:11px">'
+                        + $.map(u.aset, function (a) { return esc(a.kode_aset) + (a.lokasi_fisik ? ' — ' + esc(a.lokasi_fisik) : ''); }).join('<br>') + '</div></td>'
+                        + '<td class="text-center"><strong>' + u.aset.length + '</strong> unit</td>'
+                        + '<td class="text-center"><input type="number" class="form-control input-sm tl-ambil" min="0" max="' + u.aset.length + '" value="0" data-aset="' + esc(kodeList.join(',')) + '" style="width:80px;display:inline-block"></td></tr>';
+                });
+                aset += '</tbody></table>';
+            });
+            $('#tl-items').html('<table class="table table-bordered table-condensed"><thead><tr><th>Barang</th><th class="text-center" width="110">Diminta</th><th class="text-center" width="130">Stok Gudang</th><th class="text-center" width="150">Aset Baik</th></tr></thead><tbody>' + rows + '</tbody></table>');
+            $('#tl-aset-list').html(aset);
+            var rekom = stokCukup ? 'stok' : (asetCukup ? 'mutasi' : 'pengadaan');
+            $('.tl-opsi').removeClass('active rekomendasi disabled').find('input').prop('checked', false).prop('disabled', false);
+            if (!stokCukup) { $('.tl-opsi[data-jalur=stok]').addClass('disabled').find('input').prop('disabled', true); }
+            if (!asetCukup) { $('.tl-opsi[data-jalur=mutasi]').addClass('disabled').find('input').prop('disabled', true); }
+            $('.tl-opsi[data-jalur=' + rekom + ']').addClass('rekomendasi').find('input').prop('checked', true).trigger('change');
+            $('#tl-loading').hide();
+            $('#tl-content').show();
+        }, 'json').fail(function () {
+            $('#tl-loading').html('<div class="alert alert-danger">Gagal memeriksa ketersediaan.</div>');
+        });
+    };
+
+    $(document).on('change', 'input[name=tl_jalur]', function () {
+        $('.tl-opsi').removeClass('active');
+        $(this).closest('.tl-opsi').addClass('active');
+        var jalur = this.value;
+        $('#tl-aset-wrap').toggle(jalur === 'mutasi');
+        var label = { stok: 'Ambil dari Gudang', mutasi: 'Ajukan Mutasi', pengadaan: 'Lanjut ke Konsul Kabid Umum' }[jalur];
+        $('#tl-submit').prop('disabled', false).html('<i class="fa fa-check"></i> ' + label);
+    });
+
+    $(document).on('click', '.tl-lihat', function () { $(this).next('.tl-kode').toggle(); });
+    $(document).on('change keyup', '.tl-ambil', function () {
+        var max = Number($(this).attr('max')) || 0, v = Math.floor(Number($(this).val()) || 0);
+        if (v < 0) { v = 0; } if (v > max) { v = max; }
+        if (String(v) !== $(this).val()) { $(this).val(v); }
+    });
+
+    var selesai = function (res, fallback) {
+        $('#modal-tindak-lanjut').modal('hide');
+        if (typeof loadDisplay === 'function') { loadDisplay(); }
+        if (typeof showSppbStatusResult === 'function') { showSppbStatusResult(res, fallback); }
+        else if (typeof showNotif === 'function') { showNotif('success', res.message || fallback); }
+    };
+    var gagal = function (msg) {
+        if (typeof showNotif === 'function') { showNotif('error', msg); } else { alert(msg); }
+        var jalur = $('input[name=tl_jalur]:checked').val();
+        if (jalur) { $('input[name=tl_jalur]:checked').trigger('change'); }
+    };
+
+    $(document).on('click', '#tl-submit', function () {
+        var jalur = $('input[name=tl_jalur]:checked').val();
+        if (!jalur) { return; }
+        $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Memproses...');
+        if (jalur === 'pengadaan') {
+            $.post('{?=url(ADMIN."/logistik_non_medis/proseslogistiksppb")?}', { no_sppb: current }, function (res) {
+                var data = typeof res === 'string' ? JSON.parse(res) : res;
+                if (data.status === 'success') { selesai(data, 'Diteruskan ke Konsul Kabid Umum.'); } else { gagal(data.message || 'Gagal memproses.'); }
+            }).fail(function () { gagal('Kesalahan server.'); });
+            return;
+        }
+        var assets = [];
+        $('.tl-ambil').each(function () {
+            var n = Math.floor(Number($(this).val()) || 0);
+            assets = assets.concat(String($(this).data('aset')).split(',').slice(0, n));
+        });
+        if (jalur === 'mutasi' && !assets.length) { gagal('Isi jumlah yang diambil dari unit asal.'); return; }
+        $.post('{?=url(ADMIN."/logistik_non_medis/tindaklanjutpemenuhannonrutin")?}', { no_sppb: current, jalur: jalur, catatan: $('#tl-catatan').val(), kode_aset: assets }, function (data) {
+            if (data.status !== 'success') { gagal(data.message || 'Tindak lanjut gagal.'); return; }
+            selesai(data, data.message);
+            if (jalur === 'mutasi' && data.redirect_url && confirm(data.message + '\n\nBuka halaman Mutasi Aset untuk persetujuan unit asal?')) {
+                window.location.href = data.redirect_url;
+            }
+        }, 'json').fail(function () { gagal('Tindak lanjut gagal diproses server.'); });
+    });
+})();
+</script>
 
 {? include_once(MODULES . '/logistik_non_medis/view/admin/notifikasi.html') ?}

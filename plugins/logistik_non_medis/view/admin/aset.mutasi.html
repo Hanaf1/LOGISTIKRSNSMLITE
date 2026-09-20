@@ -210,7 +210,9 @@ function approveMutasi(no, role) {
 }
 
 function rejectMutasi(no) {
-    var alasan = prompt('Masukkan alasan penolakan mutasi ' + no + ':');
+    var alasan = prompt('Alasan penolakan mutasi ' + no + ':
+Contoh: barang tidak ada di unit / kondisi rusak / masih dipakai
+(Jika mutasi untuk permintaan Non Rutin, permintaan kembali ke Logistik & Rekap.)');
     if(alasan === null) return;
     if(alasan.trim() === '') {
         alert('Alasan penolakan wajib diisi!');

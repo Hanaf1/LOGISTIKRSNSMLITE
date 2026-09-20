@@ -25,11 +25,19 @@
         {if: $value.jumlah_aset > 1}
         <a href="{?=url([ADMIN,'logistik_non_medis','asetgrouppage'])?}&group_id={$value.asset_group_id}" class="btn btn-info btn-xs" title="Lihat {$value.jumlah_aset} aset"><i class="fa fa-folder-open"></i> Lihat {$value.jumlah_aset} Aset</a>
         {else}
-        <a href="{?=url([ADMIN,'logistik_non_medis','asetdetailpage'])?}&id={$value.id}" class="btn btn-info btn-xs" title="Detail Aset"><i class="fa fa-eye"></i> Detail</a>
-        <a href="{?=url([ADMIN,'logistik_non_medis','asetformpage'])?}&id={$value.id}" class="btn btn-success btn-xs" title="Edit"><i class="fa fa-edit"></i></a>
-        {if: $gudang_aset}
-        <button type="button" class="btn btn-danger btn-xs btn-hapus-aset" data-id="{$value.id}" data-kode="{$value.kode_aset}" title="Hapus dari Stok Aset Gudang"><i class="fa fa-trash"></i></button>
-        {/if}
+        <div class="btn-group aset-aksi">
+            <a href="{?=url([ADMIN,'logistik_non_medis','asetdetailpage'])?}&id={$value.id}" class="btn btn-info btn-xs" title="Detail Aset"><i class="fa fa-eye"></i> Detail</a>
+            <button type="button" class="btn btn-info btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Aksi lain"><span class="caret"></span></button>
+            <ul class="dropdown-menu dropdown-menu-right">
+                <li><a href="{?=url([ADMIN,'logistik_non_medis','asetformpage'])?}&id={$value.id}"><i class="fa fa-edit fa-fw"></i> Edit</a></li>
+                <li><a href="{?=url([ADMIN,'logistik_non_medis','asetprintlabel',$value['kode_aset']])?}" target="_blank"><i class="fa fa-print fa-fw"></i> Cetak label</a></li>
+                {if: $boleh_koreksi}
+                <li role="separator" class="divider"></li>
+                <li><a href="#" class="btn-koreksi-aset text-danger" data-id="{$value.id}" data-kode="{$value.kode_aset|e}" data-nama="{$value.nama_aset|e}" data-unit="{$value.nama_unit|e}{if: !empty($value.lokasi_fisik)} / {$value.lokasi_fisik|e}{/if}"{if: $gudang_aset} data-judul="Hapus dari Stok Aset Gudang"{/if}>
+                    <i class="fa fa-{if: $gudang_aset}trash{else}ban{/if} fa-fw"></i> {if: $gudang_aset}Hapus dari Stok Gudang{else}Koreksi (tidak ada fisik){/if}</a></li>
+                {/if}
+            </ul>
+        </div>
         {/if}
     </td>
 </tr>

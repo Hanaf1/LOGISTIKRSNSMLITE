@@ -40,11 +40,8 @@
             <div class="col-md-4">
                 <div class="form-group">
                     <label>Status Usulan</label>
-                    <select name="status" class="form-control">
-                        <option value="Draft" {if: $perencanaan.status == 'Draft'}selected{/if}>Draft</option>
-                        <option value="Diajukan" {if: $perencanaan.status == 'Diajukan'}selected{/if}>Diajukan</option>
-                        <option value="Disetujui" {if: $perencanaan.status == 'Disetujui'}selected{/if}>Disetujui</option>
-                    </select>
+                    <input type="hidden" name="status" value="Draft">
+                    <p class="form-control-static"><span class="label label-default">Draft</span> <small class="text-muted">Diajukan lewat tab RKBU Bulanan</small></p>
                 </div>
             </div>
         </div>
@@ -67,12 +64,14 @@
             </table>
         </div>
         <div class="alert alert-info" style="margin: 8px 0; padding: 8px 12px;">
-            <strong>Arti skala prioritas:</strong>
-            D = Diinginkan/penunjang (dapat ditunda),
-            E = Penting/kebutuhan utama (penundaan dapat mengganggu pelayanan),
-            V = Sangat penting/kritis (harus diprioritaskan).
+            <strong>ABC-VEN:</strong>
+            VEN dipilih per barang &mdash; <b>V</b> Vital (kritis, wajib tersedia), <b>E</b> Essential (kebutuhan utama), <b>N</b> Non-Essential (penunjang, dapat ditunda).
+            Kelas <b>ABC</b> dihitung otomatis dari nilai belanja bulan tersebut (A = 70% nilai teratas, B = 20% berikutnya, C = sisanya).
+            Baris dengan <b>Rencana Qty 0 tidak disimpan</b>.
         </div>
         <button type="button" class="btn btn-info btn-sm" onclick="addTableRow()"><i class="fa fa-plus"></i> Tambah Barang</button>
+        <button type="button" class="btn btn-success btn-sm" onclick="muatSemuaBarangKelompok()" title="Tampilkan semua barang di kelompok ini beserta harga; cukup isi Rencana Qty"><i class="fa fa-list"></i> Muat Semua Barang Kelompok Ini</button>
+        <small class="text-muted" id="info_pemakaian" style="margin-left:8px"></small>
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
@@ -102,6 +101,7 @@
 <script>
 var rowCount = 0;
 var activeRowIndex = -1;
+var pemakaianBulanLalu = {};
 var itemsPerencanaan = {?=json_encode($items)?};
 
 // Set form action using mlite global
@@ -141,8 +141,9 @@ function addTableRow(data = null) {
     var index = rowCount++;
     var kode_item = data ? data.kode_item : '';
     var harga = data ? data.harga_referensi : '';
-    var prioritas = data ? data.prioritas : 'Desirable';
+    var prioritas = data ? data.prioritas : 'Non-Essential';
     var total_qty = data ? data.total_qty : 0;
+    if (data && data.pemakaian_lalu == null && kode_item) { data.pemakaian_lalu = pemakaianBulanLalu[kode_item] || 0; }
     
     var html = `
         <tr id="row_${index}">
@@ -158,10 +159,10 @@ function addTableRow(data = null) {
                 <input type="text" name="items[${index}][harga_referensi]" class="form-control rupiah-input" id="harga_${index}" value="${harga ? formatRupiah(harga, 'Rp. ') : ''}" placeholder="Rp. 0">
             </td>
             <td>
-                <select name="items[${index}][prioritas]" class="form-control" title="Skala prioritas VEN">
-                    <option value="Desirable" ${prioritas == 'Desirable' ? 'selected' : ''}>D (Desirable = Diinginkan/Penunjang)</option>
-                    <option value="Essential" ${prioritas == 'Essential' ? 'selected' : ''}>E (Essential = Penting/Kebutuhan Utama)</option>
-                    <option value="Vital" ${prioritas == 'Vital' ? 'selected' : ''}>V (Vital = Sangat Penting/Kritis)</option>
+                <select name="items[${index}][prioritas]" class="form-control" title="Skala VEN">
+                    <option value="Non-Essential" ${prioritas == 'Vital' || prioritas == 'Essential' ? '' : 'selected'}>N (Non-Essential)</option>
+                    <option value="Essential" ${prioritas == 'Essential' ? 'selected' : ''}>E (Essential)</option>
+                    <option value="Vital" ${prioritas == 'Vital' ? 'selected' : ''}>V (Vital)</option>
                 </select>
             </td>
             <td>
@@ -174,15 +175,48 @@ function addTableRow(data = null) {
     `;
     
     $('#item_rows').append(html);
-    $('.select2-row').select2({ dropdownParent: $('#modalForm') });
+    $('#row_' + index + ' .select2-row').select2({ dropdownParent: $('#modalForm') });
     
     // Auto-fetch price on item select (if not set)
     $(`select[name="items[${index}][kode_item]"]`).on('change', function() {
         var p = $(this).find(':selected').data('harga');
         if (p) {
-            $(`#harga_${index}`).val(formatRupiah(p.toString(), 'Rp. '));
+            $(`#harga_${index}`).val(formatRupiah(Math.round(Number(p)).toString(), 'Rp. '));
         }
+        $(`#row_${index} input[name$="[pemakaian_lalu]"]`).val(pemakaianBulanLalu[$(this).val()] || 0);
     });
+}
+
+// Pemakaian bulan sebelum periode (barang keluar dari kartu stok), dipakai untuk kolom Pemakaian Bln Lalu.
+function muatPemakaianBulanLalu() {
+    $.post(mlite.url + '/' + mlite.admin + '/logistik_non_medis/pemakaianperencanaan?t=' + mlite.token,
+        { bulan: $('#form_bulan').val(), tahun: $('#form_tahun').val() }, function(res) {
+        if (!res || res.status !== 'success') return;
+        pemakaianBulanLalu = res.pemakaian || {};
+        var ada = Object.keys(pemakaianBulanLalu).length;
+        $('#info_pemakaian').text(ada ? ada + ' barang punya data pemakaian ' + res.label : 'Belum ada data pemakaian ' + res.label + ' (kartu stok keluar kosong).');
+        $('.item-select').each(function() {
+            $(this).closest('tr').find('input[name$="[pemakaian_lalu]"]').val(pemakaianBulanLalu[$(this).val()] || 0);
+        });
+    }, 'json');
+}
+$('#form_bulan, #form_tahun').on('change', muatPemakaianBulanLalu);
+muatPemakaianBulanLalu();
+
+function muatSemuaBarangKelompok() {
+    var kelompok = $('#form_kelompok_barang').val();
+    if (!kelompok) { alert('Pilih kelompok barang dulu.'); return; }
+    var sudahAda = {};
+    $('.item-select').each(function() {
+        if ($(this).val()) { sudahAda[$(this).val()] = true; } else { $(this).closest('tr').remove(); }
+    });
+    var ditambah = 0;
+    $.each(itemsPerencanaan, function(_, item) {
+        if ((item.kelompok_barang || item.kategori || '') !== kelompok || sudahAda[item.kode_item]) return;
+        addTableRow({ kode_item: item.kode_item, harga_referensi: Math.round(Number(item.harga_referensi) || 0), prioritas: 'Non-Essential', total_qty: 0, pemakaian_lalu: pemakaianBulanLalu[item.kode_item] || 0 });
+        ditambah++;
+    });
+    alert(ditambah ? ditambah + ' barang dimuat. Isi Rencana Qty untuk barang yang dibutuhkan; baris Qty 0 tidak disimpan.' : 'Semua barang kelompok ini sudah ada di daftar.');
 }
 
 function buildItemOptions(selectedKode) {

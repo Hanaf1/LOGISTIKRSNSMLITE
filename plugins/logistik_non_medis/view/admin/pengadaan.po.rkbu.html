@@ -1,0 +1,213 @@
+<style>
+    .porkbu-kelompok { border: 1px solid #dde3ea; border-radius: 4px; margin-bottom: 12px; background: #fff; }
+    .porkbu-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; background: #f3f6f9; border-bottom: 1px solid #dde3ea; }
+    .porkbu-head .nama { font-weight: 700; color: #1f3b57; flex: 1; min-width: 160px; }
+    .porkbu-head .subtotal { font-weight: 700; color: #1f3b57; white-space: nowrap; }
+    .porkbu-kelompok table { margin: 0; }
+    .porkbu-kelompok td, .porkbu-kelompok th { vertical-align: middle !important; }
+    .porkbu-bar { position: sticky; bottom: 0; z-index: 5; background: #fff; border-top: 2px solid #1f3b57; padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .porkbu-bar .info { flex: 1; min-width: 220px; }
+    .porkbu-bar strong { font-size: 20px; color: #1f3b57; }
+    #porkbu-modal .table td, #porkbu-modal .table th { vertical-align: middle; }
+    #porkbu-modal input.qty { width: 80px; }
+    #porkbu-modal input.harga { width: 120px; }
+</style>
+
+<div class="row" style="margin-bottom:10px;">
+    <div class="col-sm-5">
+        <select id="porkbu-batch" class="form-control input-sm"><option value="">Semua RKBU disetujui</option></select>
+    </div>
+    <div class="col-sm-7"><input type="text" id="porkbu-cari" class="form-control input-sm" placeholder="Cari barang / kode / kelompok..."></div>
+</div>
+<p class="text-muted" style="margin-top:-2px;">Barang RKBU yang sudah <b>disetujui Keuangan</b> dan belum masuk PO. Centang per kelompok atau per barang, lalu klik <b>Generate PO</b> (satu PO untuk satu vendor).</p>
+
+<div id="porkbu-wrap"></div>
+
+<div class="porkbu-bar">
+    <div class="info">Terpilih <span id="porkbu-n">0</span> barang: <strong id="porkbu-total">Rp 0</strong> <small class="text-muted">(harga referensi)</small></div>
+    <button type="button" class="btn btn-default btn-sm" id="porkbu-bersihkan">Bersihkan pilihan</button>
+    <button type="button" class="btn btn-success" id="porkbu-generate"><i class="fa fa-file-text-o"></i> Generate PO</button>
+</div>
+
+<div class="modal fade" id="porkbu-modal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document"><div class="modal-content">
+        <div class="modal-header"><button type="button" class="close" data-dismiss="modal">&times;</button><h4 class="modal-title"><i class="fa fa-file-text-o"></i> Generate PO dari RKBU</h4></div>
+        <div class="modal-body">
+            <div class="row">
+                <div class="col-sm-6 form-group">
+                    <label>Vendor <span class="text-danger">*</span></label>
+                    <select id="porkbu-vendor" class="form-control" style="width:100%;">
+                        <option value="">-- Pilih vendor --</option>
+                        {loop: $vendors}<option value="{$value.kode_vendor|e}">{$value.nama_vendor|e}</option>{/loop}
+                    </select>
+                </div>
+                <div class="col-sm-3 form-group">
+                    <label>Tanggal PO</label>
+                    <input type="date" id="porkbu-tgl" class="form-control" value="{$hari_ini}">
+                </div>
+            </div>
+            <div class="table-responsive" style="max-height:45vh;overflow:auto;">
+                <table class="table table-condensed table-bordered">
+                    <thead><tr class="active"><th>Barang</th><th class="text-right">Qty</th><th class="text-right">Harga Satuan</th><th class="text-right">Subtotal</th></tr></thead>
+                    <tbody id="porkbu-modal-items"></tbody>
+                </table>
+            </div>
+            <div class="row">
+                <div class="col-sm-6 form-group">
+                    <label>Catatan PO</label>
+                    <textarea id="porkbu-catatan" class="form-control" rows="3" maxlength="500"></textarea>
+                </div>
+                <div class="col-sm-6">
+                    <table class="table table-condensed" style="margin:0;">
+                        <tr><td>Total nilai</td><td class="text-right"><strong id="porkbu-m-total">Rp 0</strong></td></tr>
+                        <tr><td>Diskon (Rp)</td><td class="text-right"><input type="text" inputmode="numeric" id="porkbu-diskon" class="form-control input-sm text-right uang" value="0"></td></tr>
+                        <tr><td>PPN (Rp)</td><td class="text-right"><input type="text" inputmode="numeric" id="porkbu-ppn" class="form-control input-sm text-right uang" value="0"></td></tr>
+                        <tr class="active"><td><strong>Grand total</strong></td><td class="text-right"><strong id="porkbu-m-grand" style="font-size:18px;">Rp 0</strong></td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Batal</button>
+            <button type="button" class="btn btn-success" id="porkbu-simpan"><i class="fa fa-check"></i> Buat PO Draft</button>
+        </div>
+    </div></div>
+</div>
+
+<script type="application/json" id="porkbu-data">{$items_json}</script>
+<script>
+(function () {
+    var items = JSON.parse(document.getElementById('porkbu-data').textContent || '[]');
+    var dipilih = {};
+    var urlGenerate = '{?=url([ADMIN,"logistik_non_medis","generaterkbupengadaanpo"])?}';
+    var bulanNama = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
+    function rp(n) { return 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID'); }
+    function angka(n) { return (Number(n) || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 }); }
+    function uang(v) { return Number(String(v || '').replace(/[^0-9]/g, '')) || 0; }
+    function kelompok(it) { return $.trim(it.kelompok_barang || '') || 'Lain-lain'; }
+
+    var batchSeen = {};
+    $.each(items, function (_, it) {
+        if (batchSeen[it.no_batch]) return;
+        batchSeen[it.no_batch] = true;
+        $('#porkbu-batch').append('<option value="' + esc(it.no_batch) + '">' + esc(it.no_batch) + ' (' + bulanNama[+it.bulan] + ' ' + esc(it.tahun) + ')</option>');
+    });
+
+    function tampil(it) {
+        var batch = $('#porkbu-batch').val(), cari = $.trim($('#porkbu-cari').val()).toLowerCase();
+        if (batch && it.no_batch !== batch) return false;
+        return !cari || [it.nama_barang, it.kode_item, kelompok(it)].join(' ').toLowerCase().indexOf(cari) !== -1;
+    }
+
+    function render() {
+        var grup = {}, urut = [], html = '';
+        $.each(items, function (i, it) {
+            if (!tampil(it)) return;
+            var k = kelompok(it).toLowerCase();
+            if (!grup[k]) { grup[k] = { nama: kelompok(it), idx: [] }; urut.push(k); }
+            grup[k].idx.push(i);
+        });
+        urut.sort();
+        $.each(urut, function (_, k) {
+            var g = grup[k], subtotal = 0, nPilih = 0, baris = '';
+            $.each(g.idx, function (_, i) {
+                var it = items[i];
+                subtotal += it.nilai;
+                if (dipilih[it.id]) nPilih++;
+                baris += '<tr><td class="text-center" style="width:34px;"><input type="checkbox" class="porkbu-cek" data-id="' + it.id + '"' + (dipilih[it.id] ? ' checked' : '') + '></td>'
+                    + '<td>' + esc(it.nama_barang) + '<br><small class="text-muted">' + esc(it.kode_item) + ' · ' + esc(it.no_batch) + '</small></td>'
+                    + '<td class="text-right" style="white-space:nowrap;">' + angka(it.total_qty) + ' ' + esc(it.satuan) + '</td>'
+                    + '<td class="text-right" style="white-space:nowrap;">' + rp(it.harga_referensi) + '</td>'
+                    + '<td class="text-right" style="white-space:nowrap;"><strong>' + rp(it.nilai) + '</strong></td></tr>';
+            });
+            html += '<div class="porkbu-kelompok" data-k="' + esc(k) + '"><div class="porkbu-head">'
+                + '<input type="checkbox" class="porkbu-cek-kelompok"' + (nPilih === g.idx.length ? ' checked' : '') + ' title="Pilih semua di kelompok ini">'
+                + '<span class="nama">' + esc(g.nama) + ' <small class="text-muted">(' + nPilih + '/' + g.idx.length + ' dipilih)</small></span>'
+                + '<span class="subtotal">Subtotal ' + rp(subtotal) + '</span></div>'
+                + '<div class="table-responsive"><table class="table table-condensed table-hover"><thead><tr class="active"><th></th><th>Barang</th><th class="text-right">Qty Disetujui</th><th class="text-right">Harga Ref.</th><th class="text-right">Nilai</th></tr></thead>'
+                + '<tbody>' + baris + '</tbody></table></div></div>';
+        });
+        $('#porkbu-wrap').html(html || '<div class="alert alert-info">'
+            + (items.length ? 'Tidak ada barang yang cocok.' : 'Belum ada barang RKBU yang disetujui Keuangan dan belum masuk PO.') + '</div>');
+        var n = 0, total = 0;
+        $.each(items, function (_, it) { if (dipilih[it.id]) { n++; total += it.nilai; } });
+        $('#porkbu-n').text(n);
+        $('#porkbu-total').text(rp(total));
+        $('#badge-rkbu-siap-po').text(items.length || '');
+    }
+
+    $('#porkbu-batch').on('change', render);
+    $('#porkbu-cari').on('keyup', function () { clearTimeout(window.__porkbuCari); window.__porkbuCari = setTimeout(render, 200); });
+    $('#porkbu-wrap').on('change', '.porkbu-cek', function () {
+        if (this.checked) dipilih[$(this).data('id')] = true; else delete dipilih[$(this).data('id')];
+        render();
+    });
+    $('#porkbu-wrap').on('change', '.porkbu-cek-kelompok', function () {
+        var k = $(this).closest('.porkbu-kelompok').data('k'), on = this.checked;
+        $.each(items, function (_, it) {
+            if (!tampil(it) || kelompok(it).toLowerCase() !== k) return;
+            if (on) dipilih[it.id] = true; else delete dipilih[it.id];
+        });
+        render();
+    });
+    $('#porkbu-bersihkan').on('click', function () { dipilih = {}; render(); });
+
+    function hitungModal() {
+        var total = 0;
+        $('#porkbu-modal-items tr').each(function () {
+            var qty = Number($(this).find('.qty').val()) || 0, harga = uang($(this).find('.harga').val());
+            $(this).find('.sub').text(rp(qty * harga));
+            total += qty * harga;
+        });
+        $('#porkbu-m-total').text(rp(total));
+        $('#porkbu-m-grand').text(rp(total - uang($('#porkbu-diskon').val()) + uang($('#porkbu-ppn').val())));
+    }
+
+    $('#porkbu-generate').on('click', function () {
+        var terpilih = $.grep(items, function (it) { return dipilih[it.id]; });
+        if (!terpilih.length) { alert('Centang barang yang akan dibuatkan PO.'); return; }
+        var html = '';
+        $.each(terpilih, function (_, it) {
+            html += '<tr data-id="' + it.id + '"><td>' + esc(it.nama_barang) + '<br><small class="text-muted">' + esc(kelompok(it)) + ' · disetujui ' + angka(it.total_qty) + ' ' + esc(it.satuan) + '</small></td>'
+                + '<td class="text-right"><input type="number" class="form-control input-sm text-right qty" min="0.01" step="any" max="' + it.total_qty + '" value="' + it.total_qty + '"></td>'
+                + '<td class="text-right"><input type="text" inputmode="numeric" class="form-control input-sm text-right harga uang" value="' + Math.round(it.harga_referensi).toLocaleString('id-ID') + '"></td>'
+                + '<td class="text-right sub" style="white-space:nowrap;"></td></tr>';
+        });
+        $('#porkbu-modal-items').html(html);
+        $('#porkbu-diskon, #porkbu-ppn').val('0');
+        hitungModal();
+        $('#porkbu-modal').modal('show');
+        if ($.fn.select2 && !$('#porkbu-vendor').data('select2')) {
+            $('#porkbu-vendor').select2({ dropdownParent: $('#porkbu-modal'), width: '100%' });
+        }
+    });
+    $('#porkbu-modal').on('input', '.qty, .uang', function () {
+        if ($(this).hasClass('uang')) { var a = uang(this.value); this.value = a ? a.toLocaleString('id-ID') : ''; }
+        hitungModal();
+    });
+
+    $('#porkbu-simpan').on('click', function () {
+        var vendor = $('#porkbu-vendor').val();
+        if (!vendor) { alert('Pilih vendor.'); return; }
+        var data = { kode_vendor: vendor, tgl_po: $('#porkbu-tgl').val(), diskon: uang($('#porkbu-diskon').val()), ppn: uang($('#porkbu-ppn').val()), catatan: $('#porkbu-catatan').val(), items: [] };
+        $('#porkbu-modal-items tr').each(function (i) {
+            data.items.push({ id: $(this).data('id'), qty: $(this).find('.qty').val(), harga: uang($(this).find('.harga').val()) });
+        });
+        var tombol = $(this).prop('disabled', true);
+        $.post(urlGenerate, data, function (res) {
+            alert(res.message);
+            if (res.status === 'success') {
+                $('#porkbu-modal').modal('hide');
+                $.each(data.items, function (_, it) { delete dipilih[it.id]; });
+                items = $.grep(items, function (it) { return !$.grep(data.items, function (d) { return +d.id === +it.id; }).length; });
+                render();
+                if (window.loadPO) window.loadPO(1);
+            }
+        }, 'json').fail(function () { alert('Server gagal membuat PO.'); }).always(function () { tombol.prop('disabled', false); });
+    });
+
+    render();
+})();
+</script>

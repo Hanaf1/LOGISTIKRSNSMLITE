@@ -22,6 +22,8 @@
                 <div class="row" style="margin-bottom: 15px;">
                     <div class="col-md-12">
                         <button class="btn btn-primary" data-toggle="modal" data-target="#modal-tambah-akses"><i class="fa fa-user-plus"></i> Tambah Akses User Baru</button>
+                        <button class="btn btn-success" data-toggle="modal" data-target="#modal-import-hakakses"><i class="fa fa-file-excel-o"></i> Import Excel</button>
+                        <button class="btn btn-default" type="button" id="btn-template-hakakses"><i class="fa fa-download"></i> Unduh Template</button>
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -53,6 +55,8 @@
                                                 <span class="label label-success">Staf Gudang</span>
                                             {elseif: $value.logistik_role == 'aset'}
                                                 <span class="label label-info">Staf Aset</span>
+                                            {elseif: $value.logistik_role == 'keuangan'}
+                                                <span class="label label-info">Keuangan</span>
                                             {elseif: $value.logistik_role == 'kepala_unit'}
                                                 <span class="label label-primary">Ka. Unit</span>
                                             {elseif: $value.logistik_role == 'kepala_sie'}
@@ -62,12 +66,13 @@
                                             {else}
                                                 <span class="label label-default">Unit / Ruangan</span>
                                             {/if}
+                                            {if: !empty($value.rangkap_keuangan)} <span class="label" style="background:#e65100" title="Merangkap tugas Keuangan / Bendahara">+ Keuangan</span>{/if}
                                         </td>
                                         <td>
                                             {if: !empty($value.logistik_kode_unit)}
                                                 {$value.nama_unit}
                                             {else}
-                                                <span class="text-muted"><i class="fa fa-globe"></i> Semua Unit (Logistik/Admin)</span>
+                                                <span class="text-muted"><i class="fa fa-globe"></i> Semua Unit</span>
                                             {/if}
                                         </td>
                                         <td>
@@ -97,6 +102,7 @@
 
             <!-- Tab Roles Permissions Matrix -->
             <div role="tabpanel" class="tab-pane" id="tab-roles">
+                <p class="help-block">Role Keuangan secara bawaan dapat mengelola Perencanaan Belanja (RKBU), termasuk mengubah dan menyetujui rencana, serta memantau realisasi belanja. RKBU menghitung estimasi biaya kebutuhan. Akses dashboard, laporan, dan ekspor/cetak tetap tersedia. Izin proses penyusutan dan posting jurnal diatur oleh Admin sesuai kewenangan.</p>
                 <form id="form-roles" action="{?=url(ADMIN.'/logistik_non_medis/saverolepermissions')?}" method="POST">
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped table-hover" id="table-roles">
@@ -109,6 +115,7 @@
                                             {elseif: $value == 'logistik'}Logistik
                                             {elseif: $value == 'gudang'}Gudang
                                             {elseif: $value == 'aset'}Aset
+                                            {elseif: $value == 'keuangan'}Keuangan
                                             {elseif: $value == 'kepala_unit'}Ka. Unit
                                             {elseif: $value == 'kepala_sie'}Ka. Sie
                                             {elseif: $value == 'kepala_bidang'}Ka. Bidang
@@ -194,6 +201,209 @@ $(function(){
         </div>
     </div>
 </div>
+
+<!-- Modal Import Hak Akses Excel -->
+<div class="modal fade" id="modal-import-hakakses" tabindex="-1" role="dialog" data-import="{$import_data_json}">
+    <div class="modal-dialog modal-lg" role="document" style="width:95%;max-width:1200px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title"><i class="fa fa-file-excel-o"></i> Import Hak Akses dari Excel</h4>
+            </div>
+            <div class="modal-body">
+                <p class="help-block" style="margin-top:0">
+                    Kolom: <strong>kode_pegawai</strong> (username login), <strong>nama</strong> (info saja), <strong>role</strong>
+                    (Ka. Unit / Kasie / Kabid / Unit / Logistik / Gudang / Aset / Keuangan / Admin),
+                    <strong>unit</strong> (kode atau nama unit, pisahkan koma bila lebih dari satu), <strong>nomor_wa</strong> (opsional, kosong = nomor lama tetap).
+                    Kode pegawai yang belum punya akun login akan dilewati.
+                </p>
+                <div class="form-inline" style="margin-bottom:12px">
+                    <input type="file" id="file-import-hakakses" class="form-control" accept=".xlsx,.xls,.csv">
+                    <button type="button" class="btn btn-primary" id="btn-preview-hakakses"><i class="fa fa-search"></i> Baca &amp; Pratinjau</button>
+                </div>
+                <div id="import-hakakses-ringkasan"></div>
+                <div class="table-responsive" style="max-height:55vh;overflow:auto">
+                    <table class="table table-condensed table-bordered" id="table-import-hakakses" style="display:none">
+                        <thead>
+                            <tr class="active">
+                                <th>Baris</th><th>Kode Pegawai</th><th>Nama</th><th>Role Lama</th><th>Role Baru</th><th>Unit Lama</th><th>Unit Baru</th><th>Status</th><th>Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-success" id="btn-commit-hakakses" disabled><i class="fa fa-check"></i> Terapkan Hak Akses</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var importUrl = '{?=url(ADMIN."/logistik_non_medis/importhakakses")?}';
+    var parsedRows = [];
+    var roleLabel = { admin: 'Admin', logistik: 'Logistik', gudang: 'Gudang', aset: 'Aset', keuangan: 'Keuangan', unit: 'Unit', kepala_unit: 'Ka. Unit', kepala_sie: 'Kasie', kepala_bidang: 'Kabid' };
+
+    function importData() {
+        try { return JSON.parse($('#modal-import-hakakses').attr('data-import') || '{}'); } catch (e) { return { units: [], users: [] }; }
+    }
+    function esc(s) { return $('<div>').text(s == null ? '' : String(s)).html(); }
+    function normHeader(s) { return String(s || '').toLowerCase().replace(/[^a-z]/g, ''); }
+
+    function unduhTemplate() {
+        if (typeof XLSX === 'undefined') { alert('Library Excel belum termuat. Muat ulang halaman.'); return; }
+        var data = importData();
+        var unitNama = {};
+        (data.units || []).forEach(function(u) { unitNama[u.kode] = u.nama; });
+        var aoa = [['kode_pegawai', 'nama', 'role', 'unit', 'nomor_wa', 'rangkap_keuangan']];
+        (data.users || []).forEach(function(u) {
+            var units = (u.kode_unit || '').split(',').map(function(k) { k = k.trim(); return unitNama[k] || k; }).filter(Boolean).join(', ');
+            aoa.push([u.username, u.nama || '', roleLabel[u.role] || u.role, units, '', u.rangkap_keuangan ? 'ya' : '']);
+        });
+        var ref = [['kode_unit', 'nama_unit', '', 'role (isi salah satu)', 'keterangan']];
+        var roles = [
+            ['Ka. Unit', 'Kepala unit/ruang, PJ (Karu, Kepala Ruang, PJ juga diterima)'],
+            ['Kasie', 'Kepala seksi (Ka. Sie, Kepala Seksi juga diterima)'],
+            ['Kabid', 'Kepala bidang (Ka. Bidang, Kepala Bidang juga diterima)'],
+            ['Unit', 'Staf unit/ruangan pemohon'],
+            ['Logistik', 'Staf logistik (unit boleh kosong = semua unit)'],
+            ['Gudang', 'Staf gudang'], ['Aset', 'Staf aset'], ['Keuangan', 'Keuangan'], ['Admin', 'Admin Logistik']
+        ];
+        var n = Math.max((data.units || []).length, roles.length);
+        for (var i = 0; i < n; i++) {
+            var u = (data.units || [])[i];
+            var r = roles[i];
+            ref.push([u ? u.kode : '', u ? u.nama : '', '', r ? r[0] : '', r ? r[1] : '']);
+        }
+        var wb = XLSX.utils.book_new();
+        var ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [{ wch: 20 }, { wch: 32 }, { wch: 14 }, { wch: 45 }, { wch: 16 }, { wch: 17 }];
+        // Kode pegawai berupa angka panjang (NIK) harus tetap teks agar nol di depan tidak hilang.
+        for (var row = 1; row < aoa.length; row++) {
+            var cell = ws[XLSX.utils.encode_cell({ r: row, c: 0 })];
+            if (cell) { cell.t = 's'; cell.z = '@'; }
+        }
+        var wsRef = XLSX.utils.aoa_to_sheet(ref);
+        wsRef['!cols'] = [{ wch: 18 }, { wch: 40 }, { wch: 3 }, { wch: 20 }, { wch: 55 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'Import Hak Akses');
+        XLSX.utils.book_append_sheet(wb, wsRef, 'Referensi');
+        XLSX.writeFile(wb, 'template_import_hak_akses_logistik.xlsx');
+    }
+
+    function bacaFile(file, done) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', raw: false });
+                var ws = wb.Sheets[wb.SheetNames[0]];
+                var aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+                var headerIdx = -1, col = {};
+                for (var i = 0; i < Math.min(aoa.length, 10); i++) {
+                    var map = {};
+                    aoa[i].forEach(function(h, j) {
+                        var k = normHeader(h);
+                        if (k === 'kodepegawai' || k === 'username' || k === 'nik' || k === 'kode') map.kode = j;
+                        else if (k === 'role' || k === 'jabatan' || k === 'rolelogistik') map.role = j;
+                        else if (k === 'unit' || k === 'unitkerja' || k === 'kodeunit' || k === 'namaunit') map.unit = j;
+                        else if (k === 'nomorwa' || k === 'wa' || k === 'nowa') map.wa = j;
+                        else if (k === 'rangkapkeuangan' || k === 'rangkap') map.rangkap = j;
+                    });
+                    if (map.kode !== undefined && map.role !== undefined) { headerIdx = i; col = map; break; }
+                }
+                if (headerIdx < 0) { done('Header tidak ditemukan. Pastikan ada kolom kode_pegawai dan role (pakai template).'); return; }
+                var rows = [];
+                for (var r = headerIdx + 1; r < aoa.length; r++) {
+                    var line = aoa[r];
+                    var kode = String(line[col.kode] || '').trim();
+                    var role = String(line[col.role] || '').trim();
+                    var unit = col.unit !== undefined ? String(line[col.unit] || '').trim() : '';
+                    if (!kode && !role && !unit) continue;
+                    rows.push({ baris: r + 1, kode_pegawai: kode, role: role, unit: unit, nomor_wa: col.wa !== undefined ? String(line[col.wa] || '').trim() : '', rangkap_keuangan: col.rangkap !== undefined ? String(line[col.rangkap] || '').trim() : '' });
+                }
+                done(null, rows);
+            } catch (err) {
+                done('Gagal membaca file: ' + err.message);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function kirim(mode, cb) {
+        $.post(importUrl, { mode: mode, rows: JSON.stringify(parsedRows) }, function(res) {
+            if (typeof res === 'string') { try { res = JSON.parse(res); } catch (e) { res = { status: 'error', message: res }; } }
+            cb(res);
+        }).fail(function(xhr) {
+            cb({ status: 'error', message: 'Gagal menghubungi server. ' + (xhr.responseText || '').substring(0, 300) });
+        });
+    }
+
+    function tampilPratinjau(res) {
+        var badge = { baru: 'label-success', diubah: 'label-warning', tetap: 'label-default', dilewati: 'label-danger' };
+        var teks = { baru: 'Baru', diubah: 'Diubah', tetap: 'Tidak berubah', dilewati: 'Dilewati' };
+        var html = '';
+        (res.rows || []).forEach(function(r) {
+            html += '<tr' + (r.status === 'dilewati' ? ' class="danger"' : '') + '>'
+                + '<td>' + esc(r.baris) + '</td><td>' + esc(r.username) + '</td><td>' + esc(r.nama) + '</td>'
+                + '<td>' + esc(r.role_lama || '-') + '</td><td><strong>' + esc(r.role_baru || '-') + '</strong></td>'
+                + '<td><small>' + esc(r.unit_lama || '-') + '</small></td><td><small>' + esc(r.unit_baru || '-') + '</small></td>'
+                + '<td><span class="label ' + badge[r.status] + '">' + teks[r.status] + '</span></td>'
+                + '<td><small>' + esc(r.pesan) + '</small></td></tr>';
+        });
+        $('#table-import-hakakses tbody').html(html);
+        $('#table-import-hakakses').show();
+        var s = res.ringkasan || {};
+        $('#import-hakakses-ringkasan').html('<div class="alert alert-info">'
+            + '<strong>' + (s.baru || 0) + '</strong> akses baru, <strong>' + (s.diubah || 0) + '</strong> diubah, '
+            + '<strong>' + (s.tetap || 0) + '</strong> tidak berubah, <strong>' + (s.dilewati || 0) + '</strong> dilewati.'
+            + ((s.baru || s.diubah) ? ' Klik <em>Terapkan Hak Akses</em> untuk menyimpan.' : '') + '</div>');
+        $('#btn-commit-hakakses').prop('disabled', !((s.baru || 0) + (s.diubah || 0)));
+    }
+
+    $(document).on('click', '#btn-template-hakakses', unduhTemplate);
+
+    $(document).on('change', '#file-import-hakakses', function() {
+        parsedRows = [];
+        $('#btn-commit-hakakses').prop('disabled', true);
+        $('#table-import-hakakses').hide();
+        $('#import-hakakses-ringkasan').empty();
+    });
+
+    $(document).on('click', '#btn-preview-hakakses', function() {
+        var file = $('#file-import-hakakses')[0].files[0];
+        if (!file) { alert('Pilih file Excel terlebih dahulu.'); return; }
+        if (typeof XLSX === 'undefined') { alert('Library Excel belum termuat. Muat ulang halaman.'); return; }
+        var btn = $(this).prop('disabled', true);
+        bacaFile(file, function(err, rows) {
+            if (err) { btn.prop('disabled', false); alert(err); return; }
+            if (!rows.length) { btn.prop('disabled', false); alert('Tidak ada baris data di file.'); return; }
+            parsedRows = rows;
+            kirim('preview', function(res) {
+                btn.prop('disabled', false);
+                if (res.status !== 'success') { alert(res.message || 'Gagal memvalidasi file.'); return; }
+                tampilPratinjau(res);
+            });
+        });
+    });
+
+    $(document).on('click', '#btn-commit-hakakses', function() {
+        if (!parsedRows.length) return;
+        if (!confirm('Terapkan hak akses dari file ini? Baris yang dilewati tidak akan diubah.')) return;
+        var btn = $(this).prop('disabled', true);
+        kirim('commit', function(res) {
+            if (res.status === 'success') {
+                alert(res.message || 'Import selesai.');
+                location.reload();
+            } else {
+                alert(res.message || 'Import gagal.');
+                btn.prop('disabled', false);
+            }
+        });
+    });
+})();
+</script>
 
 <script>
 $(document).ready(function() {

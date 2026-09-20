@@ -122,6 +122,8 @@ if ($metode !== 'GET') {
     balas(['error' => 'Metode tidak didukung. Gunakan GET atau POST.'], 405);
 }
 
+balas_daftar_pilihan($pdo);
+
 // ---------------------------------------------------------------------------
 // GET satu catatan.
 // ---------------------------------------------------------------------------
@@ -142,14 +144,7 @@ if (($nomor = trim($_GET['nomor'] ?? '')) !== '') {
 $syarat = ["p.status = 'Selesai'"];
 $isi = [];
 
-if (($kode_aset = trim($_GET['kode_aset'] ?? '')) !== '') {
-    $syarat[] = 'p.kode_aset = ?';
-    $isi[] = $kode_aset;
-}
-if (($unit = trim($_GET['unit'] ?? '')) !== '') {
-    $syarat[] = 'a.kode_unit = ?';
-    $isi[] = $unit;
-}
+saring_unit_barang($pdo, $syarat, $isi);
 if (($sejak = trim($_GET['sejak'] ?? '')) !== '') {
     $sah = DateTime::createFromFormat('Y-m-d', $sejak);
     if (!$sah || $sah->format('Y-m-d') !== $sejak) {

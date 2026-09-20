@@ -67,6 +67,40 @@ $halamanMaintenance = 'aset-maintenance.php?kode='.rawurlencode($kode);
 $halamanSensus = 'aset-sensus.php?kode='.rawurlencode($kode);
 $halamanLapor = 'aset-lapor.php?kode='.rawurlencode($kode);
 
+/**
+ * Bila alamat helpdesk diatur di config.php, tombol Lapor & Buku Maintenance membuka
+ * helpdesk dengan data barang di URL (deep link). Helpdesk mengambil detailnya dari
+ * api-inventaris.php / api-lapor.php. Placeholder yang tidak dikenal dibiarkan apa adanya.
+ */
+function tautan_helpdesk($konstanta, array $aset)
+{
+    $template = defined($konstanta) ? trim((string) constant($konstanta)) : '';
+    if ($template === '' || !preg_match('~^https?://~i', $template)) {
+        return '';
+    }
+    $nilai = [
+        '{kode_aset}' => $aset['kode_aset'] ?? '',
+        '{nomor_inventaris}' => $aset['nomor_inventaris'] ?? '',
+        '{kode_unit}' => $aset['kode_unit'] ?? '',
+        '{nama_unit}' => $aset['nama_unit'] ?? '',
+        '{kode_area}' => $aset['kode_area'] ?? '',
+        '{nama_barang}' => $aset['nama_aset'] ?? '',
+    ];
+    return strtr($template, array_map('rawurlencode', array_map('strval', $nilai)));
+}
+
+if (!empty($aset)) {
+    try {
+        $area = $pdo->prepare("SELECT kode_area FROM rsns_custom_logistik_non_medis_inventaris_master WHERE jenis_master = 'UNIT' AND kode = ? LIMIT 1");
+        $area->execute([$aset['kode_unit']]);
+        $aset['kode_area'] = (string) $area->fetchColumn();
+    } catch (Throwable $e) {
+        $aset['kode_area'] = ''; // kolom area belum dibuat
+    }
+    $halamanLapor = tautan_helpdesk('LOGISTIK_NON_MEDIS_HELPDESK_URL_LAPOR', $aset) ?: $halamanLapor;
+    $halamanMaintenance = tautan_helpdesk('LOGISTIK_NON_MEDIS_HELPDESK_URL_MAINTENANCE', $aset) ?: $halamanMaintenance;
+}
+
 $laporanBerjalan = [];
 if ($aset && empty($error)) {
     try {

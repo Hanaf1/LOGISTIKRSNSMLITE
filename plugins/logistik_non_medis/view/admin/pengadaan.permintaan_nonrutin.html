@@ -45,20 +45,43 @@
                 <h3 class="panel-title" style="margin-top: 5px;">Permintaan Barang Non-Rutin (Insidentil / Aset)</h3>
             </div>
             <div class="panel-body">
-                <div class="row" style="margin-bottom: 15px;">
-                    <div class="col-md-4">
+                <div class="row" style="margin-bottom: 10px;">
+                    <div class="col-md-2">
+                        <label>Bulan</label>
+                        <select class="form-control" id="filter_bulan">
+                            <option value="">Semua Bulan</option>
+                            {loop: $bulan_list}<option value="{$value.kode}"{if: $value.selected} selected{/if}>{$value.nama}</option>{/loop}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label>Tahun</label>
+                        <input type="number" class="form-control" id="filter_tahun" value="{$tahun_aktif}" min="2000" max="2099">
+                    </div>
+                    <div class="col-md-3">
+                        <label>Unit</label>
+                        <select class="form-control" id="filter_unit">
+                            <option value="">Semua Unit</option>
+                            {loop: $units}<option value="{$value.kode_unit}">{$value.nama_unit}</option>{/loop}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Status</label>
                         <select class="form-control" id="filter_status">
+                            <option value="">Semua Status</option>
                             <option value="Logistik Umum & Rekap">Logistik & Rekap (Jalur Cepat)</option>
-                            <option value="Proses Pengadaan">Proses Pengadaan</option>
+                            <option value="Proses Pengadaan" selected>Proses Pengadaan</option>
                             <option value="Siap Diserahkan">Siap Diserahkan</option>
                             <option value="Selesai">Selesai</option>
                         </select>
                     </div>
-                    <div class="col-md-5">
+                </div>
+                <div class="row" style="margin-bottom: 15px;">
+                    <div class="col-md-6">
                         <input type="text" id="cari_permintaan" class="form-control" placeholder="Cari No Permintaan / Unit / Keterangan...">
                     </div>
-                    <div class="col-md-3 text-right">
+                    <div class="col-md-6 text-right">
                         <button class="btn btn-default" onclick="loadPermintaanNonRutin()"><i class="fa fa-refresh"></i> Refresh</button>
+                        <button class="btn btn-success" id="btn-export-nonrutin"><i class="fa fa-file-excel-o"></i> Export Excel</button>
                     </div>
                 </div>
 
@@ -130,7 +153,11 @@ $(document).ready(function() {
     $('#cari_permintaan').on('keyup', function() {
         loadPermintaanNonRutin();
     });
-    $('#filter_status').on('change', loadPermintaanNonRutin);
+    $('#filter_status, #filter_bulan, #filter_unit, #filter_tahun').on('change', loadPermintaanNonRutin);
+    $('#btn-export-nonrutin').on('click', function() {
+        var base = '{?=url([ADMIN,"logistik_non_medis","exportpermintaannonrutin"])?}';
+        window.location.href = base + (base.indexOf('?') === -1 ? '?' : '&') + $.param(filterNonRutin());
+    });
     loadPermintaanNonRutin();
     var targetSppb = new URLSearchParams(window.location.search).get('no_sppb');
     if (targetSppb) {
@@ -138,12 +165,19 @@ $(document).ready(function() {
     }
 });
 
+function filterNonRutin() {
+    return {
+        cari: $('#cari_permintaan').val(),
+        status: $('#filter_status').val() || '',
+        bulan: $('#filter_bulan').val() || '',
+        tahun: $('#filter_tahun').val() || '{$tahun_aktif}',
+        kode_unit: $('#filter_unit').val() || ''
+    };
+}
+
 function loadPermintaanNonRutin() {
     $('#display-permintaan-nonrutin').html('<div class="text-center" style="padding:30px;"><i class="fa fa-spinner fa-spin fa-2x"></i><br>Memuat data...</div>');
-    $.post('{?=url(ADMIN."/logistik_non_medis/displaypermintaannonrutin")?}', {
-        cari: $('#cari_permintaan').val(),
-        status: $('#filter_status').val()
-    }, function(data) {
+    $.post('{?=url(ADMIN."/logistik_non_medis/displaypermintaannonrutin")?}', filterNonRutin(), function(data) {
         $('#display-permintaan-nonrutin').html(data);
     });
 }

@@ -4,13 +4,12 @@
   <meta charset="utf-8">
   <title>Rekap Pengajuan Barang Non Rutin</title>
   <style>
-    @page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:10px;color:#111;margin:0}.kop{min-height:58px;border-bottom:3px double #111;padding:0 0 8px;text-align:center}.kop img{float:left;max-height:52px;max-width:70px}.kop h2{font-size:17px;margin:2px 0 4px}.kop p{margin:0;font-size:9px}.judul{text-align:center;margin:12px 0 10px}.judul h1{font-size:15px;margin:0;text-transform:uppercase}.judul h2{font-size:12px;margin:3px 0 0}.meta{width:100%;margin-bottom:8px}.meta td{padding:2px}.barang{width:100%;border-collapse:collapse;table-layout:fixed}.barang th,.barang td{border:1px solid #111;padding:4px;vertical-align:top;word-wrap:break-word}.barang th{background:#eee;text-align:center}.right{text-align:right}.center{text-align:center}.nowrap{white-space:nowrap}.total th{font-size:11px}.ttd{width:100%;margin-top:25px;text-align:center;page-break-inside:avoid}.ttd td{width:25%;vertical-align:top}.nama{display:inline-block;min-width:150px;border-bottom:1px solid #111;margin-top:45px}.no-print{margin:0 0 10px;text-align:right}@media print{.no-print{display:none}.barang thead{display:table-header-group}.barang tr{page-break-inside:avoid}}
+    @page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:10px;color:#111;margin:0}.kop{min-height:58px;border-bottom:3px double #111;padding:0 0 8px;text-align:center}.kop img{float:left;max-height:52px;max-width:70px}.kop h2{font-size:17px;margin:2px 0 4px}.kop p{margin:0;font-size:9px}.judul{text-align:center;margin:12px 0 10px}.judul h1{font-size:15px;margin:0;text-transform:uppercase}.judul h2{font-size:12px;margin:3px 0 0}.meta{width:100%;margin-bottom:8px}.meta td{padding:2px}.barang{width:100%;border-collapse:collapse;table-layout:fixed}.barang th,.barang td{border:1px solid #111;padding:4px;vertical-align:top;word-wrap:break-word}.barang th{background:#eee;text-align:center}.right{text-align:right}.center{text-align:center}.nowrap{white-space:nowrap}.total th{font-size:11px}.ttd{width:100%;margin-top:25px;text-align:center;page-break-inside:avoid}.ttd td{width:25%;vertical-align:top}.nama{display:inline-block;min-width:150px;border-bottom:1px solid #111;margin-top:45px}.ttd-img{display:block;margin:2px auto 0;max-height:52px}.ttd-nama{display:inline-block;min-width:150px;border-bottom:1px solid #111}.ttd-waktu{display:block;font-size:8px;color:#555;margin-top:2px}.no-print{margin:0 0 10px;text-align:right}@media print{.no-print{display:none}.barang thead{display:table-header-group}.barang tr{page-break-inside:avoid}}
   </style>
 </head>
 <body onload="window.print()">
   <div class="no-print"><button onclick="window.print()">Cetak Ulang</button></div>
   <div class="kop">
-    {if: !empty($logo)}<img src="{$logo}" alt="Logo">{/if}
     <h2>{?=htmlspecialchars($nama_rs,ENT_QUOTES,'UTF-8')?}</h2>
     <p>{?=htmlspecialchars($alamat_rs,ENT_QUOTES,'UTF-8')?}{if: !empty($kontak_rs)} &nbsp; Telp. {?=htmlspecialchars($kontak_rs,ENT_QUOTES,'UTF-8')?}{/if}</p>
   </div>
@@ -26,6 +25,18 @@
     {else}<tr><td colspan="11" class="center" style="padding:20px">Tidak ada data pada periode ini.</td></tr>{/if}
     </tbody>
   </table>
-  <table class="ttd"><tr><td>Komisaris<br><span class="nama">(&nbsp;................................&nbsp;)</span></td><td>Kabid Umum &amp; Keuangan<br><span class="nama">(&nbsp;................................&nbsp;)</span></td><td>Kasie Umum dan Admin<br><span class="nama">(&nbsp;................................&nbsp;)</span></td><td>{?=htmlspecialchars($kota_rs,ENT_QUOTES,'UTF-8')?}, {$tanggal_cetak}<br>Petugas Logistik<br><span class="nama">(&nbsp;................................&nbsp;)</span></td></tr></table>
+  <table class="ttd"><tr><td>Komisaris<br><span class="nama">(&nbsp;................................&nbsp;)</span></td><td>Kabid Umum &amp; Keuangan<br>
+    {if: $ttd.kabid_umum.ada}
+      {if: $ttd.kabid_umum.gambar != ''}<img class="ttd-img" src="{$ttd.kabid_umum.gambar}" alt="TTD Kabid Umum">{else}<span style="display:block;margin-top:45px"></span>{/if}
+      <span class="ttd-nama">{?=htmlspecialchars($ttd['kabid_umum']['nama'],ENT_QUOTES,'UTF-8')?}</span>
+      <span class="ttd-waktu">{$ttd.kabid_umum.waktu}{if: $ttd.kabid_umum.valid} &middot; TTD terverifikasi{/if}</span>
+    {else}<span class="nama">(&nbsp;................................&nbsp;)</span>{/if}
+    </td><td>Kasie Umum dan Admin<br>
+    {if: $ttd.kasie_umum.ada}
+      {if: $ttd.kasie_umum.gambar != ''}<img class="ttd-img" src="{$ttd.kasie_umum.gambar}" alt="TTD Kasie Umum">{else}<span style="display:block;margin-top:45px"></span>{/if}
+      <span class="ttd-nama">{?=htmlspecialchars($ttd['kasie_umum']['nama'],ENT_QUOTES,'UTF-8')?}</span>
+      <span class="ttd-waktu">{$ttd.kasie_umum.waktu}{if: $ttd.kasie_umum.valid} &middot; TTD terverifikasi{/if}</span>
+    {else}<span class="nama">(&nbsp;................................&nbsp;)</span>{/if}
+    </td><td>{?=htmlspecialchars($kota_rs,ENT_QUOTES,'UTF-8')?}, {$tanggal_cetak}<br>Petugas Logistik<br><span class="nama">(&nbsp;................................&nbsp;)</span></td></tr></table>
 </body>
 </html>

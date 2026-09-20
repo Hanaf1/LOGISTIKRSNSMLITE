@@ -1,0 +1,64 @@
+<div class="alert" style="background:#fff3e0;border:1px solid #e65100;color:#4e342e;">
+    <i class="fa fa-info-circle" style="color:#e65100"></i>
+    Permintaan <strong>Non Rutin</strong> yang sudah disetujui Kabid Umum dan <strong>dananya sudah disetujui Keuangan</strong>, tetapi belum dibuatkan PO.
+    <strong>Buat PO</strong> membuat PO Draft dari barang yang disetujui; lengkapi vendor dan harga lalu terbitkan.
+    Jika barang ternyata tersedia di gudang, proses lewat menu <a href="{?=url([ADMIN,'logistik_non_medis','permintaannonrutin'])?}">Pengadaan Non Rutin</a> (penuhi dari stok/mutasi).
+</div>
+<div class="table-responsive">
+    <table class="table table-bordered table-condensed" style="margin-bottom:0">
+        <thead>
+            <tr style="background:#1f4e79;color:#fff;">
+                <th width="40">No</th>
+                <th>No. SPPB</th>
+                <th>Tanggal</th>
+                <th>Unit</th>
+                <th>Barang</th>
+                <th class="text-right">Estimasi Dana</th>
+                <th>Dana Disetujui</th>
+                <th width="110" class="text-center">Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {if: !empty($rows)}
+                {loop: $rows as $i => $r}
+                <tr>
+                    <td>{?=$i+1?}</td>
+                    <td><strong>{$r.no_sppb}</strong></td>
+                    <td>{$r.tgl_sppb_fmt}</td>
+                    <td>{$r.nama_unit}</td>
+                    <td><small>{$r.daftar_barang}</small></td>
+                    <td class="text-right" style="color:#2e7d32;font-weight:600">Rp {?=number_format($r['nilai_pengajuan'],0,',','.')?}</td>
+                    <td><small>{if: !empty($r.tgl_verifikasi)}{?=date('d/m/Y H:i', strtotime($r['tgl_verifikasi']))?}<br>oleh {$r.user_verifikasi}{else}-{/if}</small></td>
+                    <td class="text-center"><button type="button" class="btn btn-xs btn-warning btn-buat-po-nonrutin" data-no="{$r.no_sppb}"><i class="fa fa-shopping-cart"></i> Buat PO</button></td>
+                </tr>
+                {/loop}
+            {else}
+                <tr><td colspan="8" class="text-center text-muted" style="padding:20px">Tidak ada permintaan Non Rutin yang menunggu PO pada tahun {$tahun}.</td></tr>
+            {/if}
+        </tbody>
+    </table>
+</div>
+<script>
+(function () {
+    $('#badge-nonrutin-siap-po').text('{?=count($rows) ?: ""?}');
+    $('#display-po-nonrutin').off('click', '.btn-buat-po-nonrutin').on('click', '.btn-buat-po-nonrutin', function () {
+        var no = $(this).data('no');
+        var btn = $(this);
+        if (!confirm('Buat PO Draft untuk ' + no + '?')) return;
+        btn.prop('disabled', true);
+        $.post('{?=url([ADMIN,"logistik_non_medis","generateordernonrutin"])?}', { no_sppb: no }, function (res) {
+            if (typeof res === 'string') { try { res = JSON.parse(res); } catch (e) { res = { status: 'error', message: res }; } }
+            if (res.status === 'success') {
+                alert(res.message);
+                if (res.po_url) { window.location.href = res.po_url; } else { location.reload(); }
+            } else {
+                alert(res.message || 'Gagal membuat PO.');
+                btn.prop('disabled', false);
+            }
+        }).fail(function (xhr) {
+            alert('Gagal menghubungi server. ' + (xhr.responseText || '').substring(0, 200));
+            btn.prop('disabled', false);
+        });
+    });
+})();
+</script>
