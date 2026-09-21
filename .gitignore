@@ -1,5 +1,5 @@
 .DS_Store
-config.php
+config.local.php
 admin/tmp
 admin/pla.php
 tmp
@@ -12,7 +12,6 @@ webapps
 backup/
 plugins/apotek_online
 plugins/simrsp
-config.php
 themes/mlite
 systems/lib/jasperphp
 plugins/jasper
@@ -44,7 +43,6 @@ plugins/pasien_galleries
 
 .env
 logs/
-config.php
 #workerman.php
 composer.lock
 backups

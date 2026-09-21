@@ -47,6 +47,14 @@ File SQL utama modul berada di folder `plugins/logistik_non_medis/`:
 
 Gunakan `full.sql` apabila membutuhkan dump lengkap. Gunakan `schemanew.sql` apabila hanya ingin menerapkan atau memeriksa desain struktur database terbaru modul.
 
+Database yang dipakai aplikasi dipilih langsung pada konstanta `DB_USE` di `config.php`. Gunakan
+`dump` untuk database berisi data atau `empty` untuk database kosong. Pilihan juga dapat diubah tanpa
+edit file dengan environment variable `MLITE_DB_USE=dump` atau `MLITE_DB_USE=empty`.
+
+`config.php` dilacak Git tetapi tidak menyimpan password atau API key. Salin
+`config.local.example.php` menjadi `config.local.php` untuk konfigurasi rahasia tiap server;
+`config.local.php` diabaikan Git.
+
 ---
 
 ## Persyaratan Sistem
