@@ -6,9 +6,10 @@ require_once(BASE_DIR.'/systems/lib/QRCode.php');
 use Systems\Lib\QRCode;
 
 $kode = trim($_GET['kode'] ?? '');
-if ($kode === '') {
+$id = max(0, (int)($_GET['id'] ?? 0));
+if ($kode === '' && $id === 0) {
     http_response_code(400);
-    exit('Kode aset kosong.');
+    exit('Identitas aset kosong.');
 }
 
 $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
@@ -16,7 +17,8 @@ $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (isset($_SERVER['HTTP_X_FORWARDED_PORT']) && $_SERVER['HTTP_X_FORWARDED_PORT'] == 443);
 $protocol = $https ? 'https://' : 'http://';
 $basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
-$scanUrl = $protocol.$_SERVER['HTTP_HOST'].$basePath.'/aset-info.php?kode='.rawurlencode($kode);
+$scanUrl = $protocol.$_SERVER['HTTP_HOST'].$basePath.'/aset-info.php?'
+    . ($id > 0 ? 'id=' . $id : 'kode=' . rawurlencode($kode));
 
 $qr = QRCode::getMinimumQRCode($scanUrl, QR_ERROR_CORRECT_LEVEL_M);
 

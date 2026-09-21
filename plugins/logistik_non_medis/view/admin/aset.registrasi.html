@@ -157,6 +157,8 @@
                             <i class="fa fa-plus-circle"></i> Registrasikan Inventaris Baru
                         </a>
                         <a href="{?=url([ADMIN, 'logistik_non_medis', 'exportaset'])?}" class="btn btn-success btn-export-aset"><i class="fa fa-file-excel-o"></i> Export List Inventaris</a>
+                        <button type="button" class="btn btn-info" id="btn-cetak-label-batch" disabled title="Satu stiker untuk setiap barang fisik dengan kode inventaris resminya"><i class="fa fa-qrcode"></i> Batch 1 - Stiker per Item <span class="badge" id="jumlah-label-terpilih">0</span></button>
+                        <button type="button" class="btn btn-default" id="btn-clear-label-selection" style="display:none;"><i class="fa fa-times"></i> Batal Pilih</button>
                         <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#modal-import-aset"><i class="fa fa-upload"></i> Import</button>
                         <button type="button" class="btn btn-default" onclick="loadAset()" title="Segarkan Data">
                             <i class="fa fa-refresh"></i> Refresh
@@ -172,6 +174,7 @@
                     <table class="table table-striped no-margin dataTable" id="table-aset">
                         <thead>
                             <tr>
+                                <th style="width:32px;"><input type="checkbox" id="pilih-semua-label" title="Pilih semua pada halaman ini"></th>
                                 <th style="width:45px;">No.</th>
                                 <th>Barang</th>
                                 <th>Unit / Lokasi</th>
@@ -185,7 +188,7 @@
                         </thead>
                         <tbody id="display-aset">
                             <tr>
-                                <td colspan="9" class="text-center" style="padding: 40px 0;">
+                                <td colspan="10" class="text-center" style="padding: 40px 0;">
                                     <i class="fa fa-spinner fa-spin fa-2x"></i>
                                     <p>Memuat data inventaris...</p>
                                 </td>
@@ -241,6 +244,22 @@
     </div>
 </div>
 <script>
+    var labelGroupsTerpilih = {};
+
+    function perbaruiPilihanLabel() {
+        var keys = Object.keys(labelGroupsTerpilih);
+        var totalStiker = 0;
+        $.each(keys, function (_, key) { totalStiker += parseInt(labelGroupsTerpilih[key], 10) || 0; });
+        $('#jumlah-label-terpilih').text(totalStiker);
+        $('#btn-cetak-label-batch').prop('disabled', keys.length === 0);
+        $('#btn-clear-label-selection').toggle(keys.length > 0);
+        $('.pilih-label-group').each(function () {
+            $(this).prop('checked', !!labelGroupsTerpilih[$(this).attr('data-group-key')]);
+        });
+        var semua = $('.pilih-label-group').length > 0 && $('.pilih-label-group:not(:checked)').length === 0;
+        $('#pilih-semua-label').prop('checked', semua);
+    }
+
     $(document).ready(function() {
         if ($.fn.select2) {
             $('#filter_unit, #filter_kelompok, #filter_jenis').each(function() {
@@ -309,6 +328,39 @@
             var kode_aset = encodeURIComponent($(this).attr('data-kode'));
             var print_url = '{?=url([ADMIN, "logistik_non_medis", "asetprintlabel"])?}&kode_aset=' + kode_aset;
             window.open(print_url, '_blank');
+        });
+
+        $(document).on('change', '.pilih-label-group', function () {
+            var key = $(this).attr('data-group-key');
+            if (this.checked) labelGroupsTerpilih[key] = parseInt($(this).attr('data-jumlah'), 10) || 1;
+            else delete labelGroupsTerpilih[key];
+            perbaruiPilihanLabel();
+        });
+
+        $('#pilih-semua-label').on('change', function () {
+            var pilih = this.checked;
+            $('.pilih-label-group').each(function () {
+                var key = $(this).attr('data-group-key');
+                if (pilih) labelGroupsTerpilih[key] = parseInt($(this).attr('data-jumlah'), 10) || 1;
+                else delete labelGroupsTerpilih[key];
+            });
+            perbaruiPilihanLabel();
+        });
+
+        $('#btn-clear-label-selection').on('click', function () {
+            labelGroupsTerpilih = {};
+            perbaruiPilihanLabel();
+        });
+
+        $('#btn-cetak-label-batch').on('click', function () {
+            var keys = Object.keys(labelGroupsTerpilih);
+            if (!keys.length) { alert('Pilih inventaris yang akan dibuatkan stiker.'); return; }
+            var totalStiker = 0;
+            $.each(keys, function (_, key) { totalStiker += parseInt(labelGroupsTerpilih[key], 10) || 0; });
+            if (totalStiker > 500) { alert('Maksimal 500 stiker per proses. Pilih kelompok yang lebih sedikit.'); return; }
+            var form = $('<form>', { method: 'post', target: '_blank', action: '{?=url([ADMIN,"logistik_non_medis","asetlabelbatch"])?}' });
+            form.append($('<input>', { type: 'hidden', name: 'group_keys', value: keys.join(',') }));
+            form.appendTo(document.body).trigger('submit').remove();
         });
 
         // Setelah koreksi/pembatalan aset, muat ulang halaman daftar yang sedang dibuka.
@@ -393,7 +445,7 @@
                 filter_jenis: filter_jenis
             },
             beforeSend: function() {
-                $('#display-aset').html('<tr><td colspan="9" class="text-center" style="padding: 40px 0;"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Memuat data...</p></td></tr>');
+                $('#display-aset').html('<tr><td colspan="10" class="text-center" style="padding: 40px 0;"><i class="fa fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Memuat data...</p></td></tr>');
                 $('#pagination-aset').html('');
             },
             success: function(res) {
@@ -401,6 +453,7 @@
                 if (res.html_stats) {
                     $('#aset-stats-container').html(res.html_stats);
                 }
+                perbaruiPilihanLabel();
                 var totalItems = parseInt(res.jumlah) || 0;
                 var currentPage = parseInt(res.halaman) || 1;
                 var totalPages = parseInt(res.jml_halaman) || 1;
@@ -437,7 +490,7 @@
                 $('#pagination-aset').html(pag);
             },
             error: function() {
-                $('#display-aset').html('<tr><td colspan="9" class="text-center text-danger" style="padding: 40px 0;"><i class="fa fa-exclamation-triangle fa-2x"></i><p style="margin-top:10px;">Gagal memuat data dari server.</p></td></tr>');
+                $('#display-aset').html('<tr><td colspan="10" class="text-center text-danger" style="padding: 40px 0;"><i class="fa fa-exclamation-triangle fa-2x"></i><p style="margin-top:10px;">Gagal memuat data dari server.</p></td></tr>');
             }
         });
     }

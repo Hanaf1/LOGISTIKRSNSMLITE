@@ -22,6 +22,7 @@ function tahun_perolehan(array $aset)
 }
 
 $kode = trim($_GET['kode'] ?? '');
+$id = max(0, (int)($_GET['id'] ?? 0));
 $aset = null;
 $error = '';
 
@@ -31,7 +32,7 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
 
-    if ($kode === '') {
+    if ($kode === '' && $id === 0) {
         $error = 'Kode aset tidak ditemukan pada QR.';
     } else {
         $stmt = $pdo->prepare("
@@ -48,14 +49,17 @@ try {
             LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master im
               ON im.jenis_master = 'BARANG'
              AND (im.kode = a.kode_item OR im.nama = a.nama_aset OR im.nama = b.nama_barang)
-            WHERE a.kode_aset = ?
+            WHERE " . ($id > 0 ? 'a.id = ?' : 'a.kode_aset = ?') . "
             ORDER BY im.id IS NULL ASC, im.id ASC
             LIMIT 1
         ");
-        $stmt->execute([$kode]);
+        $stmt->execute([$id > 0 ? $id : $kode]);
         $aset = $stmt->fetch();
         if (!$aset) {
             $error = 'Data aset tidak ditemukan.';
+        } else {
+            // Tautan turunan tetap memakai kode aset terkini dari database.
+            $kode = (string)$aset['kode_aset'];
         }
     }
 } catch (Throwable $e) {

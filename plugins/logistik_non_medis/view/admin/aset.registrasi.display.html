@@ -1,6 +1,7 @@
 {if: !empty($aset)}
 {loop: $aset}
 <tr>
+    <td class="text-center"><input type="checkbox" class="pilih-label-group" data-group-key="{$value.group_key}" data-jumlah="{$value.jumlah_aset}" title="Pilih {$value.jumlah_aset} stiker"></td>
     <td class="text-center">{$value.nomor_tabel}</td>
     <td>
         <strong class="asset-name">{$value.nama_aset}</strong><br><span class="label label-info">{$value.klasifikasi_label}</span>
@@ -43,7 +44,7 @@
 </tr>
 {/loop}
 {else}
-<tr><td colspan="9" class="text-center" style="padding:40px 0;color:#888;"><i class="fa fa-folder-open-o fa-2x"></i><p style="margin-top:10px;">Belum ada kelompok aset non-medis atau data tidak cocok dengan pencarian.</p></td></tr>
+<tr><td colspan="10" class="text-center" style="padding:40px 0;color:#888;"><i class="fa fa-folder-open-o fa-2x"></i><p style="margin-top:10px;">Belum ada kelompok aset non-medis atau data tidak cocok dengan pencarian.</p></td></tr>
 {/if}
 
 <div id="aset-display-data" data-jumlah="{$jumlah_data}" data-halaman="{?=(int)$halaman?}" data-jml-halaman="{?=(int)$jml_halaman?}" style="display:none;"></div>

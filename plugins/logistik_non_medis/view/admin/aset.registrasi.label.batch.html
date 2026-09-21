@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cetak {$jumlah} Stiker Inventaris</title>
+<style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; color: #111; background: #e9ecef; }
+    .toolbar { position: sticky; top: 0; z-index: 5; padding: 10px 16px; background: #fff; border-bottom: 1px solid #ccc; text-align: center; }
+    .toolbar button { padding: 8px 18px; border: 1px solid #287a65; border-radius: 4px; background: #287a65; color: #fff; font-weight: 700; cursor: pointer; }
+    .sheet { width: 190mm; margin: 8mm auto; display: grid; grid-template-columns: repeat(2, 90mm); gap: 4mm 5mm; align-content: start; }
+    .sticker { width: 90mm; height: 40mm; overflow: hidden; border: .4mm solid #153d34; background: #fff; page-break-inside: avoid; break-inside: avoid; }
+    .header { height: 11mm; display: flex; align-items: center; border-bottom: .3mm solid #8eaaa2; }
+    .logo { width: 15mm; height: 10mm; padding: .8mm 1.8mm; object-fit: contain; }
+    .brand { flex: 1; line-height: 1.1; }
+    .brand strong { display: block; color: #183d34; font-size: 9pt; letter-spacing: .12mm; }
+    .brand span { color: #55716a; font-size: 5.8pt; letter-spacing: .18mm; text-transform: uppercase; }
+    .body { height: 28.2mm; display: flex; }
+    .details { min-width: 0; flex: 1; padding: 2mm 2.2mm; }
+    .field { margin-bottom: 1.2mm; }
+    .field:last-child { margin-bottom: 0; }
+    .label { display: block; color: #6b7e79; font-size: 5.2pt; font-weight: 700; letter-spacing: .1mm; text-transform: uppercase; }
+    .value { display: block; overflow: hidden; color: #172c27; font-size: 7.2pt; font-weight: 700; line-height: 1.12; white-space: nowrap; text-overflow: ellipsis; }
+    .kode-inventaris { color: #176d58; font-family: "Courier New", monospace; font-size: 9pt; letter-spacing: .12mm; }
+    .qr { width: 27mm; flex: 0 0 27mm; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: .3mm solid #8eaaa2; padding: 1mm; }
+    .qr img { display: block; width: 21.5mm; height: 21.5mm; object-fit: contain; }
+    .qr span { margin-top: .6mm; color: #176d58; font-size: 5.2pt; font-weight: 800; letter-spacing: .12mm; }
+    @page { size: A4 portrait; margin: 8mm 7.5mm; }
+    @media print {
+        html, body { background: #fff; }
+        .toolbar { display: none; }
+        .sheet { width: 185mm; margin: 0; gap: 4mm 5mm; }
+    }
+</style>
+</head>
+<body>
+<div class="toolbar"><strong>{$jumlah} stiker siap dicetak.</strong> <button type="button" onclick="window.print()">Cetak Stiker Batch</button></div>
+<main class="sheet">
+{loop: $aset}
+    <section class="sticker">
+        <div class="header">
+            <img class="logo" src="{$logo_url}" alt="Logo RSU Nurusyifa">
+            <div class="brand"><strong>RSU NURUSYIFA</strong><span>Inventaris Non Medis</span></div>
+        </div>
+        <div class="body">
+            <div class="details">
+                <div class="field"><span class="label">Kode Inventaris</span><span class="value kode-inventaris">{$value.kode_label_inventaris|e}</span></div>
+                <div class="field"><span class="label">Barang</span><span class="value">{$value.nama_aset|e}{if: !empty($value.merk_type)} / {$value.merk_type|e}{/if}</span></div>
+                <div class="field"><span class="label">Unit / Ruangan</span><span class="value">{$value.nama_unit|e}{if: !empty($value.lokasi_fisik)} / {$value.lokasi_fisik|e}{/if}</span></div>
+            </div>
+            <div class="qr"><img src="{$value.qr_image_url}" alt="QR {$value.kode_label_inventaris|e}"><span>SCAN INVENTARIS</span></div>
+        </div>
+    </section>
+{/loop}
+</main>
+<script>
+window.addEventListener('load', function () {
+    setTimeout(function () { window.print(); }, 250);
+});
+</script>
+</body>
+</html>
