@@ -19,6 +19,22 @@ require_once('../systems/lib/Autoloader.php');
 
 $core = new Systems\Admin;
 
+// Kompatibilitas QR ruangan yang pernah dicetak ketika tujuan QR masih halaman
+// admin. Permintaan pemeriksaan memakai mode=check sehingga tetap melewati login.
+if (parseURL(1) === 'logistik_non_medis'
+    && parseURL(2) === 'cekasetruang'
+    && empty($_GET['t'])
+    && ($_GET['mode'] ?? '') !== 'check'
+    && ((int)($_GET['ruang_id'] ?? 0) > 0 || trim((string)($_GET['ruang'] ?? '')) !== '')) {
+    $publicRoomUrl = url('plugins/logistik_non_medis/public/ruang-info.php');
+    if ((int)($_GET['ruang_id'] ?? 0) > 0) {
+        $publicRoomUrl .= '?id='.(int)$_GET['ruang_id'];
+    } else {
+        $publicRoomUrl .= '?kode='.rawurlencode(trim((string)$_GET['ruang']));
+    }
+    redirect($publicRoomUrl);
+}
+
 if ($core->loginCheck()) {
     $core->loadModules();
 

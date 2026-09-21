@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR Inventaris Ruangan {$ruang.nama|e}</title>
+<style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; background: #e9eeec; font-family: Arial, Helvetica, sans-serif; color: #18342d; }
+    .aksi { max-width: 500px; margin: 0 auto 12px; text-align: right; }
+    .aksi button { padding: 9px 18px; border: 1px solid #287a65; border-radius: 4px; background: #287a65; color: #fff; font-weight: 700; cursor: pointer; }
+    .label-qr { position: relative; width: 100%; max-width: 500px; margin: auto; overflow: hidden; background: #fff; border: 2px solid #287a65; border-radius: 14px; text-align: center; box-shadow: 0 8px 28px rgba(20,57,48,.15); }
+    .aksen { height: 12px; background: linear-gradient(90deg, #1f6d5b, #8fbd4c); }
+    .isi { padding: 24px 30px 26px; }
+    .kop { display: flex; align-items: center; justify-content: center; gap: 12px; padding-bottom: 17px; border-bottom: 1px solid #cadbd5; }
+    .kop img { max-width: 62px; max-height: 62px; }
+    .instansi { color: #172722; font-weight: 800; font-size: 19px; }
+    .sub-instansi { margin-top: 3px; color: #527069; font-size: 13px; letter-spacing: .7px; text-transform: uppercase; }
+    .judul { margin: 22px 0 5px; color: #287a65; font-size: 14px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+    .ruangan { margin: 0 0 4px; color: #122b24; font-size: 30px; font-weight: 800; line-height: 1.12; }
+    .area { min-height: 22px; color: #617970; font-size: 16px; }
+    .qr-bingkai { display: inline-block; margin: 20px auto 12px; padding: 10px; border: 3px solid #287a65; border-radius: 12px; background: #fff; }
+    #qr-ruangan { width: 284px; height: 284px; padding: 2px; background: #fff; }
+    #qr-ruangan canvas, #qr-ruangan img { display: block; width: 280px !important; height: 280px !important; }
+    .qr-gagal { display: flex; width: 280px; height: 280px; align-items: center; justify-content: center; padding: 20px; background: #fff3f3; color: #a94442; font-weight: 700; }
+    .scan { margin-top: 2px; color: #287a65; font-size: 24px; font-weight: 900; letter-spacing: 1px; }
+    .petunjuk { margin: 5px auto 16px; max-width: 360px; color: #425d55; font-size: 15px; line-height: 1.45; }
+    .footer-label { margin-top: 16px; color: #71847e; font-size: 11px; }
+    @media print {
+        @page { size: A5 portrait; margin: 8mm; }
+        body { padding: 0; background: #fff; }
+        .aksi { display: none; }
+        .label-qr { max-width: none; border-color: #287a65; border-radius: 10px; box-shadow: none; }
+    }
+</style>
+<script src="{?=url()?}/assets/jscripts/jquery.min.js"></script>
+<script src="{?=url()?}/assets/jscripts/qrcode.js"></script>
+<script src="{?=url()?}/assets/jscripts/jquery.qrcode.js"></script>
+</head>
+<body>
+<div class="aksi"><button type="button" onclick="window.print()">Cetak QR Ruangan</button></div>
+<main class="label-qr">
+    <div class="aksen"></div>
+    <div class="isi">
+        <div class="kop">
+            {if: !empty($logo)}<img src="{?=url($logo)?}" alt="Logo">{/if}
+            <div><div class="instansi">RSU NURUSYIFA</div><div class="sub-instansi">Inventaris Non Medis</div></div>
+        </div>
+        <div class="judul">Informasi Inventaris Ruangan</div>
+        <div class="ruangan">{$ruang.nama|e}</div>
+        {if: !empty($ruang.nama_area)}<div class="area">Area {$ruang.nama_area|e}</div>{/if}
+        <div class="qr-bingkai"><div id="qr-ruangan"></div></div>
+        <div class="scan">SCAN QR INI</div>
+        <div class="petunjuk">Pindai untuk melihat dan melakukan pemeriksaan inventaris khusus ruangan ini.</div>
+        <div class="footer-label">QR tetap berlaku saat kode ruangan atau data inventaris diperbarui.</div>
+    </div>
+</main>
+<script>
+$(function () {
+    var scanUrl = {$scan_url_json};
+    try {
+        $('#qr-ruangan').empty().qrcode({ render: 'canvas', width: 280, height: 280, text: scanUrl, correctLevel: QRErrorCorrectLevel.H });
+    } catch (e) {
+        $('#qr-ruangan').html('<div class="qr-gagal">QR gagal dibuat. Muat ulang halaman.</div>');
+    }
+});
+</script>
+</body>
+</html>

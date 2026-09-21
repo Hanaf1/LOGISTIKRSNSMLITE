@@ -204,7 +204,7 @@ class Admin extends AdminModule
         // Penyesuaian data adalah fungsi awal stok untuk pengelola gudang.
         $this->db()->pdo()->exec("UPDATE rsns_custom_logistik_non_medis_role_permissions SET permissions = CONCAT(permissions, ',gudangpenyesuaian') WHERE role IN ('admin','logistik','gudang') AND permissions NOT LIKE '%gudangpenyesuaian%'");
 
-        // Cek Aset Ruangan: pemeriksaan sederhana per ruangan untuk pengelola aset.
+        // Cek Inventaris Ruangan: pemeriksaan sederhana per ruangan untuk pengelola aset.
         $this->db()->pdo()->exec("UPDATE rsns_custom_logistik_non_medis_role_permissions SET permissions = CONCAT(permissions, ',asetcekruang') WHERE role IN ('admin','logistik','aset') AND CONCAT(',', permissions, ',') NOT LIKE '%,asetcekruang,%'");
 
         // Master inventaris berdiri sendiri dari master logistik umum.
@@ -421,6 +421,11 @@ class Admin extends AdminModule
                     echo json_encode(['status' => 'error', 'message' => 'Anda tidak memiliki hak akses untuk tindakan ini!']);
                     exit();
                 } else {
+                    $ruangDitolak = max((int)($_GET['ruang_id'] ?? 0), (int)(parseURL(3) ?: 0));
+                    if (strtolower($method) === 'cekasetruang' && $ruangDitolak > 0) {
+                        redirect(url('plugins/logistik_non_medis/public/ruang-info.php')
+                          . '?id=' . $ruangDitolak . '&akses=ditolak');
+                    }
                     $this->core->setNotify('failure', 'Akses Ditolak: Anda tidak memiliki hak akses ke menu tersebut.');
                     redirect(url([ADMIN, 'logistik_non_medis', 'manage']));
                 }
@@ -566,7 +571,7 @@ class Admin extends AdminModule
         if (strpos($method, 'distribusikuota') !== false || strpos($method, 'monitoringkuota') !== false) {
             return 'distribusikuota';
         }
-        if (strpos($method, 'asetregistrasi') !== false || strpos($method, 'exportaset') !== false || strpos($method, 'updatehargaaset') !== false) {
+        if (strpos($method, 'asetregistrasi') !== false || strpos($method, 'asetlabelbatch') !== false || strpos($method, 'exportaset') !== false || strpos($method, 'updatehargaaset') !== false) {
             return 'asetregistrasi';
         }
         if (strpos($method, 'asetkib') !== false || strpos($method, 'asetprintlabel') !== false) {
@@ -692,7 +697,7 @@ class Admin extends AdminModule
         'Mutasi Aset'         => 'asetmutasi',
         'Penghapusan Aset'    => 'asetpenghapusan',
         'Sensus & Verifikasi Inventaris' => 'asetsensus',
-        'Cek Aset Ruangan' => 'cekasetruang',
+        'Cek Inventaris Ruangan' => 'cekasetruang',
         '--- LAPORAN & AUDIT ---' => '#',
         'Laporan Stok & Mutasi' => 'laporanstokmutasi',
         'Laporan Pengadaan'    => 'laporanpengadaan',
@@ -1101,7 +1106,7 @@ class Admin extends AdminModule
         'asetmutasi' => 'Mutasi Aset',
         'asetpenghapusan' => 'Penghapusan Aset',
         'asetsensus' => 'Sensus & Verifikasi Inventaris',
-        'asetcekruang' => 'Cek Aset Ruangan',
+        'asetcekruang' => 'Cek Inventaris Ruangan',
         'laporanstokmutasi' => 'Laporan Stok & Mutasi',
         'laporanpengadaan' => 'Laporan Pengadaan',
         'rekapnonrutin' => 'Rekap Cetak Non Rutin',
@@ -17036,9 +17041,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                         'Kasie Umum',
                         $user,
                     ]);
-                    if (!$semuaDitolak) {
-                        $stmtDel->execute([$item['id']]);
-                    }
+                    $stmtDel->execute([$item['id']]);
                 }
             }
 
@@ -22709,8 +22712,8 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           ? $aset['nomor_inventaris']
           : preg_replace('/^AST-?/i', '', $aset['kode_aset']);
 
-        $scan_url = url('plugins/logistik_non_medis/public/aset-info.php') . '?kode=' . urlencode($kode_aset);
-        $qr_image_url = url('plugins/logistik_non_medis/public/aset-qr.php') . '?kode=' . urlencode($kode_aset);
+        $scan_url = url('plugins/logistik_non_medis/public/aset-info.php') . '?id=' . (int)$aset['id'];
+        $qr_image_url = url('plugins/logistik_non_medis/public/aset-qr.php') . '?id=' . (int)$aset['id'];
         $logo_url = url('plugins/logistik_non_medis/public/rsunurussyifa-logo.png');
 
         echo $this->draw('aset.registrasi.label.html', [
@@ -22718,6 +22721,56 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
           'scan_url' => $scan_url,
           'qr_image_url' => $qr_image_url,
           'logo_url' => $logo_url
+        ]);
+        exit();
+    }
+
+    /** Cetak banyak stiker dari baris/kelompok yang dicentang pada daftar Inventaris. */
+    public function postAsetLabelBatch()
+    {
+        $this->_initAset();
+        $mentah = trim((string)($_POST['group_keys'] ?? ''));
+        $groupKeys = array_values(array_unique(array_filter(array_map('intval', explode(',', $mentah)), static function ($nilai) {
+            return $nilai !== 0;
+        })));
+        if (!$groupKeys || count($groupKeys) > 100) {
+            http_response_code(422);
+            echo 'Pilih minimal satu dan maksimal 100 baris/kelompok inventaris.';
+            exit();
+        }
+        $marks = implode(',', array_fill(0, count($groupKeys), '?'));
+        $stmt = $this->db()->pdo()->prepare("SELECT a.id, a.kode_aset, a.nomor_inventaris, a.nama_aset, a.merk_type,
+                a.kode_unit, a.lokasi_fisik, COALESCE(iu.nama, u.nama_unit, a.kode_unit, '-') nama_unit
+            FROM rsns_custom_logistik_non_medis_aset a
+            LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master iu ON iu.jenis_master='UNIT' AND iu.kode=a.kode_unit
+            LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=a.kode_unit
+            WHERE a.status='Aktif' AND COALESCE(a.asset_group_id, -a.id) IN ($marks)
+            ORDER BY nama_unit, a.nama_aset, a.nomor_inventaris, a.id
+            LIMIT 501");
+        $stmt->execute($groupKeys);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        if (!$rows) {
+            http_response_code(404);
+            echo 'Inventaris aktif tidak ditemukan.';
+            exit();
+        }
+        if (count($rows) > 500) {
+            http_response_code(422);
+            echo 'Jumlah stiker melebihi batas 500. Pilih kelompok yang lebih sedikit.';
+            exit();
+        }
+        $qrBase = url('plugins/logistik_non_medis/public/aset-qr.php') . '?id=';
+        foreach ($rows as &$row) {
+            $row['kode_label_inventaris'] = !empty($row['nomor_inventaris'])
+              ? $row['nomor_inventaris']
+              : preg_replace('/^AST-?/i', '', $row['kode_aset']);
+            $row['qr_image_url'] = $qrBase . (int)$row['id'];
+        }
+        unset($row);
+        echo $this->draw('aset.registrasi.label.batch.html', [
+          'aset' => $rows,
+          'jumlah' => count($rows),
+          'logo_url' => url('plugins/logistik_non_medis/public/rsunurussyifa-logo.png'),
         ]);
         exit();
     }
@@ -26307,7 +26360,7 @@ public function anyDisplayLaporanInventaris()
     }
 
     // =========================================================================
-    // CEK ASET RUANGAN: pemeriksaan sederhana per ruangan (ada/tidak ada,
+    // CEK INVENTARIS RUANGAN: pemeriksaan sederhana per ruangan (ada/tidak ada,
     // kondisi, catatan) dengan tanda tangan perwakilan unit. Terpisah dari
     // Sensus agar alur harian tetap ringkas.
     // =========================================================================
@@ -26407,10 +26460,16 @@ public function anyDisplayLaporanInventaris()
         exit();
     }
 
+    /** URL publik permanen; tindakan pemeriksaan tetap meminta login. */
+    private function _cekRuangScanUrl($ruangId): string
+    {
+        return url('plugins/logistik_non_medis/public/ruang-info.php') . '?id=' . rawurlencode((string)$ruangId);
+    }
+
     /** Daftar ruangan (master unit inventaris) beserta area dan jumlah aset aktif. */
     private function _cekRuangDaftarRuangan(): array
     {
-        return $this->db()->pdo()->query("SELECT m.kode, m.nama, COALESCE(m.kode_area,'') kode_area,
+        return $this->db()->pdo()->query("SELECT m.id ruang_id, m.kode, m.nama, COALESCE(m.kode_area,'') kode_area,
                 COALESCE(u.nama_unit, '') nama_area,
                 (SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_aset a WHERE a.kode_unit = m.kode AND a.status = 'Aktif') jumlah_aset
             FROM rsns_custom_logistik_non_medis_inventaris_master m
@@ -26444,7 +26503,79 @@ public function anyDisplayLaporanInventaris()
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    public function getCekAsetRuang()
+    /** Normalisasi pilihan semua periode, satu bulan, atau satu minggu ISO. */
+    private function _cekRuangFilterPeriode(array $input): array
+    {
+        $jenis = in_array(($input['jenis_periode'] ?? ''), ['bulan', 'minggu'], true) ? $input['jenis_periode'] : 'semua';
+        $awal = null;
+        $akhir = null;
+        $label = 'Semua periode';
+        if ($jenis === 'bulan') {
+            $bulan = preg_match('/^\d{4}-\d{2}$/', (string)($input['bulan'] ?? '')) ? (string)$input['bulan'] : date('Y-m');
+            $awal = $bulan . '-01';
+            $akhir = date('Y-m-t', strtotime($awal));
+            $label = 'Bulan ' . date('m/Y', strtotime($awal));
+        } elseif ($jenis === 'minggu') {
+            $minggu = preg_match('/^(\d{4})-W(\d{2})$/', (string)($input['minggu'] ?? ''), $cocok)
+                ? (string)$input['minggu'] : date('o-\WW');
+            preg_match('/^(\d{4})-W(\d{2})$/', $minggu, $cocok);
+            $tanggal = new \DateTime();
+            $tanggal->setISODate((int)$cocok[1], (int)$cocok[2]);
+            if ($tanggal->format('o-\WW') !== $minggu) {
+                $minggu = date('o-\WW');
+                preg_match('/^(\d{4})-W(\d{2})$/', $minggu, $cocok);
+                $tanggal->setISODate((int)$cocok[1], (int)$cocok[2]);
+            }
+            $awal = $tanggal->format('Y-m-d');
+            $tanggal->modify('+6 days');
+            $akhir = $tanggal->format('Y-m-d');
+            $label = 'Minggu ' . $cocok[2] . '/' . $cocok[1] . ' (' . date('d/m/Y', strtotime($awal)) . ' - ' . date('d/m/Y', strtotime($akhir)) . ')';
+        }
+        return ['jenis' => $jenis, 'awal' => $awal, 'akhir' => $akhir, 'label' => $label];
+    }
+
+    /** Riwayat pemeriksaan ruangan yang dipakai bersama oleh layar dan ekspor. */
+    private function _cekRuangRiwayatRows(array $input, int $limit = 0): array
+    {
+        $periode = $this->_cekRuangFilterPeriode($input);
+        $status = in_array(($input['status'] ?? ''), ['Draft', 'Selesai'], true) ? $input['status'] : '';
+        $cari = mb_substr(trim((string)($input['cari'] ?? '')), 0, 100);
+        $where = [];
+        $params = [];
+        if ($periode['awal'] !== null) {
+            $where[] = 'c.tanggal BETWEEN ? AND ?';
+            $params[] = $periode['awal'];
+            $params[] = $periode['akhir'];
+        }
+        if ($status !== '') {
+            $where[] = 'c.status = ?';
+            $params[] = $status;
+        }
+        if ($cari !== '') {
+            $like = '%' . $cari . '%';
+            $where[] = "(c.no_cek LIKE ? OR c.kode_unit LIKE ? OR COALESCE(m.nama,'') LIKE ? OR COALESCE(u.nama_unit,'') LIKE ? OR COALESCE(NULLIF(mu.fullname,''),c.pemeriksa) LIKE ? OR COALESCE(c.ttd_nama,'') LIKE ?)";
+            array_push($params, $like, $like, $like, $like, $like, $like);
+        }
+        $sql = "SELECT c.id, c.no_cek, c.kode_area, c.kode_unit, c.tanggal, c.status, c.ttd_nama, c.ttd_jabatan, c.ttd_waktu, c.catatan_umum,
+                m.nama nama_ruangan, COALESCE(u.nama_unit,'') nama_area, COALESCE(NULLIF(mu.fullname,''), c.pemeriksa) nama_pemeriksa,
+                COALESCE(s.total,0) total, COALESCE(s.dicek,0) dicek, COALESCE(s.ada,0) ada,
+                COALESCE(s.tidak_ada,0) tidak_ada, COALESCE(s.berubah,0) berubah
+            FROM rsns_custom_logistik_non_medis_cek_ruang c
+            LEFT JOIN (SELECT cek_id, COUNT(*) total, SUM(keberadaan <> 'Belum') dicek, SUM(keberadaan = 'Ada') ada,
+                    SUM(keberadaan = 'Tidak Ada') tidak_ada, SUM(keberadaan = 'Ada' AND kondisi_sesudah <> kondisi_sebelum) berubah
+                FROM rsns_custom_logistik_non_medis_cek_ruang_item GROUP BY cek_id) s ON s.cek_id = c.id
+            LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master m ON m.jenis_master = 'UNIT' AND m.kode = c.kode_unit
+            LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = c.kode_area
+            LEFT JOIN mlite_users mu ON mu.username = c.pemeriksa"
+            . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
+            . " ORDER BY c.status = 'Draft' DESC, c.tanggal DESC, c.id DESC"
+            . ($limit > 0 ? ' LIMIT ' . $limit : '');
+        $stmt = $this->db()->pdo()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    public function getCekAsetRuang($ruangIdPath = 0)
     {
         $this->_initCekRuang();
         $this->_addHeaderFiles();
@@ -26455,33 +26586,171 @@ public function anyDisplayLaporanInventaris()
         foreach ($ruangan as $r) {
             $key = $r['kode_area'];
             if (!isset($area[$key])) {
-                $area[$key] = ['kode_area' => $key, 'nama_area' => $key === '' ? 'Lainnya (tanpa area)' : ($r['nama_area'] ?: $key), 'jumlah_ruangan' => 0];
+                $area[$key] = ['kode_area' => $key, 'nama_area' => $key === '' ? 'Ruang lain' : ($r['nama_area'] ?: $key), 'jumlah_ruangan' => 0];
             }
             $area[$key]['jumlah_ruangan']++;
         }
         uasort($area, fn ($a, $b) => [$a['kode_area'] === '', $a['nama_area']] <=> [$b['kode_area'] === '', $b['nama_area']]);
 
-        $riwayat = $pdo->query("SELECT c.id, c.no_cek, c.kode_area, c.kode_unit, c.tanggal, c.status, c.ttd_nama,
-                m.nama nama_ruangan, COALESCE(u.nama_unit,'') nama_area, COALESCE(NULLIF(mu.fullname,''), c.pemeriksa) nama_pemeriksa,
-                COALESCE(s.total,0) total, COALESCE(s.dicek,0) dicek, COALESCE(s.tidak_ada,0) tidak_ada, COALESCE(s.berubah,0) berubah
-            FROM rsns_custom_logistik_non_medis_cek_ruang c
-            LEFT JOIN (SELECT cek_id, COUNT(*) total, SUM(keberadaan <> 'Belum') dicek, SUM(keberadaan = 'Tidak Ada') tidak_ada,
-                    SUM(keberadaan = 'Ada' AND kondisi_sesudah <> kondisi_sebelum) berubah
-                FROM rsns_custom_logistik_non_medis_cek_ruang_item GROUP BY cek_id) s ON s.cek_id = c.id
-            LEFT JOIN rsns_custom_logistik_non_medis_inventaris_master m ON m.jenis_master = 'UNIT' AND m.kode = c.kode_unit
-            LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = c.kode_area
-            LEFT JOIN mlite_users mu ON mu.username = c.pemeriksa
-            ORDER BY c.status = 'Draft' DESC, c.tanggal DESC, c.id DESC
-            LIMIT 300")->fetchAll(\PDO::FETCH_ASSOC);
+        $riwayat = $this->_cekRuangRiwayatRows([], 300);
 
         $unitOrg = $this->db('rsns_custom_logistik_non_medis_unit')->where('status', 'Aktif')->asc('nama_unit')->toArray();
+
+        // QR baru memakai ID master yang stabil. Parameter lama `ruang` tetap
+        // diterima agar label yang pernah dicetak sebelumnya tidak rusak.
+        $ruangAwal = trim((string)($_GET['ruang'] ?? ''));
+        $ruangId = max((int)($_GET['ruang_id'] ?? 0), (int)$ruangIdPath);
+        if ($ruangId > 0) {
+            $stmtRuang = $pdo->prepare("SELECT kode FROM rsns_custom_logistik_non_medis_inventaris_master WHERE id = ? AND jenis_master = 'UNIT' AND status = 'Aktif' LIMIT 1");
+            $stmtRuang->execute([$ruangId]);
+            $kodeTerkini = $stmtRuang->fetchColumn();
+            if ($kodeTerkini !== false) $ruangAwal = (string)$kodeTerkini;
+        }
 
         return $this->draw('aset.cekruang.html', [
           'area' => array_values($area),
           'ruangan_json' => json_encode($ruangan, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
           'riwayat_json' => json_encode($riwayat, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
+          'ruang_awal_json' => json_encode($ruangAwal, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
+          'qr_cetak_url' => url([ADMIN, 'logistik_non_medis', 'cekasetruangqr']),
+          'qr_batch_url' => url([ADMIN, 'logistik_non_medis', 'cekruanglabelbatch']),
+          'qr_scan_base_json' => json_encode($this->_cekRuangScanUrl(''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
+          'riwayat_url' => url([ADMIN, 'logistik_non_medis', 'cekruangriwayat']),
+          'export_url' => url([ADMIN, 'logistik_non_medis', 'cekasetruangexport']),
+          'bulan_sekarang' => date('Y-m'),
+          'minggu_sekarang' => date('o-\WW'),
           'unit_org' => $unitOrg,
         ]);
+    }
+
+    /** Data riwayat untuk filter minggu/bulan pada halaman. */
+    public function getCekRuangRiwayat()
+    {
+        $this->_initCekRuang();
+        $periode = $this->_cekRuangFilterPeriode($_GET);
+        $rows = $this->_cekRuangRiwayatRows($_GET, 2000);
+        $this->_cekRuangJson(['status' => 'success', 'rows' => $rows, 'total' => count($rows), 'periode' => $periode['label']]);
+    }
+
+    /** Ekspor rekap pemeriksaan inventaris ruangan sesuai filter aktif. */
+    public function getCekAsetRuangExport()
+    {
+        $this->_initCekRuang();
+        $periode = $this->_cekRuangFilterPeriode($_GET);
+        $rows = $this->_cekRuangRiwayatRows($_GET);
+        if (!$rows) {
+            http_response_code(404);
+            echo 'Tidak ada hasil pemeriksaan pada periode dan filter tersebut.';
+            exit();
+        }
+        $data = [];
+        foreach ($rows as $i => $row) {
+            $data[] = [
+              $i + 1,
+              $row['no_cek'],
+              date('d-m-Y', strtotime($row['tanggal'])),
+              $row['nama_area'] ?: '-',
+              $row['nama_ruangan'] ?: $row['kode_unit'],
+              $row['kode_unit'],
+              $row['nama_pemeriksa'],
+              (int)$row['total'],
+              (int)$row['dicek'],
+              (int)$row['ada'],
+              (int)$row['tidak_ada'],
+              (int)$row['berubah'],
+              $row['status'],
+              $row['ttd_nama'] ?: '-',
+              $row['ttd_jabatan'] ?: '-',
+              $row['ttd_waktu'] ? date('d-m-Y H:i', strtotime($row['ttd_waktu'])) : '-',
+              $row['catatan_umum'] ?: '-',
+            ];
+        }
+        $ringkasan = $periode['label'];
+        if (!empty($_GET['status'])) $ringkasan .= ' | Status: ' . $_GET['status'];
+        if (trim((string)($_GET['cari'] ?? '')) !== '') $ringkasan .= ' | Pencarian: ' . trim((string)$_GET['cari']);
+        $namaPeriode = $periode['awal'] !== null
+            ? str_replace('-', '', $periode['awal']) . '_' . str_replace('-', '', $periode['akhir'])
+            : 'Semua_Periode';
+        $this->_downloadSimpleXlsx(
+            'REKAP CEK INVENTARIS RUANGAN RSU NURUSYIFA',
+            $ringkasan,
+            'Cek Inventaris Ruangan',
+            ['No', 'No. Cek', 'Tanggal', 'Area / Unit', 'Ruangan', 'Kode Ruangan', 'Pemeriksa', 'Total', 'Dicek', 'Ada', 'Tidak Ada', 'Kondisi Berubah', 'Status', 'Perwakilan Unit', 'Jabatan', 'Waktu TTD', 'Catatan Umum'],
+            $data,
+            [6, 22, 14, 24, 30, 16, 24, 10, 10, 10, 12, 16, 12, 24, 20, 20, 40],
+            'Cek_Inventaris_Ruangan_' . $namaPeriode
+        );
+    }
+
+    /** Label QR permanen untuk membuka pemeriksaan inventaris suatu ruangan. */
+    public function getCekAsetRuangQr()
+    {
+        $this->_initCekRuang();
+        $kode = trim((string)($_GET['kode'] ?? ''));
+        $stmt = $this->db()->pdo()->prepare("SELECT m.id ruang_id, m.kode, m.nama, COALESCE(m.kode_area,'') kode_area,
+                COALESCE(u.nama_unit, '') nama_area,
+                (SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_aset a WHERE a.kode_unit = m.kode AND a.status = 'Aktif') jumlah_aset
+            FROM rsns_custom_logistik_non_medis_inventaris_master m
+            LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = m.kode_area
+            WHERE m.jenis_master = 'UNIT' AND m.status = 'Aktif' AND m.kode = ? LIMIT 1");
+        $stmt->execute([$kode]);
+        $ruang = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$ruang) {
+            http_response_code(404);
+            echo 'Ruangan tidak ditemukan.';
+            exit();
+        }
+
+        // QR membuka daftar publik. Hanya tombol pemeriksaan di halaman tersebut
+        // yang menuju login dan halaman admin berizin.
+        $scanUrl = $this->_cekRuangScanUrl((int)$ruang['ruang_id']);
+        echo $this->draw('aset.cekruang.qr.html', [
+          'ruang' => $ruang,
+          'scan_url_json' => json_encode($scanUrl, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT),
+          'logo' => url('plugins/logistik_non_medis/public/rsunurussyifa-logo.png'),
+        ]);
+        exit();
+    }
+
+    /** Cetak sekaligus label QR permanen untuk ruangan yang dipilih. */
+    public function postCekRuangLabelBatch()
+    {
+        $this->_initCekRuang();
+        $mentah = trim((string)($_POST['ruang_ids'] ?? ''));
+        $ids = array_values(array_unique(array_filter(array_map('intval', explode(',', $mentah)), static function ($nilai) {
+            return $nilai > 0;
+        })));
+        if (!$ids || count($ids) > 50) {
+            http_response_code(422);
+            echo 'Pilih minimal satu dan maksimal 50 ruangan.';
+            exit();
+        }
+
+        $marks = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->db()->pdo()->prepare("SELECT m.id ruang_id, m.kode, m.nama, COALESCE(m.kode_area,'') kode_area,
+                COALESCE(u.nama_unit, '') nama_area
+            FROM rsns_custom_logistik_non_medis_inventaris_master m
+            LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit = m.kode_area
+            WHERE m.jenis_master = 'UNIT' AND m.status = 'Aktif' AND m.id IN ($marks)
+            ORDER BY COALESCE(u.nama_unit,''), m.nama, m.id");
+        $stmt->execute($ids);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        if (!$rows) {
+            http_response_code(404);
+            echo 'Ruangan aktif tidak ditemukan.';
+            exit();
+        }
+        foreach ($rows as &$row) {
+            $row['scan_url'] = $this->_cekRuangScanUrl((int)$row['ruang_id']);
+        }
+        unset($row);
+
+        echo $this->draw('aset.cekruang.qr.batch.html', [
+          'ruangan' => $rows,
+          'jumlah' => count($rows),
+          'logo_url' => url('plugins/logistik_non_medis/public/rsunurussyifa-logo.png'),
+        ]);
+        exit();
     }
 
     public function postCekRuangBuat()
@@ -26665,7 +26934,7 @@ public function anyDisplayLaporanInventaris()
             . $tidakAda . ' tidak ada, ' . $diubah . ' kondisi diperbarui | TTD: ' . $ttdNama, 'U');
         $this->_cekRuangJson([
           'status' => 'success',
-          'message' => 'Cek ruangan selesai. ' . $diubah . ' kondisi aset diperbarui' . ($tidakAda ? ', ' . $tidakAda . ' barang tidak ada (tindak lanjuti dengan Koreksi).' : '.'),
+          'message' => 'Cek inventaris ruangan selesai. ' . $diubah . ' kondisi inventaris diperbarui' . ($tidakAda ? ', ' . $tidakAda . ' barang tidak ada (tindak lanjuti dengan Koreksi).' : '.'),
         ]);
     }
 

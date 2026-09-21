@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<title>Berita Acara Cek Aset {$cek.no_cek|e}</title>
+<title>Berita Acara Cek Inventaris {$cek.no_cek|e}</title>
 <style>
     body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #111; margin: 24px; }
     .kop { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
@@ -29,7 +29,7 @@
     {if: !empty($logo)}<img src="{?=url($logo)?}" alt="">{/if}
     <div><strong style="font-size:14px;">{$nama_instansi|e}</strong><br><span class="muted">Logistik Non Medis — Inventaris</span></div>
 </div>
-<h1>Berita Acara Pemeriksaan Aset Ruangan</h1>
+<h1>Berita Acara Pemeriksaan Inventaris Ruangan</h1>
 
 <table class="info">
     <tr><td style="width:120px;">No. Cek</td><td>: {$cek.no_cek|e}</td><td style="width:120px;">Tanggal</td><td>: {?=date('d-m-Y', strtotime($cek['tanggal']))?}</td></tr>

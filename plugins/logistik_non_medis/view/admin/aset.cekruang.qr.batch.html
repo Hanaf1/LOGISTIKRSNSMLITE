@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cetak {$jumlah} QR Inventaris Ruangan</title>
+<style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #e9eeec; color: #17372f; font-family: Arial, Helvetica, sans-serif; }
+    .toolbar { position: sticky; top: 0; z-index: 5; padding: 10px 16px; background: #fff; border-bottom: 1px solid #cbd7d3; text-align: center; }
+    .toolbar button { margin-left: 10px; padding: 8px 18px; border: 1px solid #287a65; border-radius: 4px; background: #287a65; color: #fff; font-weight: 700; cursor: pointer; }
+    .sheet { width: 194mm; margin: 7mm auto; display: grid; grid-template-columns: repeat(2, 94mm); gap: 5mm 6mm; align-content: start; }
+    .label-ruang { position: relative; width: 94mm; height: 136mm; overflow: hidden; background: #fff; border: .5mm solid #287a65; border-radius: 3mm; text-align: center; page-break-inside: avoid; break-inside: avoid; }
+    .aksen { height: 3mm; background: linear-gradient(90deg, #1f6d5b, #8fbd4c); }
+    .isi { padding: 4mm 6mm 3mm; }
+    .kop { display: flex; align-items: center; justify-content: center; gap: 3mm; padding-bottom: 3mm; border-bottom: .3mm solid #cadbd5; }
+    .kop img { width: 14mm; height: 14mm; object-fit: contain; }
+    .instansi { color: #172722; font-size: 14pt; font-weight: 800; }
+    .sub { margin-top: .7mm; color: #527069; font-size: 7.5pt; letter-spacing: .25mm; text-transform: uppercase; }
+    .judul { margin: 3mm 0 1mm; color: #287a65; font-size: 9.5pt; font-weight: 800; letter-spacing: .5mm; text-transform: uppercase; }
+    .nama { min-height: 9mm; color: #122b24; font-size: 18pt; font-weight: 900; line-height: 1.05; }
+    .area { min-height: 4mm; color: #617970; font-size: 9pt; }
+    .tanpa-area { min-height: 4mm; }
+    .qr-bingkai { display: inline-block; margin: 2mm auto 1.5mm; padding: 2mm; border: .8mm solid #287a65; border-radius: 2.5mm; background: #fff; }
+    .qr-ruang, .qr-ruang canvas, .qr-ruang img { display: block; width: 48mm !important; height: 48mm !important; }
+    .scan { color: #287a65; font-size: 14pt; font-weight: 900; letter-spacing: .45mm; }
+    .petunjuk { margin: 1mm auto 0; max-width: 78mm; color: #425d55; font-size: 7.5pt; line-height: 1.25; }
+    .audit { margin-top: 1.5mm; padding-top: 1.5mm; border-top: .25mm solid #dce6e2; color: #6a7d77; font-size: 6.2pt; line-height: 1.2; }
+    @page { size: A4 portrait; margin: 6mm 5mm; }
+    @media print {
+        html, body { background: #fff; }
+        .toolbar { display: none; }
+        .sheet { width: 194mm; margin: 0; gap: 5mm 6mm; }
+        .label-ruang { border-radius: 2mm; }
+    }
+</style>
+<script src="{?=url()?}/assets/jscripts/jquery.min.js"></script>
+<script src="{?=url()?}/assets/jscripts/qrcode.js"></script>
+<script src="{?=url()?}/assets/jscripts/jquery.qrcode.js"></script>
+</head>
+<body>
+<div class="toolbar"><strong>{$jumlah} label ruangan siap dicetak.</strong><button type="button" onclick="window.print()">Cetak Batch Ruangan</button></div>
+<main class="sheet">
+{loop: $ruangan}
+    <section class="label-ruang">
+        <div class="aksen"></div>
+        <div class="isi">
+            <div class="kop">
+                <img src="{$logo_url}" alt="Logo RSU Nurusyifa">
+                <div><div class="instansi">RSU NURUSYIFA</div><div class="sub">Inventaris Non Medis</div></div>
+            </div>
+            <div class="judul">Informasi Inventaris Ruangan</div>
+            <div class="nama">{$value.nama|e}</div>
+            {if: !empty($value.nama_area)}<div class="area">Area {$value.nama_area|e}</div>{else}<div class="tanpa-area"></div>{/if}
+            <div class="qr-bingkai"><div class="qr-ruang" data-url="{$value.scan_url|e}"></div></div>
+            <div class="scan">SCAN QR INI</div>
+            <div class="petunjuk">Lihat daftar barang dan lakukan pengecekan inventaris khusus ruangan ini.</div>
+            <div class="audit">Riwayat pemeriksaan tersimpan untuk monitoring, tindak lanjut temuan, dan dokumentasi akreditasi.</div>
+        </div>
+    </section>
+{/loop}
+</main>
+<script>
+$(function () {
+    $('.qr-ruang').each(function () {
+        var el = $(this);
+        try {
+            el.qrcode({ render: 'canvas', width: 181, height: 181, text: String(el.data('url')), correctLevel: QRErrorCorrectLevel.H });
+        } catch (e) {
+            el.text('QR gagal dibuat. Muat ulang halaman.');
+        }
+    });
+    setTimeout(function () { window.print(); }, 350);
+});
+</script>
+</body>
+</html>
