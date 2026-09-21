@@ -443,7 +443,7 @@ CREATE TABLE `rsns_custom_logistik_non_medis_cek_ruang_item` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_cek_aset` (`cek_id`,`kode_aset`),
   KEY `idx_cek_item_aset` (`kode_aset`)
-) ENGINE=InnoDB AUTO_INCREMENT=455 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=411 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1451,62 +1451,6 @@ CREATE TABLE `rsns_custom_logistik_non_medis_role_permissions` (
   PRIMARY KEY (`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017*/ /*!50003 TRIGGER `trg_lnm_role_permission_normal_ai` AFTER INSERT ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
-  CALL `sp_lnm_sync_role_permission_normal`(NEW.`role`,NEW.`permissions`);
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017*/ /*!50003 TRIGGER `trg_lnm_role_permission_normal_au` AFTER UPDATE ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
-  IF OLD.`role`<>NEW.`role` THEN
-    DELETE FROM `rsns_custom_logistik_non_medis_role_permission_item`
-    WHERE `role`=OLD.`role`;
-  END IF;
-  CALL `sp_lnm_sync_role_permission_normal`(NEW.`role`,NEW.`permissions`);
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017*/ /*!50003 TRIGGER `trg_lnm_role_permission_normal_ad` AFTER DELETE ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
-  DELETE FROM `rsns_custom_logistik_non_medis_role_permission_item`
-  WHERE `role`=OLD.`role`;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `rsns_custom_logistik_non_medis_satuan`
@@ -2243,7 +2187,7 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-21 19:05:35
+-- Dump completed on 2026-09-21 23:58:36
 -- MySQL dump 10.13  Distrib 8.0.30, for Win64 (x86_64)
 --
 -- Host: localhost    Database: mlite_rsns
@@ -2316,7 +2260,7 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-21 19:05:34
+-- Dump completed on 2026-09-21 23:58:35
 -- MySQL dump 10.13  Distrib 8.0.30, for Win64 (x86_64)
 --
 -- Host: localhost    Database: mlite_rsns
@@ -2594,7 +2538,7 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-21 19:05:35
+-- Dump completed on 2026-09-21 23:58:38
 -- MySQL dump 10.13  Distrib 8.0.30, for Win64 (x86_64)
 --
 -- Host: localhost    Database: mlite_rsns
@@ -2631,7 +2575,7 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-21 19:05:35
+-- Dump completed on 2026-09-21 23:58:38
 -- MySQL dump 10.13  Distrib 8.0.30, for Win64 (x86_64)
 --
 -- Host: localhost    Database: mlite_rsns
@@ -2668,7 +2612,7 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-21 19:05:35
+-- Dump completed on 2026-09-21 23:58:38
 -- MySQL dump 10.13  Distrib 8.0.30, for Win64 (x86_64)
 --
 -- Host: localhost    Database: mlite_rsns
@@ -2705,7 +2649,7 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-21 19:05:35
+-- Dump completed on 2026-09-21 23:58:38
 -- MySQL dump 10.13  Distrib 8.0.30, for Win64 (x86_64)
 --
 -- Host: localhost    Database: mlite_rsns
@@ -2742,4 +2686,124 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-21 19:05:35
+-- Dump completed on 2026-09-21 23:58:38
+-- MySQL dump 10.13  Distrib 8.0.30, for Win64 (x86_64)
+--
+-- Host: localhost    Database: mlite_rsns
+-- ------------------------------------------------------
+-- Server version	8.0.30
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Dumping data for table `rsns_custom_logistik_non_medis_role_permission_item`
+--
+
+LOCK TABLES `rsns_custom_logistik_non_medis_role_permission_item` WRITE;
+/*!40000 ALTER TABLE `rsns_custom_logistik_non_medis_role_permission_item` DISABLE KEYS */;
+INSERT INTO `rsns_custom_logistik_non_medis_role_permission_item` VALUES ('admin','asetcekruang','2026-09-20 09:42:40'),('admin','asetkib','2026-09-20 09:42:40'),('admin','asetmutasi','2026-09-20 09:42:40'),('admin','asetpemeliharaan','2026-09-20 09:42:40'),('admin','asetpenghapusan','2026-09-20 09:42:40'),('admin','asetpenyusutan','2026-09-20 09:42:40'),('admin','asetregistrasi','2026-09-20 09:42:40'),('admin','asetsensus','2026-09-20 09:42:40'),('admin','distribusikuota','2026-09-20 09:42:40'),('admin','distribusimendesak','2026-09-20 09:42:40'),('admin','distribusinonrutin','2026-09-20 09:42:40'),('admin','distribusipacking','2026-09-20 09:42:40'),('admin','distribusiretur','2026-09-20 09:42:40'),('admin','distribusiserahterima','2026-09-20 09:42:40'),('admin','distribusisppb','2026-09-20 09:42:40'),('admin','distribusitracking','2026-09-20 09:42:40'),('admin','distribusiverifikasi','2026-09-20 09:42:40'),('admin','gudanglokasi','2026-09-20 09:42:40'),('admin','gudangmanage','2026-09-20 09:42:40'),('admin','gudangmetode','2026-09-20 09:42:40'),('admin','gudangmutasi','2026-09-20 09:42:40'),('admin','gudangopname','2026-09-20 09:42:40'),('admin','gudangopnamev2','2026-09-20 09:42:40'),('admin','gudangpaket','2026-09-20 09:42:40'),('admin','gudangpenerimaan','2026-09-20 09:42:40'),('admin','gudangpenyesuaian','2026-09-20 09:42:40'),('admin','gudangproduksi','2026-09-20 09:42:40'),('admin','gudangrusak','2026-09-20 09:42:40'),('admin','gudangstok','2026-09-20 09:42:40'),('admin','hakakses','2026-09-20 09:42:40'),('admin','konfigurasiwaha','2026-09-20 09:42:40'),('admin','laporanaset','2026-09-20 09:42:40'),('admin','laporandashboardkpi','2026-09-20 09:42:40'),('admin','laporandistribusi','2026-09-20 09:42:40'),('admin','laporaneksporcetak','2026-09-20 09:42:40'),('admin','laporanpengadaan','2026-09-20 09:42:40'),('admin','laporanstokmutasi','2026-09-20 09:42:40'),('admin','manage','2026-09-20 09:42:40'),('admin','masterbarang','2026-09-20 09:42:40'),('admin','mastercoa','2026-09-20 09:42:40'),('admin','masterinventaris','2026-09-20 09:42:40'),('admin','masterkategori','2026-09-20 09:42:40'),('admin','masterlokasi','2026-09-20 09:42:40'),('admin','masterrekanan','2026-09-20 09:42:40'),('admin','mastersatuan','2026-09-20 09:42:40'),('admin','masterunit','2026-09-20 09:42:40'),('admin','mastervendor','2026-09-20 09:42:40'),('admin','pengadaanekatalog','2026-09-20 09:42:40'),('admin','pengadaankontrak','2026-09-20 09:42:40'),('admin','pengadaanpenerimaan','2026-09-20 09:42:40'),('admin','pengadaanperencanaan','2026-09-20 09:42:40'),('admin','pengadaanpo','2026-09-20 09:42:40'),('admin','pengadaanvendor','2026-09-20 09:42:40'),('admin','realisasibelanja','2026-09-20 09:42:40'),('admin','rekapnonrutin','2026-09-20 09:42:40'),('admin','rencanabelanja','2026-09-20 09:42:40'),('aset','asetcekruang','2026-09-17 20:29:42'),('aset','asetkib','2026-09-17 20:29:42'),('aset','asetmutasi','2026-09-17 20:29:42'),('aset','asetpemeliharaan','2026-09-17 20:29:42'),('aset','asetpenghapusan','2026-09-17 20:29:42'),('aset','asetpenyusutan','2026-09-17 20:29:42'),('aset','asetregistrasi','2026-09-17 20:29:42'),('aset','asetsensus','2026-09-17 20:29:42'),('aset','manage','2026-09-17 20:29:42'),('aset','masterinventaris','2026-09-17 20:29:42'),('bendahara','distribusinonrutin','2026-09-02 20:53:21'),('bendahara','distribusisppb','2026-09-02 20:53:21'),('bendahara','manage','2026-09-02 20:53:21'),('gudang','distribusimendesak','2026-09-19 03:02:11'),('gudang','distribusinonrutin','2026-09-19 03:02:11'),('gudang','distribusipacking','2026-09-19 03:02:11'),('gudang','distribusiretur','2026-09-19 03:02:11'),('gudang','distribusiserahterima','2026-09-19 03:02:11'),('gudang','distribusisppb','2026-09-19 03:02:11'),('gudang','distribusitracking','2026-09-19 03:02:11'),('gudang','distribusiverifikasi','2026-09-19 03:02:11'),('gudang','gudanglokasi','2026-09-19 03:02:11'),('gudang','gudangmanage','2026-09-19 03:02:11'),('gudang','gudangmetode','2026-09-19 03:02:11'),('gudang','gudangmutasi','2026-09-19 03:02:11'),('gudang','gudangopname','2026-09-19 03:02:11'),('gudang','gudangopnamev2','2026-09-19 03:02:11'),('gudang','gudangpaket','2026-09-19 03:02:11'),('gudang','gudangpenerimaan','2026-09-19 03:02:11'),('gudang','gudangpenyesuaian','2026-09-19 03:02:11'),('gudang','gudangproduksi','2026-09-19 03:02:11'),('gudang','gudangrusak','2026-09-19 03:02:11'),('gudang','gudangstok','2026-09-19 03:02:11'),('gudang','manage','2026-09-19 03:02:11'),('kepala_bidang','distribusikuota','2026-09-02 20:53:21'),('kepala_bidang','distribusinonrutin','2026-09-02 20:53:21'),('kepala_bidang','distribusiverifikasi','2026-09-02 20:53:21'),('kepala_bidang','manage','2026-09-02 20:53:21'),('kepala_bidang','rekapnonrutin','2026-09-02 20:53:21'),('kepala_sie','distribusikuota','2026-09-02 20:53:21'),('kepala_sie','distribusinonrutin','2026-09-02 20:53:21'),('kepala_sie','distribusiverifikasi','2026-09-02 20:53:21'),('kepala_sie','manage','2026-09-02 20:53:21'),('kepala_unit','distribusikuota','2026-09-02 20:53:21'),('kepala_unit','distribusinonrutin','2026-09-02 20:53:21'),('kepala_unit','distribusisppb','2026-09-02 20:53:21'),('kepala_unit','distribusiverifikasi','2026-09-02 20:53:21'),('kepala_unit','manage','2026-09-02 20:53:21'),('keuangan','distribusinonrutin','2026-09-18 07:15:57'),('keuangan','laporanaset','2026-09-18 07:15:57'),('keuangan','laporandashboardkpi','2026-09-18 07:15:57'),('keuangan','laporandistribusi','2026-09-18 07:15:57'),('keuangan','laporaneksporcetak','2026-09-18 07:15:57'),('keuangan','laporaninventaris','2026-09-18 07:15:57'),('keuangan','laporanpengadaan','2026-09-18 07:15:57'),('keuangan','laporanstokmutasi','2026-09-18 07:15:57'),('keuangan','manage','2026-09-18 07:15:57'),('keuangan','pengadaanperencanaan','2026-09-18 07:15:57'),('logistik','asetcekruang','2026-09-20 09:42:40'),('logistik','asetkib','2026-09-20 09:42:40'),('logistik','asetmutasi','2026-09-20 09:42:40'),('logistik','asetpemeliharaan','2026-09-20 09:42:40'),('logistik','asetpenghapusan','2026-09-20 09:42:40'),('logistik','asetpenyusutan','2026-09-20 09:42:40'),('logistik','asetregistrasi','2026-09-20 09:42:40'),('logistik','asetsensus','2026-09-20 09:42:40'),('logistik','distribusikuota','2026-09-20 09:42:40'),('logistik','distribusimendesak','2026-09-20 09:42:40'),('logistik','distribusinonrutin','2026-09-20 09:42:40'),('logistik','distribusipacking','2026-09-20 09:42:40'),('logistik','distribusiretur','2026-09-20 09:42:40'),('logistik','distribusiserahterima','2026-09-20 09:42:40'),('logistik','distribusisppb','2026-09-20 09:42:40'),('logistik','distribusitracking','2026-09-20 09:42:40'),('logistik','distribusiverifikasi','2026-09-20 09:42:40'),('logistik','gudanglokasi','2026-09-20 09:42:40'),('logistik','gudangmanage','2026-09-20 09:42:40'),('logistik','gudangmetode','2026-09-20 09:42:40'),('logistik','gudangmutasi','2026-09-20 09:42:40'),('logistik','gudangopname','2026-09-20 09:42:40'),('logistik','gudangopnamev2','2026-09-20 09:42:40'),('logistik','gudangpaket','2026-09-20 09:42:40'),('logistik','gudangpenerimaan','2026-09-20 09:42:40'),('logistik','gudangpenyesuaian','2026-09-20 09:42:40'),('logistik','gudangproduksi','2026-09-20 09:42:40'),('logistik','gudangrusak','2026-09-20 09:42:40'),('logistik','gudangstok','2026-09-20 09:42:40'),('logistik','konfigurasiwaha','2026-09-20 09:42:40'),('logistik','laporanaset','2026-09-20 09:42:40'),('logistik','laporandashboardkpi','2026-09-20 09:42:40'),('logistik','laporandistribusi','2026-09-20 09:42:40'),('logistik','laporaneksporcetak','2026-09-20 09:42:40'),('logistik','laporanpengadaan','2026-09-20 09:42:40'),('logistik','laporanstokmutasi','2026-09-20 09:42:40'),('logistik','manage','2026-09-20 09:42:40'),('logistik','masterbarang','2026-09-20 09:42:40'),('logistik','mastercoa','2026-09-20 09:42:40'),('logistik','masterinventaris','2026-09-20 09:42:40'),('logistik','masterkategori','2026-09-20 09:42:40'),('logistik','masterlokasi','2026-09-20 09:42:40'),('logistik','masterrekanan','2026-09-20 09:42:40'),('logistik','mastersatuan','2026-09-20 09:42:40'),('logistik','masterunit','2026-09-20 09:42:40'),('logistik','mastervendor','2026-09-20 09:42:40'),('logistik','pengadaanekatalog','2026-09-20 09:42:40'),('logistik','pengadaankontrak','2026-09-20 09:42:40'),('logistik','pengadaanpenerimaan','2026-09-20 09:42:40'),('logistik','pengadaanperencanaan','2026-09-20 09:42:40'),('logistik','pengadaanpo','2026-09-20 09:42:40'),('logistik','pengadaanvendor','2026-09-20 09:42:40'),('logistik','realisasibelanja','2026-09-20 09:42:40'),('logistik','rekapnonrutin','2026-09-20 09:42:40'),('logistik','rencanabelanja','2026-09-20 09:42:40'),('unit','distribusikuota','2026-09-02 20:53:21'),('unit','distribusinonrutin','2026-09-02 20:53:21'),('unit','distribusiretur','2026-09-02 20:53:21'),('unit','distribusisppb','2026-09-02 20:53:21'),('unit','manage','2026-09-02 20:53:21');
+/*!40000 ALTER TABLE `rsns_custom_logistik_non_medis_role_permission_item` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-09-21 23:58:38
+-- MySQL dump 10.13  Distrib 8.0.30, for Win64 (x86_64)
+--
+-- Host: localhost    Database: mlite_rsns
+-- ------------------------------------------------------
+-- Server version	8.0.30
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017*/ /*!50003 TRIGGER `trg_lnm_role_permission_normal_ai` AFTER INSERT ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
+  CALL `sp_lnm_sync_role_permission_normal`(NEW.`role`,NEW.`permissions`);
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017*/ /*!50003 TRIGGER `trg_lnm_role_permission_normal_au` AFTER UPDATE ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
+  IF OLD.`role`<>NEW.`role` THEN
+    DELETE FROM `rsns_custom_logistik_non_medis_role_permission_item`
+    WHERE `role`=OLD.`role`;
+  END IF;
+  CALL `sp_lnm_sync_role_permission_normal`(NEW.`role`,NEW.`permissions`);
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017*/ /*!50003 TRIGGER `trg_lnm_role_permission_normal_ad` AFTER DELETE ON `rsns_custom_logistik_non_medis_role_permissions` FOR EACH ROW BEGIN
+  DELETE FROM `rsns_custom_logistik_non_medis_role_permission_item`
+  WHERE `role`=OLD.`role`;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-09-21 23:58:37
