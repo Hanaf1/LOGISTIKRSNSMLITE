@@ -17041,7 +17041,9 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                         'Kasie Umum',
                         $user,
                     ]);
-                    $stmtDel->execute([$item['id']]);
+                    if (!$semuaDitolak) {
+                        $stmtDel->execute([$item['id']]);
+                    }
                 }
             }
 
