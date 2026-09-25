@@ -855,7 +855,9 @@ function toggleItemSource($row) {
     $row.find('.select-item').prop('disabled', isManual);
     $row.find('.manual-kode').prop('disabled', !isManual);
     $row.find('.manual-name').prop('required', isManual);
-    $row.find('.manual-name').prop('disabled', !isManual);
+    // Jangan di-disable: nama_barang_manual[] harus tetap terkirim di setiap baris
+    // agar indeksnya sejajar dengan jumlah[]; server mengabaikannya untuk baris master.
+    $row.find('.manual-name').prop('disabled', false);
     $row.find('.manual-spec').prop('required', true).prop('readonly', false);
     $row.find('select[name="satuan[]"]').prop('disabled', false);
     if (isManual) {
