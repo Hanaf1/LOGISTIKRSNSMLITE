@@ -1164,8 +1164,42 @@ class Admin extends AdminModule
           'availableMenus' => $availableMenus,
           'roles' => $roles,
           'matrix' => $matrix,
-          'wa_notifikasi_aktif' => (string)$this->settings->get('logistik_non_medis.wa_notifikasi_aktif') === '1'
+          'wa_notifikasi_aktif' => (string)$this->settings->get('logistik_non_medis.wa_notifikasi_aktif') === '1',
+          'nama_ttd_cetak' => $this->_namaTtdCetak()
         ]);
+    }
+
+    /** Nama default pejabat penandatangan cetakan (dipakai bila belum ada TTD digital). */
+    private const NAMA_TTD_CETAK_FIELDS = [
+      'komisaris' => 'ttd_nama_komisaris',
+      'kabid_umum' => 'ttd_nama_kabid_umum',
+      'kasie_umum' => 'ttd_nama_kasie_umum',
+      'petugas_logistik' => 'ttd_nama_petugas_logistik',
+    ];
+
+    private function _namaTtdCetak(): array
+    {
+        $result = [];
+        foreach (self::NAMA_TTD_CETAK_FIELDS as $key => $field) {
+            $result[$key] = trim((string)$this->settings->get('logistik_non_medis.' . $field));
+        }
+        return $result;
+    }
+
+    public function postSaveNamaTtdCetak()
+    {
+        $username = (string)$this->core->getUserInfo('username', null, true);
+        $roleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $username)->oneArray();
+        if (($roleData['role'] ?? '') !== 'admin') {
+            echo json_encode(['status' => 'error', 'message' => 'Hanya Admin Logistik yang dapat mengubah nama penandatangan cetakan.']);
+            exit();
+        }
+        foreach (self::NAMA_TTD_CETAK_FIELDS as $key => $field) {
+            $this->_ensureLogistikSetting($field, '');
+            $this->settings('logistik_non_medis', $field, mb_substr(trim((string)($_POST[$key] ?? '')), 0, 150));
+        }
+        echo json_encode(['status' => 'success', 'message' => 'Nama penandatangan cetakan berhasil disimpan.']);
+        exit();
     }
 
     public function postSaveWaNotificationConfig()
@@ -18272,6 +18306,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         }
         $sppb = $rows[0];
         $sppb['items'] = $rows;
+        $sppb['ka_unit_nama'] = $this->_namaKaUnitCetakSppb($no_sppb, (string)($sppb['kode_unit'] ?? ''), (string)($sppb['ka_unit'] ?? ''));
 
         echo $this->draw('distribusi.sppb.cetak.html', [
           'sppb' => $sppb,
@@ -20603,6 +20638,43 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized
         }
 
         return $prefix . $next_num;
+    }
+
+    /**
+     * Nama Ka. Unit untuk cetakan SPPB: penyetuju tahap KA_UNIT bila sudah ada,
+     * lalu akun kepala_unit milik unit tersebut, terakhir isian ka_unit di form.
+     */
+    private function _namaKaUnitCetakSppb(string $no_sppb, string $kode_unit, string $ka_unit): string
+    {
+        $namaAkun = function (string $username): string {
+            $username = trim($username);
+            if ($username === '') {
+                return '';
+            }
+            $user = $this->db('mlite_users')->where('username', $username)->oneArray();
+            return trim((string)($user['fullname'] ?? '')) ?: $username;
+        };
+
+        $approval = $this->db('rsns_custom_logistik_non_medis_sppb_approval')
+          ->where('no_sppb', $no_sppb)
+          ->where('tahap', 'KA_UNIT')
+          ->desc('waktu')
+          ->oneArray();
+        if (!empty($approval['username'])) {
+            return $namaAkun((string)$approval['username']);
+        }
+
+        if ($kode_unit !== '') {
+            $roles = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('role', 'kepala_unit')->toArray();
+            foreach ($roles as $role) {
+                $units = array_map('trim', explode(',', (string)($role['kode_unit'] ?? '')));
+                if (in_array($kode_unit, $units, true)) {
+                    return $namaAkun((string)$role['username']);
+                }
+            }
+        }
+
+        return $namaAkun($ka_unit);
     }
 
     private function _getKaUnitFromParent(string $kode_unit): string
@@ -28587,6 +28659,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
           'periode' => date('d/m/Y', strtotime($filter['tanggal_awal'])) . ' s.d. ' . date('d/m/Y', strtotime($filter['tanggal_akhir'])),
           'tanggal_cetak' => date('d/m/Y'),
           'ttd' => $this->_getTtdRekapNonRutin(array_column($rows, 'no_sppb')),
+          'nama_ttd' => $this->_namaTtdCetak(),
           'nama_rs' => 'RSU Nurusyifa',
           'alamat_rs' => $this->settings->get('settings.alamat'),
           'kota_rs' => $this->settings->get('settings.kota'),

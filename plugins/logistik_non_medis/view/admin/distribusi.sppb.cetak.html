@@ -63,7 +63,7 @@
             <td><strong>Diajukan Oleh</strong></td>
             <td>: {if: !empty($sppb.diajukan_oleh)}{$sppb.diajukan_oleh}{else}-{/if}</td>
             <td><strong>Ka Unit</strong></td>
-            <td>: {if: !empty($sppb.ka_unit)}{$sppb.ka_unit}{else}-{/if}</td>
+            <td>: {if: !empty($sppb.ka_unit_nama)}{$sppb.ka_unit_nama}{else}-{/if}</td>
         </tr>
         <tr>
             <td><strong>Penanggung Jawab</strong></td>
@@ -110,7 +110,7 @@
         </tr>
         <tr>
             <td>( ............................ )<br>Staf Unit</td>
-            <td>( ............................ )<br>Ka. Unit</td>
+            <td>( {if: !empty($sppb.ka_unit_nama)}{$sppb.ka_unit_nama}{else}............................{/if} )<br>Ka. Unit</td>
             <td>( ............................ )<br>Petugas Logistik</td>
         </tr>
     </table>
