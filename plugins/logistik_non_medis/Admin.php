@@ -15294,10 +15294,26 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                     exit();
                 }
                 $tmp_name = $file_tmp_names[$file_index] ?? '';
-                $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                $mime = $finfo && $tmp_name !== '' ? finfo_file($finfo, $tmp_name) : '';
-                if ($finfo) {
-                    finfo_close($finfo);
+                $mime = '';
+                // Fileinfo adalah pemeriksaan utama karena mendeteksi MIME dari isi
+                // berkas. Pada server lama yang tidak memuat Fileinfo, gunakan
+                // ekstensi nama file sebagai fallback agar unggahan tetap berjalan.
+                if ($tmp_name !== '' && is_file($tmp_name)) {
+                    if (function_exists('finfo_open')) {
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        $mime = $finfo ? (string) finfo_file($finfo, $tmp_name) : '';
+                        if ($finfo) {
+                            finfo_close($finfo);
+                        }
+                    } else {
+                        $extension = strtolower(pathinfo((string) $original_name, PATHINFO_EXTENSION));
+                        $extension_mimes = [
+                          'jpg' => 'image/jpeg',
+                          'jpeg' => 'image/jpeg',
+                          'png' => 'image/png'
+                        ];
+                        $mime = $extension_mimes[$extension] ?? '';
+                    }
                 }
                 if (!isset($allowed_photo_mimes[$mime])) {
                     while (ob_get_level()) {
