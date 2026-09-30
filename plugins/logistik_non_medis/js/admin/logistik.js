@@ -1,3 +1,47 @@
+/* Kalender minggu bulanan: dipakai oleh impor SPPB dan Cost Unit. */
+(function (window, $) {
+    'use strict';
+    function ranges(period) {
+        if (!/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(period || '')) return [];
+        var parts = period.split('-'), year = Number(parts[0]), month = Number(parts[1]) - 1;
+        var first = new Date(year, month, 1), last = new Date(year, month + 1, 0), result = [];
+        var names = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+        function date(value) { return value.getFullYear() + '-' + ('0' + (value.getMonth() + 1)).slice(-2) + '-' + ('0' + value.getDate()).slice(-2); }
+        function label(value) { return value.getDate() + ' ' + names[value.getMonth()]; }
+        for (var n = 1, day = 1 - first.getDay(); day <= last.getDate(); n++, day += 7) {
+            var start = new Date(year, month, day), end = new Date(year, month, day + 6);
+            result.push({number:n, date:date(start < first ? first : start), label:'Minggu ke-' + n + ' (' + label(start) + '–' + label(end) + ')'});
+        }
+        return result;
+    }
+    function bind(pickerSelector, periodSelector, weekSelector, allWeeks) {
+        var picker = $(pickerSelector), period = $(periodSelector), select = $(weekSelector);
+        function updateDate() {
+            var weeks = ranges(period.val());
+            var selected = weeks.filter(function (week) { return String(week.number) === select.val(); })[0];
+            $('#sppb-tanggal-otomatis').text(selected ? 'Tanggal SPPB otomatis: ' + selected.date.split('-').reverse().join('/') : '');
+        }
+        function update() {
+            var chosen = select.val(), weeks = ranges(period.val());
+            // Selectator menyimpan referensi option saat dibuat. refresh() hanya
+            // memperbarui label, jadi bangun ulang setelah daftar option berubah.
+            var decorated = $.fn.selectator && select.data('selectator');
+            if (decorated) select.selectator('destroy');
+            select.empty();
+            if (allWeeks) select.append($('<option>').val('0').text('Semua Minggu'));
+            weeks.forEach(function (week) { select.append($('<option>').val(week.number).text(week.label)); });
+            select.val(weeks.some(function (week) { return String(week.number) === chosen; }) ? chosen : (allWeeks ? '0' : '1'));
+            if (decorated) select.selectator({useDimmer:true, useSearch:false, labels:{search:'...'}});
+            updateDate();
+        }
+        picker.on('dp.change change', update);
+        select.on('change', updateDate);
+        $('#modal-import-sppb').on('shown.bs.modal', update);
+        update();
+    }
+    window.LogistikMonthlyWeeks = {ranges:ranges, bind:bind};
+})(window, window.jQuery);
+
 /* Logistik Non Medis Script */
 $(document).ready(function () {
     var baseURL = mlite.url + '/' + mlite.admin;

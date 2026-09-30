@@ -799,6 +799,7 @@ $(document).ready(function() {
         var $periode = $(this).find('[name="periode"]');
         if (!$periode.val() && typeof moment !== 'undefined') $periode.val(moment().format('YYYY-MM'));
     });
+    LogistikMonthlyWeeks.bind('#periode-import-sppb', '#periode-import-sppb input', '#import-sppb-minggu', false);
 
     var submitImportSppb = function(e) {
         e.preventDefault();
@@ -1436,16 +1437,13 @@ function exportSppbAktif() {
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Minggu Ke- <span class="text-danger">*</span></label>
-                                <select name="minggu_ke" class="form-control" required>
-                                    <option value="1">Minggu ke-1</option>
-                                    <option value="2">Minggu ke-2</option>
-                                    <option value="3">Minggu ke-3</option>
-                                    <option value="4">Minggu ke-4</option>
-                                </select>
+                                <select name="minggu_ke" id="import-sppb-minggu" class="form-control" required></select>
                             </div>
                         </div>
                     </div>
                     <div class="form-group">
+                        <p class="text-success" id="sppb-tanggal-otomatis"></p>
+                        <p class="help-block">Minggu mengikuti kalender Minggu–Sabtu. Minggu lintas bulan dicatat pada periode yang dipilih.</p>
                         <label>File CSV <span class="text-danger">*</span></label>
                         <input type="file" name="file" class="form-control" accept=".csv" required>
                         <p class="help-block">Maksimal 10 MB. Pemisah kolom koma (,) atau titik koma (;).</p>

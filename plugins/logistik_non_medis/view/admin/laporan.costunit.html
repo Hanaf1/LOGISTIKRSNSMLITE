@@ -18,7 +18,7 @@
       </div>
       <div class="panel-body">
         <div class="alert alert-info">
-          <i class="fa fa-info-circle"></i> Data berasal dari SPPB mingguan berstatus <strong>Diajukan</strong>. Simpan harga untuk tetap sebagai Diajukan, lalu finalisasi setelah nilai sudah benar agar status berubah menjadi <strong>Selesai</strong>.
+          <i class="fa fa-info-circle"></i> Data mencakup permintaan Rutin mingguan dan Permintaan Langsung. Harga SPPB mingguan dapat diedit saat berstatus <strong>Diajukan</strong>; proses Permintaan Langsung tetap dilakukan di halaman Permintaan Langsung.
         </div>
         <div class="cost-filter">
           <div class="row">
@@ -32,10 +32,10 @@
               </div>
             </div>
             <div class="col-md-2"><div class="form-group"><label>Minggu</label>
-              <select id="cost-minggu" class="form-control"><option value="0">Semua Minggu</option><option value="1">Minggu ke-1 (1–7)</option><option value="2">Minggu ke-2 (8–14)</option><option value="3">Minggu ke-3 (15–21)</option><option value="4">Minggu ke-4 (22–akhir bulan)</option></select>
+              <select id="cost-minggu" class="form-control"><option value="0">Semua Minggu</option></select>
             </div></div>
             <div class="col-md-2"><div class="form-group"><label>Status</label>
-              <select id="cost-status" class="form-control"><option value="">Diajukan & Selesai</option><option value="Diajukan">Diajukan</option><option value="Selesai">Selesai</option></select>
+              <select id="cost-status" class="form-control"><option value="">Semua Status</option><option value="Diajukan">Diajukan</option><option value="Proses Logistik">Proses Logistik</option><option value="Siap Diserahkan">Siap Diserahkan</option><option value="Selesai">Selesai</option></select>
             </div></div>
             <div class="col-md-3"><div class="form-group"><label>Unit</label>
               <select id="cost-unit" class="form-control select2" style="width:100%">
@@ -66,6 +66,7 @@
 
 <script>
 $(function(){
+  LogistikMonthlyWeeks.bind('#cost-periode-picker', '#cost-periode', '#cost-minggu', true);
   // bootstrap-datetimepicker versi lama masih memakai .size(), sedangkan jQuery baru sudah menghapusnya.
   if(!$.fn.size) $.fn.size=function(){return this.length;};
   if($.fn.datetimepicker){

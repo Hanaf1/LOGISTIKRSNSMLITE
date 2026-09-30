@@ -9,6 +9,33 @@ require_once __DIR__ . '/InventarisClassification.php';
 
 class Admin extends AdminModule
 {
+    /** Baris kalender Minggu–Sabtu; tanggal pencatatan tetap di bulan terpilih. */
+    private static function _monthlyWeekRanges(string $period): array
+    {
+        if (!preg_match('/^[1-9]\d{3}-(0[1-9]|1[0-2])$/', $period)) {
+            throw new \InvalidArgumentException('Periode harus berupa bulan/tahun yang valid.');
+        }
+        $first = new \DateTimeImmutable($period . '-01');
+        $last = $first->modify('last day of this month');
+        $start = $first->modify('-' . $first->format('w') . ' days');
+        $ranges = [];
+        for ($number = 1; $start <= $last; $number++, $start = $start->modify('+7 days')) {
+            $end = $start->modify('+6 days');
+            $ranges[$number] = [
+                'start' => $start->format('Y-m-d'),
+                'end' => $end->format('Y-m-d'),
+                'date' => ($start < $first ? $first : $start)->format('Y-m-d'),
+            ];
+        }
+        return $ranges;
+    }
+
+    /** Nomor tersimpan dipertahankan untuk permintaan lama. */
+    private static function _monthlyWeekSql(string $date = 's.tgl_sppb', string $stored = 's.minggu_ke'): string
+    {
+        return "COALESCE(NULLIF($stored,0), FLOOR((DAY($date) - 1 + DAYOFWEEK(DATE_SUB($date, INTERVAL DAY($date) - 1 DAY)) - 1) / 7) + 1)";
+    }
+
     private function _demoModeEnabled(): bool
     {
         return defined('LOGISTIK_NON_MEDIS_DEMO_MODE') && LOGISTIK_NON_MEDIS_DEMO_MODE === true;
@@ -14885,7 +14912,16 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         }
 
         $periode = $_POST['periode'] ?? date('Y-m');
-        $minggu_ke = $_POST['minggu_ke'] ?? 1;
+        $minggu_ke = filter_var($_POST['minggu_ke'] ?? 1, FILTER_VALIDATE_INT);
+        try {
+            $minggu_bulan = self::_monthlyWeekRanges((string)$periode);
+            if ($minggu_ke === false || !isset($minggu_bulan[$minggu_ke])) {
+                throw new \InvalidArgumentException('Minggu yang dipilih tidak tersedia pada bulan ini.');
+            }
+        } catch (\InvalidArgumentException $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            exit;
+        }
 
         $file = $_FILES['file']['tmp_name'];
         $handle = fopen($file, 'r');
@@ -14970,7 +15006,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         }
 
         $success_count = 0;
-        $tgl_sppb = $periode . '-01'; // Default date within the period
+        $tgl_sppb = $minggu_bulan[$minggu_ke]['date'];
         $user_input = $this->core->getUserInfo('username', null, true);
 
         foreach ($sppb_data as $kode_unit => $items) {
@@ -18868,7 +18904,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         exit();
     }
 
-    /** Pengeluaran langsung untuk kebutuhan mendesak/non-rutin tanpa alur persetujuan. */
+    /** Pengeluaran rutin langsung tanpa alur persetujuan SPPB mingguan. */
     public function getDistribusiMendesak()
     {
         $this->_initSppb();
@@ -18915,7 +18951,9 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $unit = trim((string)($_POST['unit'] ?? ''));
         $halaman = max(1, (int)($_POST['halaman'] ?? 1));
         $perHalaman = 20;
-        $where = " WHERE s.jenis_permintaan='Non Rutin' AND s.sifat_permintaan IN ('Mendesak','Langsung')";
+        // Transaksi baru dicatat Rutin; transaksi langsung lama tetap dapat dilihat.
+        $where = " WHERE ((s.jenis_permintaan='Rutin' AND s.sifat_permintaan='Langsung')
+                    OR (s.jenis_permintaan='Non Rutin' AND s.sifat_permintaan IN ('Mendesak','Langsung')))";
         $params = [];
 
         $username = $this->core->getUserInfo('username', null, true);
@@ -19016,13 +19054,15 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             $rows[] = [$kode, $qty, $qtySetuju, $barang];
         }
         if (!$rows) { echo json_encode(['status'=>'error','message'=>'Minimal satu barang dengan jumlah lebih dari 0.']); exit(); }
+        $mingguKe = intdiv((int)date('j') - 1 + (int)date('w', strtotime(date('Y-m-01'))), 7) + 1;
         $no = $this->_generateNoMendesak(); $pdo = $this->db()->pdo();
         try {
             $pdo->beginTransaction();
             foreach ($rows as $row) {
                 [$kode, $qty, $qtySetuju, $barang] = $row;
                 $this->_saveSppbNormalized([
-                  'no_sppb'=>$no, 'tgl_sppb'=>date('Y-m-d'), 'kode_unit'=>$kode_unit, 'jenis_permintaan'=>'Non Rutin',
+                  'no_sppb'=>$no, 'tgl_sppb'=>date('Y-m-d'), 'kode_unit'=>$kode_unit,
+                  'jenis_permintaan'=>'Rutin', 'minggu_ke'=>$mingguKe,
                   'kode_item'=>$kode, 'item_sumber'=>'master', 'estimasi_harga'=>(float)($barang['harga_referensi'] ?? 0),
                   'sifat_permintaan'=>'Langsung', 'diajukan_oleh'=>$peminta, 'jumlah'=>$qty, 'jumlah_disetujui'=>$qtySetuju,
                   // Mode 'selesai' dan 'langsung' sama-sama masuk sebagai Siap
@@ -20063,7 +20103,8 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $this->core->addJS(url('assets/jscripts/bootstrap-datetimepicker.js'));
         $this->core->addJS('https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js');
         $this->core->addJS('https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js');
-        $this->core->addJS(url([ADMIN, 'logistik_non_medis', 'javascript']), 'footer');
+        $javascriptUrl = url([ADMIN, 'logistik_non_medis', 'javascript']);
+        $this->core->addJS($javascriptUrl . (strpos($javascriptUrl, '?') === false ? '?' : '&') . 'v=monthly-weeks-3', 'footer');
     }
 
     private function _initKuota()
@@ -28701,14 +28742,12 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $end = date('Y-m-t', strtotime($start));
         $where = "s.jenis_permintaan = 'Rutin' AND s.tgl_sppb BETWEEN ? AND ?";
         $params = [$start, $end];
-        if ($minggu >= 1 && $minggu <= 4) {
-            $from = $minggu === 1 ? 1 : (($minggu - 1) * 7) + 1;
-            $to = $minggu === 4 ? 31 : ($minggu * 7);
-            $where .= ' AND DAY(s.tgl_sppb) BETWEEN ? AND ?';
-            $params[] = $from;
-            $params[] = $to;
+        $mingguSql = self::_monthlyWeekSql();
+        if ($minggu >= 1 && $minggu <= 6) {
+            $where .= " AND $mingguSql = ?";
+            $params[] = $minggu;
         }
-        if (in_array($status, ['Diajukan', 'Selesai'], true)) {
+        if (in_array($status, ['Diajukan', 'Proses Logistik', 'Siap Diserahkan', 'Selesai'], true)) {
             $where .= ' AND s.status = ?';
             $params[] = $status;
         }
@@ -28717,10 +28756,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             $params[] = $kode_unit;
         }
         $sql = "SELECT s.no_sppb, MAX(s.tgl_sppb) tgl_sppb,
-                     COALESCE(
-                         MAX(NULLIF(s.minggu_ke, 0)),
-                         LEAST(4, FLOOR((DAY(MAX(s.tgl_sppb)) - 1) / 7) + 1)
-                     ) minggu_ke,
+                     MAX($mingguSql) minggu_ke,
                      s.kode_unit, COALESCE(u.nama_unit, s.kode_unit) nama_unit,
                      COUNT(*) jumlah_item,
                      COALESCE(SUM(
@@ -28731,7 +28767,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                      ),0) total_cost,
                      SUM(CASE WHEN COALESCE(NULLIF(s.harga_satuan_cost,0), b.harga_referensi, 0) <= 0 AND s.subtotal_cost <= 0 THEN 1 ELSE 0 END) belum_harga,
                      SUM(CASE WHEN s.harga_satuan_cost > 0 OR s.subtotal_cost > 0 THEN 1 ELSE 0 END) harga_terkunci,
-                     MAX(s.status) status
+                     MAX(s.status) status, MAX(s.sifat_permintaan) sifat_permintaan
 FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
               LEFT JOIN rsns_custom_logistik_non_medis_unit u ON u.kode_unit=s.kode_unit
               LEFT JOIN rsns_custom_logistik_non_medis_master_barang b ON b.kode_item=s.kode_item
@@ -28848,9 +28884,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         }
         $html .= '</tbody><tfoot><tr><th colspan="4" class="text-right">Total Cost</th><th id="cost-grand-total">Rp. ' . number_format($grandTotal, 0, ',', '.') . '</th></tr></tfoot></table>';
         $html .= '<div class="alert alert-info" style="margin-bottom:0"><i class="fa fa-info-circle"></i> '
-          . ($adaKunci
-            ? 'Sebagian harga sudah dikunci pada saat cost unit disimpan, jadi perubahan HPS di Master Barang tidak mengubah nilai permintaan lama. Ubah angkanya langsung atau tekan tombol <i class="fa fa-refresh"></i> untuk memakai HPS terbaru, lalu <strong>Simpan Harga</strong> (hanya bisa selama status masih Diajukan).'
-            : 'Harga masih mengikuti HPS terbaru di Master Barang. Nilai akan terkunci pada angka yang tersimpan begitu Anda menekan <strong>Simpan Harga</strong> atau <strong>Simpan &amp; Tandai Selesai</strong>.')
+          . (!$editable
+            ? 'Rincian ini hanya dapat dilihat. Harga yang belum dikunci mengikuti HPS terbaru di Master Barang; proses permintaan langsung dilakukan di halaman Permintaan Langsung.'
+            : ($adaKunci
+              ? 'Sebagian harga sudah dikunci pada saat cost unit disimpan, jadi perubahan HPS di Master Barang tidak mengubah nilai permintaan lama. Ubah angkanya langsung atau tekan tombol <i class="fa fa-refresh"></i> untuk memakai HPS terbaru, lalu <strong>Simpan Harga</strong>.'
+              : 'Harga masih mengikuti HPS terbaru di Master Barang. Nilai akan terkunci pada angka yang tersimpan begitu Anda menekan <strong>Simpan Harga</strong> atau <strong>Simpan &amp; Tandai Selesai</strong>.'))
           . '</div>';
         echo $html;
         exit();
@@ -29137,14 +29175,12 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $end = date('Y-m-t', strtotime($start));
         $where = "s.jenis_permintaan = 'Rutin' AND s.tgl_sppb BETWEEN ? AND ?";
         $params = [$start, $end];
-        if ($minggu >= 1 && $minggu <= 4) {
-            $from = $minggu === 1 ? 1 : (($minggu - 1) * 7) + 1;
-            $to = $minggu === 4 ? 31 : ($minggu * 7);
-            $where .= ' AND DAY(s.tgl_sppb) BETWEEN ? AND ?';
-            $params[] = $from;
-            $params[] = $to;
+        $mingguSql = self::_monthlyWeekSql();
+        if ($minggu >= 1 && $minggu <= 6) {
+            $where .= " AND $mingguSql = ?";
+            $params[] = $minggu;
         }
-        if (in_array($status, ['Diajukan', 'Selesai'], true)) {
+        if (in_array($status, ['Diajukan', 'Proses Logistik', 'Siap Diserahkan', 'Selesai'], true)) {
             $where .= ' AND s.status = ?';
             $params[] = $status;
         }
@@ -29154,7 +29190,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         }
 
         $sql = "SELECT s.no_sppb, s.tgl_sppb,
-                       COALESCE(NULLIF(s.minggu_ke,0), LEAST(4, FLOOR((DAY(s.tgl_sppb)-1)/7)+1)) minggu_ke,
+                       $mingguSql minggu_ke,
                        s.kode_unit, COALESCE(u.nama_unit, s.kode_unit) nama_unit,
                        s.kode_item, COALESCE(NULLIF(s.nama_barang_manual,''), b.nama_barang, s.kode_item) nama_barang,
                        s.jumlah, s.jumlah_dasar, s.jumlah_disetujui, s.jumlah_disetujui_dasar,
@@ -29173,15 +29209,15 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
 
         $namaBulan = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
         $labelPeriode = $namaBulan[(int)date('n', strtotime($start))] . ' ' . date('Y', strtotime($start));
-        $labelMinggu = $minggu >= 1 && $minggu <= 4 ? 'Minggu ke-' . $minggu : 'Semua Minggu';
-        $labelStatus = in_array($status, ['Diajukan', 'Selesai'], true) ? $status : 'Semua Status';
+        $labelMinggu = $minggu >= 1 && $minggu <= 6 ? 'Minggu ke-' . $minggu : 'Semua Minggu';
+        $labelStatus = in_array($status, ['Diajukan', 'Proses Logistik', 'Siap Diserahkan', 'Selesai'], true) ? $status : 'Semua Status';
         $labelUnit = 'Semua Unit';
         if ($kode_unit !== '') {
             $unitRow = $this->db('rsns_custom_logistik_non_medis_unit')->where('kode_unit', $kode_unit)->oneArray();
             $labelUnit = ($unitRow['nama_unit'] ?? $kode_unit) . ' (' . $kode_unit . ')';
         }
         $namaFile = 'cost-unit-' . $periode
-          . ($minggu >= 1 && $minggu <= 4 ? '-minggu' . $minggu : '')
+          . ($minggu >= 1 && $minggu <= 6 ? '-minggu' . $minggu : '')
           . ($kode_unit !== '' ? '-' . preg_replace('/[^A-Za-z0-9_-]/', '', $kode_unit) : '')
           . '.xlsx';
 
