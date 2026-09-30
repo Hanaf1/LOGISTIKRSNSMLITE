@@ -34,6 +34,8 @@
             <div class="col-md-2"><div class="form-group"><label>Minggu</label>
               <select id="cost-minggu" class="form-control"><option value="0">Semua Minggu</option></select>
             </div></div>
+            <div class="col-md-2"><div class="form-group"><label>Dari Tanggal</label><input type="date" id="cost-tgl-awal" class="form-control"></div></div>
+            <div class="col-md-2"><div class="form-group"><label>Sampai Tanggal</label><input type="date" id="cost-tgl-akhir" class="form-control"></div></div>
             <div class="col-md-2"><div class="form-group"><label>Status</label>
               <select id="cost-status" class="form-control"><option value="">Semua Status</option><option value="Diajukan">Diajukan</option><option value="Proses Logistik">Proses Logistik</option><option value="Siap Diserahkan">Siap Diserahkan</option><option value="Selesai">Selesai</option></select>
             </div></div>
@@ -77,7 +79,7 @@ $(function(){
   if($.fn.select2) $('#cost-unit').select2({width:'100%',placeholder:'Semua Unit',allowClear:true});
   function loadCost(){
     $('#display-cost-unit').html('<div class="text-center" style="padding:40px"><i class="fa fa-spinner fa-spin fa-3x"></i></div>');
-    $.ajax({url:'{?=url(ADMIN."/logistik_non_medis/displaylaporancostunit")?}',type:'POST',data:{periode:$('#cost-periode').val(),minggu:$('#cost-minggu').val(),status:$('#cost-status').val(),kode_unit:$('#cost-unit').val()},timeout:30000})
+    $.ajax({url:'{?=url(ADMIN."/logistik_non_medis/displaylaporancostunit")?}',type:'POST',data:{periode:$('#cost-periode').val(),minggu:$('#cost-minggu').val(),tgl_awal:$('#cost-tgl-awal').val(),tgl_akhir:$('#cost-tgl-akhir').val(),status:$('#cost-status').val(),kode_unit:$('#cost-unit').val()},timeout:30000})
       .done(function(html){$('#display-cost-unit').html(html);})
       .fail(function(xhr,status){var message=status==='timeout'?'Permintaan melewati batas 30 detik.':'Gagal memuat laporan dari server.';$('#display-cost-unit').html('<div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> '+message+' <button type="button" class="btn btn-danger btn-xs" id="btn-cost-coba-lagi">Coba Lagi</button></div>');});
   }
@@ -85,7 +87,20 @@ $(function(){
   $('#btn-cost-tampil').on('click',function(e){e.preventDefault();loadCost();});
   $('#cost-unit').on('change',function(){loadCost();});
   $('#btn-cost-export').on('click',function(e){e.preventDefault();var base='{?=url(ADMIN."/logistik_non_medis/exportlaporancostunit")?}';var sep=base.indexOf('?')>=0?'&':'?';window.location.href=base+sep+'periode='+encodeURIComponent($('#cost-periode').val())+'&minggu='+encodeURIComponent($('#cost-minggu').val())+'&status='+encodeURIComponent($('#cost-status').val())+'&kode_unit='+encodeURIComponent($('#cost-unit').val()||'');});
-  $(document).on('click','.btn-detail-cost',function(){var no=$(this).data('no');$('#detail-cost-unit').html('<div class="text-center" style="padding:30px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');$.post('{?=url(ADMIN."/logistik_non_medis/detaillaporancostunit")?}',{no_sppb:no},function(html){$('#detail-cost-unit').html(html);var editable=$('#cost-editable').val()==='1';$('#footer-cost-unit .btn-save-cost').toggle(editable);$('#modal-cost-unit').modal('show');});});
+  $(document).on('click','.btn-detail-cost',function(){var no=$(this).data('no');$('#detail-cost-unit').html('<div class="text-center" style="padding:30px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');$.post('{?=url(ADMIN."/logistik_non_medis/detaillaporancostunit")?}',{no_sppb:no},function(html){$('#detail-cost-unit').html(html);var editable=$('#cost-editable').val()==='1',koreksi=$('#cost-qty-correctable').val()==='1';$('#footer-cost-unit .btn-save-cost').toggle(editable);$('#btn-koreksi-qty').remove();if(koreksi)$('<button type="button" id="btn-koreksi-qty" class="btn btn-warning"><i class="fa fa-pencil"></i> Koreksi Jumlah</button>').insertBefore($('#footer-cost-unit .btn-default'));$('#modal-cost-unit').modal('show');});});
+  $(document).on('click','#btn-koreksi-qty',function(){
+    if(!$('#form-cost-unit')[0].reportValidity())return;
+    var changes=[];
+    $('.cost-qty-koreksi').each(function(){var row=$(this).closest('tr'),name=row.find('td:first').text();if(row.find('.cost-hapus-item').prop('checked'))changes.push('HAPUS '+name+' (jumlah '+$(this).data('lama')+')');else if(Number(this.value)!==Number($(this).data('lama')))changes.push(name+': '+$(this).data('lama')+' → '+this.value);});
+    if(!changes.length){alert('Tidak ada perubahan jumlah.');return;}
+    if(!confirm(changes.join('\n')+'\n\nSimpan koreksi SPPB, Cost Unit, dan selisih stok?'))return;
+    var b=$(this).prop('disabled',true);
+    $.ajax({url:'{?=url(ADMIN."/logistik_non_medis/koreksijumlahsppb")?}',type:'POST',data:$('#form-cost-unit').serialize(),dataType:'json'})
+      .done(function(r){alert(r.message||'Koreksi gagal.');if(r.status==='success'){$('#modal-cost-unit').modal('hide');loadCost();}})
+      .fail(function(){alert('Koreksi belum dapat dikonfirmasi. Buka ulang rincian sebelum mencoba lagi.');})
+      .always(function(){b.prop('disabled',false);});
+  });
+  $(document).on('change','.cost-hapus-item',function(){var row=$(this).closest('tr');row.toggleClass('danger',this.checked);row.find('.cost-qty-koreksi').prop('readOnly',this.checked);});
   // Catatan: jangan memakai nama variabel JS berawalan "$" di template ini.
   // Parser template mengubah pola $var.sesuatu dan bisa merusak string di dalamnya.
   function hitungBaris(el){var tr=$(el).closest('tr'),qty=parseFloat(tr.data('qty'))||0,harga=parseFloat($(el).val())||0;tr.find('.cost-subtotal').text('Rp. '+Math.round(qty*harga).toLocaleString('id-ID'));}

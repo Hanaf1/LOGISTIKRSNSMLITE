@@ -28740,6 +28740,11 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $kode_unit = trim((string)($_POST['kode_unit'] ?? ''));
         $start = $periode . '-01';
         $end = date('Y-m-t', strtotime($start));
+        $tglAwal = trim((string)($_POST['tgl_awal'] ?? ''));
+        $tglAkhir = trim((string)($_POST['tgl_akhir'] ?? ''));
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $tglAwal)) $start = $tglAwal;
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $tglAkhir)) $end = $tglAkhir;
+        if ($start > $end) { [$start, $end] = [$end, $start]; }
         $where = "s.jenis_permintaan = 'Rutin' AND s.tgl_sppb BETWEEN ? AND ?";
         $params = [$start, $end];
         $mingguSql = self::_monthlyWeekSql();
@@ -28758,7 +28763,7 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $sql = "SELECT s.no_sppb, MAX(s.tgl_sppb) tgl_sppb,
                      MAX($mingguSql) minggu_ke,
                      s.kode_unit, COALESCE(u.nama_unit, s.kode_unit) nama_unit,
-                     COUNT(*) jumlah_item,
+                     SUM(CASE WHEN s.status='Dibatalkan' AND s.jumlah=0 THEN 0 ELSE 1 END) jumlah_item,
                      COALESCE(SUM(
                        CASE WHEN s.subtotal_cost > 0 THEN s.subtotal_cost
                             ELSE COALESCE(NULLIF(s.jumlah_dasar,0),s.jumlah*COALESCE(NULLIF(s.faktor_konversi,0),1))
@@ -28843,8 +28848,13 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
         $stmt->execute([$no]);
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         $editable = in_array($this->core->getUserInfo('role', null, true), ['admin','logistik'], true) && !empty($rows) && $rows[0]['status'] === 'Diajukan';
+        $correctionRole = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $this->core->getUserInfo('username', null, true))->oneArray();
+        $canCorrectQty = in_array($correctionRole['role'] ?? '', ['admin','logistik'], true) && count(array_filter($rows, function ($r) {
+            return $r['jenis_permintaan'] === 'Rutin' && in_array($r['status'], ['Selesai','Diterima'], true);
+        })) > 0;
         $html = '<input type="hidden" name="no_sppb" value="' . htmlspecialchars($no, ENT_QUOTES, 'UTF-8') . '">';
         $html .= '<input type="hidden" id="cost-editable" value="' . ($editable ? '1' : '0') . '">';
+        $html .= '<input type="hidden" id="cost-qty-correctable" value="' . ($canCorrectQty ? '1' : '0') . '">';
         if ($editable) {
             $html .= '<div class="clearfix" style="margin-bottom:8px"><button type="button" class="btn btn-default btn-sm pull-right" id="btn-semua-harga-master"><i class="fa fa-refresh"></i> Gunakan Semua Harga Master</button>'
               . '<span class="text-muted"><i class="fa fa-pencil"></i> Harga boleh diubah manual, atau ambil dari Master Barang.</span></div>';
@@ -28880,9 +28890,26 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
             } else {
                 $kolomHarga = 'Rp. ' . number_format($harga, 0, ',', '.');
             }
-            $html .= '<tr data-qty="' . $qty . '"><td>' . $name . '</td><td>' . $qtyLabel . '</td><td>' . htmlspecialchars($row['satuan_dasar_snapshot'] ?? $row['satuan'] ?? '-', ENT_QUOTES, 'UTF-8') . '</td><td>' . $kolomHarga . $tanda . '</td><td class="cost-subtotal">Rp. ' . number_format($subtotal, 0, ',', '.') . '</td></tr>';
+            $qtyCell = $qtyLabel;
+            if ($canCorrectQty && in_array($row['status'], ['Selesai','Diterima'], true)) {
+                $qtyCell .= '<input type="hidden" name="qty_lama[' . (int)$row['id'] . ']" value="' . (float)$row['jumlah'] . '"><input aria-label="Jumlah benar" class="form-control input-sm cost-qty-koreksi" data-lama="' . (float)$row['jumlah'] . '" style="margin-top:5px" type="number" min="0.000001" step="any" name="qty[' . (int)$row['id'] . ']" value="' . (float)$row['jumlah'] . '">';
+                $qtyCell .= '<label class="text-danger"><input type="checkbox" class="cost-hapus-item" name="hapus[' . (int)$row['id'] . ']" value="1"> Hapus item</label>';
+            }
+            if ($row['status'] === 'Dibatalkan' && (float)$row['jumlah'] === 0.0) $qtyCell .= '<br><span class="label label-danger">Dihapus melalui koreksi</span>';
+            $html .= '<tr data-qty="' . $qty . '"><td>' . $name . '</td><td>' . $qtyCell . '</td><td>' . htmlspecialchars($row['satuan_dasar_snapshot'] ?? $row['satuan'] ?? '-', ENT_QUOTES, 'UTF-8') . '</td><td>' . $kolomHarga . $tanda . '</td><td class="cost-subtotal">Rp. ' . number_format($subtotal, 0, ',', '.') . '</td></tr>';
         }
         $html .= '</tbody><tfoot><tr><th colspan="4" class="text-right">Total Cost</th><th id="cost-grand-total">Rp. ' . number_format($grandTotal, 0, ',', '.') . '</th></tr></tfoot></table>';
+        if ($canCorrectQty) $html .= '<div class="form-group" style="margin-top:12px"><label>Alasan koreksi jumlah</label><textarea class="form-control" name="alasan_koreksi" required minlength="10" placeholder="Contoh: salah impor, seharusnya 1 box bukan 100 box."></textarea><label><input type="checkbox" name="konfirmasi_fisik" value="1" required> Jumlah benar sudah sesuai barang yang diterima unit; ini koreksi salah catat.</label><p>Selisih stok dikoreksi pada batch asal bila sudah ada stok keluar. Jika barang benar-benar dikembalikan, gunakan Retur Unit. Bukti serah terima lama tetap menjadi arsip; riwayat koreksi dicatat terpisah.</p></div>';
+        $auditExists = $this->db()->pdo()->query("SHOW TABLES LIKE 'rsns_custom_logistik_non_medis_koreksi_qty_audit'")->fetchColumn();
+        if ($auditExists) {
+            $history = $this->db()->pdo()->prepare('SELECT * FROM rsns_custom_logistik_non_medis_koreksi_qty_audit WHERE no_sppb=? ORDER BY id DESC');
+            $history->execute([$no]);
+            foreach ($history->fetchAll(\PDO::FETCH_ASSOC) as $entry) {
+                $before = json_decode($entry['sebelum'], true); $after = json_decode($entry['sesudah'], true);
+                $text = $entry['waktu'].' | '.$entry['username'].' | '.($before['kode_item'] ?? '').': '.($before['jumlah'] ?? '').' → '.($after['jumlah'] ?? '').' | '.$entry['alasan'];
+                $html .= '<div class="alert alert-warning">Koreksi: '.htmlspecialchars($text, ENT_QUOTES, 'UTF-8').'</div>';
+            }
+        }
         $html .= '<div class="alert alert-info" style="margin-bottom:0"><i class="fa fa-info-circle"></i> '
           . (!$editable
             ? 'Rincian ini hanya dapat dilihat. Harga yang belum dikunci mengikuti HPS terbaru di Master Barang; proses permintaan langsung dilakukan di halaman Permintaan Langsung.'
@@ -28994,6 +29021,110 @@ FROM rsns_custom_logistik_non_medis_v_sppb_normalized s
                 $pdo->rollBack();
             }echo json_encode(['status' => 'error','message' => $e->getMessage()]);
         } exit();
+    }
+
+    public function postKoreksiJumlahSppb()
+    {
+        $no = trim((string)($_POST['no_sppb'] ?? ''));
+        $qty = $_POST['qty'] ?? [];
+        $alasan = trim((string)($_POST['alasan_koreksi'] ?? ''));
+        $user = (string)$this->core->getUserInfo('username', null, true);
+        $roleData = $this->db('rsns_custom_logistik_non_medis_user_roles')->where('username', $user)->oneArray();
+        if (!in_array($roleData['role'] ?? '', ['admin','logistik'], true) || $no === '' || !is_array($qty) || mb_strlen($alasan) < 10) {
+            echo json_encode(['status'=>'error','message'=>'Koreksi hanya untuk Admin/Logistik dan alasan minimal 10 karakter.']); exit();
+        }
+        $pdo = $this->db()->pdo();
+        $pdo->exec("CREATE TABLE IF NOT EXISTS rsns_custom_logistik_non_medis_koreksi_qty_audit (
+            id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, no_sppb varchar(50) NOT NULL,
+            item_id int NOT NULL, sebelum longtext NOT NULL, sesudah longtext NOT NULL,
+            mutasi longtext NOT NULL, alasan text NOT NULL, username varchar(100) NOT NULL,
+            waktu datetime NOT NULL, KEY(no_sppb)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $pdo->beginTransaction();
+        try {
+            if (($_POST['konfirmasi_fisik'] ?? '') !== '1') throw new \RuntimeException('Konfirmasi jumlah sesuai barang diterima unit terlebih dahulu.');
+            $lock = $pdo->prepare('SELECT id FROM rsns_custom_logistik_non_medis_sppb WHERE no_sppb=? ORDER BY id FOR UPDATE');
+            $lock->execute([$no]); $lock->fetchAll();
+            $changed = 0;
+            foreach ($qty as $id => $baru) {
+                $hapus = isset($_POST['hapus'][$id]) && $_POST['hapus'][$id] === '1';
+                if (!$hapus && (!is_scalar($baru) || !is_numeric($baru) || !is_finite((float)$baru) || (float)$baru <= 0)) throw new \RuntimeException('Jumlah koreksi harus angka lebih dari nol; gunakan Hapus item untuk penghapusan.');
+                $baru = $hapus ? 0.0 : (float)$baru;
+                $stmt = $pdo->prepare("SELECT * FROM rsns_custom_logistik_non_medis_v_sppb_normalized WHERE id=? AND no_sppb=? FOR UPDATE"); $stmt->execute([(int)$id,$no]); $item=$stmt->fetch(\PDO::FETCH_ASSOC);
+                if (!$item || $item['jenis_permintaan'] !== 'Rutin' || !in_array($item['status'], ['Selesai','Diterima'], true)) throw new \RuntimeException('Item rutin selesai tidak ditemukan.');
+                if (!isset($_POST['qty_lama'][$id]) || abs((float)$_POST['qty_lama'][$id] - (float)$item['jumlah']) > 0.000001) throw new \RuntimeException('Data telah berubah. Buka ulang rincian sebelum koreksi.');
+                if (abs((float)$item['jumlah']-$baru) < 0.000001) continue;
+                $mutasi = $this->_koreksiStokJumlahSppb($item, $baru, $user);
+                $faktor=max(0.000001,(float)($item['faktor_konversi'] ?? 1));
+                $data = ['jumlah'=>$baru,'jumlah_disetujui'=>$baru,'jumlah_dasar'=>$baru*$faktor,'jumlah_disetujui_dasar'=>$baru*$faktor];
+                if ($hapus) {
+                    // Penghapusan logis: ID, transaksi lama, serta bukti serah terima tetap dapat ditelusuri.
+                    $data['status'] = 'Dibatalkan';
+                    $data['subtotal_cost'] = 0;
+                    $data['harga_satuan_cost'] = 0;
+                }
+                if (!$hapus && ((float)$item['subtotal_cost'] > 0 || (float)$item['harga_satuan_cost'] > 0)) {
+                    $harga = $this->_hargaCostUnit($item)['harga'];
+                    $data['harga_satuan_cost'] = $harga;
+                    $data['subtotal_cost'] = $baru*$faktor*$harga;
+                }
+                if (!$this->_updateSppbNormalized(['id'=>(int)$id], $data)) throw new \RuntimeException('Gagal menyimpan koreksi item.');
+                $audit = $pdo->prepare('INSERT INTO rsns_custom_logistik_non_medis_koreksi_qty_audit (no_sppb,item_id,sebelum,sesudah,mutasi,alasan,username,waktu) VALUES (?,?,?,?,?,?,?,NOW())');
+                $audit->execute([$no,(int)$id,json_encode($item, JSON_THROW_ON_ERROR),json_encode($data, JSON_THROW_ON_ERROR),json_encode($mutasi, JSON_THROW_ON_ERROR),$alasan,$user]);
+                $changed++;
+            }
+            $pdo->commit(); echo json_encode(['status'=>'success','message'=>$changed ? $changed.' item dikoreksi: SPPB, Cost Unit, dan selisih stok tersimpan beserta audit.' : 'Tidak ada perubahan jumlah.']);
+        } catch (\Throwable $e) { if ($pdo->inTransaction()) $pdo->rollBack(); echo json_encode(['status'=>'error','message'=>$e->getMessage()]); }
+        exit();
+    }
+
+    /** Koreksi salah catat, bukan retur fisik. Dipanggil di dalam transaksi SPPB. */
+    private function _koreksiStokJumlahSppb(array $item, float $baru, string $user): array
+    {
+        $pdo = $this->db()->pdo();
+        $no = $item['no_sppb']; $kode = $item['kode_item'];
+        $check = $pdo->prepare('SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_produksi_resep WHERE kode_item_hasil=? AND status=\'Aktif\'');
+        $check->execute([$kode]);
+        if ($check->fetchColumn()) throw new \RuntimeException('Koreksi paket/olahan memerlukan rekonsiliasi komponennya: '.$kode);
+        $check = $pdo->prepare('SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_sppb WHERE no_sppb=? AND kode_item=?');
+        $check->execute([$no,$kode]);
+        if ((int)$check->fetchColumn() !== 1) throw new \RuntimeException('Barang berulang dalam satu SPPB perlu rekonsiliasi per pengiriman: '.$kode);
+        $check = $pdo->prepare("SELECT COUNT(*) FROM rsns_custom_logistik_non_medis_retur_unit WHERE no_sppb=? AND kode_item=? AND status<>'Ditolak'");
+        $check->execute([$no,$kode]);
+        if ($check->fetchColumn()) throw new \RuntimeException('Barang sudah memiliki proses retur. Rekonsiliasi retur dahulu: '.$kode);
+        $stmt = $pdo->prepare("SELECT * FROM rsns_custom_logistik_non_medis_kartu_stok WHERE no_referensi=? AND kode_item=? AND tipe_transaksi IN ('Keluar','Retur') ORDER BY id FOR UPDATE");
+        $stmt->execute([$no,$kode]); $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        if (!$rows) return []; // Finalisasi Cost Unit impor tidak selalu memposting stok.
+        $net = 0; $groups = [];
+        foreach ($rows as $r) {
+            $key = json_encode([$r['kode_lokasi'],$r['batch_no']]);
+            if (!isset($groups[$key])) $groups[$key] = ['row'=>$r,'qty'=>0.0];
+            $q = (float)$r['qty_keluar']-(float)$r['qty_masuk'];
+            $groups[$key]['qty'] += $q; $net += $q;
+        }
+        if (abs($net-$this->_qtyDasarSppb($item,true)) > 0.00001) throw new \RuntimeException('Jumlah SPPB dan stok keluar tidak cocok; perlu rekonsiliasi: '.$kode);
+        $target = $baru*max(0.000001,(float)($item['faktor_konversi'] ?? 1));
+        $delta = $target-$net; $remaining = abs($delta); $audit = [];
+        // Batch asal dipertahankan. Penambahan ditolak bila saldo batch tidak cukup.
+        foreach ($groups as $group) {
+            if ($remaining < 0.000001) break;
+            $r = $group['row'];
+            $batch = $pdo->prepare('SELECT * FROM rsns_custom_logistik_non_medis_stok_batch WHERE kode_item=? AND kode_lokasi=? AND batch_no=? FOR UPDATE');
+            $keys = [$kode,$r['kode_lokasi'],$r['batch_no']];
+            $batch->execute($keys); $b = $batch->fetch(\PDO::FETCH_ASSOC);
+            if (!$b) throw new \RuntimeException('Batch asal tidak ditemukan: '.$kode);
+            if ($delta > 0 && !empty($b['tgl_expired']) && $b['tgl_expired'] < date('Y-m-d')) continue;
+            $take = min($remaining, $delta < 0 ? max(0,$group['qty']) : max(0,(float)$b['stok']));
+            if ($take <= 0) continue;
+            $akhir = (float)$b['stok'] + ($delta < 0 ? $take : -$take);
+            $pdo->prepare('UPDATE rsns_custom_logistik_non_medis_stok_batch SET stok=? WHERE kode_item=? AND kode_lokasi=? AND batch_no=?')->execute(array_merge([$akhir],$keys));
+            $insert = $pdo->prepare('INSERT INTO rsns_custom_logistik_non_medis_kartu_stok (tgl_transaksi,kode_item,kode_lokasi,batch_no,tipe_transaksi,no_referensi,qty_masuk,qty_keluar,stok_akhir,harga,satuan_snapshot,user_input) VALUES (NOW(),?,?,?,?,?,?,?,?,?,?,?)');
+            $insert->execute([$kode,$r['kode_lokasi'],$r['batch_no'],$delta < 0 ? 'Retur' : 'Keluar',$no,$delta < 0 ? $take : 0,$delta > 0 ? $take : 0,$akhir,$r['harga'],$r['satuan_snapshot'],$user]);
+            $audit[] = ['kartu_id'=>(int)$pdo->lastInsertId(),'batch'=>$keys,'saldo_lama'=>$b['stok'],'saldo_baru'=>$akhir,'selisih_keluar'=>$delta < 0 ? -$take : $take];
+            $remaining -= $take;
+        }
+        if ($remaining > 0.00001) throw new \RuntimeException('Saldo batch asal tidak cukup untuk koreksi: '.$kode);
+        return $audit;
     }
 
     /**
