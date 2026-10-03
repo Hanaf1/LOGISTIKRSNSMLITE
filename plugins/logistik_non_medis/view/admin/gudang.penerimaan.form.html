@@ -8,7 +8,7 @@
   <div class="panel-body">
     <div class="alert {if: $penerimaan.tipe_penerimaan == 'MANUAL'}alert-warning{else}alert-info{/if}">
       {if: $penerimaan.tipe_penerimaan == 'MANUAL'}
-      Catat barang yang benar-benar diterima secara fisik. Data ini tidak akan membuat atau mengubah Purchase Order.
+      Catat barang non rutin secara manual sebagai dokumen/faktur. Data ini tidak membuat PO dan tidak masuk stok gudang.
       {else}
       Barang dan jumlah pesanan berasal dari PO. Penerimaan dapat dilakukan sebagian sesuai barang yang datang.
       {/if}
@@ -18,19 +18,19 @@
       <input type="hidden" name="kode_vendor" id="gudang-kode-vendor" value="{$penerimaan.kode_vendor}">
       <div class="row">
         <div class="col-md-6"><div class="form-group"><label>Lokasi Penyimpanan <span class="text-danger">*</span></label>
-          <select name="kode_lokasi" class="form-control" required {if: $penerimaan.status == 'Selesai'}disabled{/if}>
+          <select name="kode_lokasi" class="form-control" required {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}disabled{/if}>
             <option value="">-- Pilih lokasi --</option>
             {loop: $lokasi}
             <option value="{$value.kode_lokasi}" {if: ($penerimaan.kode_lokasi == $value.kode_lokasi) || (empty($penerimaan.kode_lokasi) && $value.kode_lokasi == 'GUDANG-LOGISTIK')}selected{/if}>{$value.nama_lokasi}</option>
             {/loop}
           </select>
-          {if: $penerimaan.status == 'Selesai'}<input type="hidden" name="kode_lokasi" value="{$penerimaan.kode_lokasi}">{/if}
+          {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}<input type="hidden" name="kode_lokasi" value="{$penerimaan.kode_lokasi}">{/if}
           <small class="text-muted">BHP masuk Gudang BHP. Barang inventaris/aset masuk Gudang Aset.</small>
         </div></div>
       </div>
       <div class="row">
         <div class="col-md-3"><div class="form-group"><label>No. Penerimaan</label><input type="text" name="no_penerimaan" class="form-control" value="{$penerimaan.no_penerimaan}" readonly></div></div>
-        <div class="col-md-3"><div class="form-group"><label>Tanggal Diterima</label><input type="date" name="tgl_penerimaan" class="form-control" value="{$penerimaan.tgl_penerimaan}" required {if: $penerimaan.status == 'Selesai'}readonly{/if}></div></div>
+        <div class="col-md-3"><div class="form-group"><label>Tanggal Diterima</label><input type="date" name="tgl_penerimaan" class="form-control" value="{$penerimaan.tgl_penerimaan}" required {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}readonly{/if}></div></div>
         <div class="col-md-3"><div class="form-group"><label>Mode</label><input type="text" class="form-control" value="{if: $penerimaan.tipe_penerimaan == 'MANUAL'}Tanpa PO{else}Dari PO{/if}" readonly></div></div>
         <div class="col-md-3"><div class="form-group"><label>Status Saat Ini</label><div style="padding-top:7px"><span class="label {if: $penerimaan.status == 'Selesai'}label-success{elseif: $penerimaan.status == 'Menunggu Verifikasi'}label-warning{else}label-default{/if}">{$penerimaan.status}</span></div></div></div>
       </div>
@@ -38,7 +38,7 @@
       {if: $penerimaan.tipe_penerimaan == 'MANUAL'}
       <div class="row">
         <div class="col-md-5"><div class="form-group"><label>Sumber Barang <span class="text-danger">*</span></label>
-          {if: $penerimaan.status == 'Selesai'}
+          {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}
           <input type="text" class="form-control" value="{$penerimaan.sumber_manual}" readonly>
           <input type="hidden" name="sumber_manual" value="{$penerimaan.sumber_manual}">
           {else}
@@ -54,7 +54,7 @@
           <small class="text-muted">Pilih vendor terdaftar atau ketik sendiri (donasi, hibah, pembelian langsung).</small>
           {/if}
         </div></div>
-        <div class="col-md-7"><div class="form-group"><label>Alasan Tanpa PO <span class="text-danger">*</span></label><input type="text" name="alasan_tanpa_po" class="form-control" value="{$penerimaan.alasan_tanpa_po}" placeholder="Contoh: PO belum tercatat di sistem atau barang diterima sebagai hibah" required {if: $penerimaan.status == 'Selesai'}readonly{/if}></div></div>
+        <div class="col-md-7"><div class="form-group"><label>Alasan Tanpa PO <span class="text-danger">*</span></label><input type="text" name="alasan_tanpa_po" class="form-control" value="{$penerimaan.alasan_tanpa_po}" placeholder="Contoh: PO belum tercatat di sistem atau barang diterima sebagai hibah" required {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}readonly{/if}></div></div>
       </div>
       {else}
       <div class="row">
@@ -64,32 +64,34 @@
       {/if}
 
       <div class="row">
-        <div class="col-md-3"><div class="form-group"><label>No. Surat Jalan</label><input type="text" name="no_surat_jalan" class="form-control" value="{$penerimaan.no_surat_jalan}" placeholder="Opsional" {if: $penerimaan.status == 'Selesai'}readonly{/if}></div></div>
-        <div class="col-md-3"><div class="form-group"><label>No. Faktur</label><input type="text" name="no_faktur" class="form-control" value="{$penerimaan.no_faktur}" placeholder="Opsional" {if: $penerimaan.status == 'Selesai'}readonly{/if}></div></div>
-        <div class="col-md-3"><div class="form-group"><label>File Surat Jalan</label><input type="file" name="file_surat_jalan" class="form-control" accept=".jpg,.jpeg,.png,.pdf" {if: $penerimaan.status == 'Selesai'}disabled{/if}>{if: !empty($penerimaan.file_surat_jalan)}<small class="text-success"><i class="fa fa-check"></i> {$penerimaan.file_surat_jalan}</small>{/if}</div></div>
-        <div class="col-md-3"><div class="form-group"><label>File Faktur</label><input type="file" name="file_faktur" class="form-control" accept=".jpg,.jpeg,.png,.pdf" {if: $penerimaan.status == 'Selesai'}disabled{/if}>{if: !empty($penerimaan.file_faktur)}<small class="text-success"><i class="fa fa-check"></i> {$penerimaan.file_faktur}</small>{/if}</div></div>
+        <div class="col-md-3"><div class="form-group"><label>No. Surat Jalan</label><input type="text" name="no_surat_jalan" class="form-control" value="{$penerimaan.no_surat_jalan}" placeholder="Opsional" {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}readonly{/if}></div></div>
+        <div class="col-md-3"><div class="form-group"><label>No. Faktur</label><input type="text" name="no_faktur" class="form-control" value="{$penerimaan.no_faktur}" placeholder="Opsional" {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}readonly{/if}></div></div>
+        <div class="col-md-3"><div class="form-group"><label>File Surat Jalan</label><input type="file" name="file_surat_jalan" class="form-control" accept=".jpg,.jpeg,.png,.pdf" {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}disabled{/if}>{if: !empty($penerimaan.file_surat_jalan)}<small class="text-success"><i class="fa fa-check"></i> {$penerimaan.file_surat_jalan}</small>{/if}</div></div>
+        <div class="col-md-3"><div class="form-group"><label>File Faktur</label><input type="file" name="file_faktur" class="form-control" accept=".jpg,.jpeg,.png,.pdf" {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}disabled{/if}>{if: !empty($penerimaan.file_faktur)}<small class="text-success"><i class="fa fa-check"></i> {$penerimaan.file_faktur}</small>{/if}</div></div>
       </div>
 
-      {if: $penerimaan.tipe_penerimaan == 'MANUAL' && $penerimaan.status != 'Selesai'}
+      {if: $penerimaan.tipe_penerimaan == 'MANUAL' && ($penerimaan.status != 'Selesai' || $can_edit_selesai)}
       <div class="well well-sm">
         <label>Cari Barang dari Master</label>
-        <div class="input-group"><select id="manual-item-picker" style="width:100%"></select><span class="input-group-btn"><button type="button" id="btn-add-manual-item" class="btn btn-warning"><i class="fa fa-plus"></i> Tambahkan</button></span></div>
-        <small class="text-muted">Jika barang belum tersedia, hubungi pengelola master barang agar tidak terjadi data ganda.</small>
+        <div class="input-group"><select id="manual-item-picker" style="width:100%"></select><span class="input-group-btn"><button type="button" id="btn-add-master-item" class="btn btn-warning"><i class="fa fa-plus"></i> Tambahkan</button></span></div>
+        <div class="text-muted" style="margin:7px 0">atau, bila barang belum ada di master:</div>
+        <div class="input-group"><input id="manual-item-name" class="form-control" placeholder="Ketik nama barang non rutin..."><span class="input-group-btn"><button type="button" id="btn-add-manual-item" class="btn btn-default"><i class="fa fa-pencil"></i> Tambah Manual</button></span></div>
+        <small class="text-muted">Penerimaan Non Rutin dicatat sebagai dokumen/faktur dan tidak menambah stok gudang.</small>
       </div>
       {/if}
 
       <div class="table-responsive">
         <table class="table table-bordered table-striped" id="table-gudang-receive">
-          <thead><tr class="{if: $penerimaan.tipe_penerimaan == 'MANUAL'}bg-warning{else}bg-info{/if}"><th>Nama Barang</th>{if: $penerimaan.tipe_penerimaan == 'PO'}<th width="120">Sisa PO</th>{/if}<th width="140">Qty Diterima</th><th width="100">Satuan</th>{if: $penerimaan.status != 'Selesai'}<th width="60">Aksi</th>{/if}</tr></thead>
+          <thead><tr class="{if: $penerimaan.tipe_penerimaan == 'MANUAL'}bg-warning{else}bg-info{/if}"><th>Nama Barang</th>{if: $penerimaan.tipe_penerimaan == 'PO'}<th width="120">Sisa PO</th>{/if}<th width="140">Qty Diterima</th><th width="100">Satuan</th>{if: $penerimaan.status != 'Selesai' || $can_edit_selesai}<th width="60">Aksi</th>{/if}</tr></thead>
           <tbody id="gudang-item-list">
             {if: !empty($penerimaan.detail_items)}
             {loop: $penerimaan.detail_items}
             <tr class="item-row" data-kode="{$value.kode_item}">
-              <td><strong>{$value.nama_barang}</strong><br><small class="text-muted">{$value.kode_item}</small><input type="hidden" name="kode_item[]" value="{$value.kode_item}"><input type="hidden" name="nama_barang[]" value="{$value.nama_barang}"></td>
+              <td><strong>{$value.nama_barang}</strong><br><small class="text-muted">{$value.kode_item}</small><input type="hidden" name="kode_item[]" value="{$value.kode_item}"><input type="hidden" name="nama_barang[]" value="{$value.nama_barang}"><input type="hidden" name="nama_barang_manual[]" value="{$value.nama_barang_manual}"></td>
               {if: $penerimaan.tipe_penerimaan == 'PO'}<td><input type="number" name="qty_po[]" class="form-control" value="{$value.qty_po}" readonly></td>{else}<input type="hidden" name="qty_po[]" value="0">{/if}
-              <td><input type="number" name="qty_terima[]" class="form-control input-qty" value="{$value.qty_terima}" min="0.01" step="any" required {if: $penerimaan.status == 'Selesai'}readonly{/if}></td>
+              <td><input type="number" name="qty_terima[]" class="form-control input-qty" value="{$value.qty_terima}" min="0.01" step="any" required {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}readonly{/if}></td>
               <td>
-                {if: $penerimaan.status == 'Selesai'}
+                {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}
                 {$value.satuan_terpilih}<input type="hidden" name="satuan[]" value="{$value.satuan_terpilih}">
                 {else}
                 <select name="satuan[]" class="form-control input-sm">
@@ -99,7 +101,7 @@
                 </select>
                 {/if}
               </td>
-              {if: $penerimaan.status != 'Selesai'}<td><button type="button" class="btn btn-danger btn-xs btn-remove-item"><i class="fa fa-times"></i></button></td>{/if}
+              {if: $penerimaan.status != 'Selesai' || $can_edit_selesai}<td><button type="button" class="btn btn-danger btn-xs btn-remove-item"><i class="fa fa-times"></i></button></td>{/if}
               <input type="hidden" name="qty_tolak[]" value="0"><input type="hidden" name="harga[]" value="{$value.harga}"><input type="hidden" name="keterangan_item[]" value=""><input type="hidden" name="batch_no[]" value="-"><input type="hidden" name="tgl_expired[]" value="">
             </tr>
             {/loop}
@@ -110,7 +112,7 @@
         </table>
       </div>
 
-      {if: $penerimaan.tipe_penerimaan == 'PO' && $penerimaan.status != 'Selesai'}
+      {if: $penerimaan.tipe_penerimaan == 'PO' && ($penerimaan.status != 'Selesai' || $can_edit_selesai)}
       <button type="button" id="btn-load-items" class="btn btn-default"><i class="fa fa-refresh"></i> Muat Ulang Sisa Barang PO</button>
       {/if}
 
@@ -118,19 +120,19 @@
       <div class="row">
         <div class="col-md-6">
           <div class="form-group"><label>Tahap Proses</label>
-            {if: $penerimaan.status == 'Selesai'}
+            {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}
             <input type="hidden" name="status" value="Selesai"><input type="text" class="form-control" value="Selesai — stok sudah masuk" readonly>
             {else}
             <select name="status" id="gudang-status" class="form-control">
               <option value="Draft" {if: $penerimaan.status == 'Draft'}selected{/if}>1. Draft — masih dapat diperbaiki</option>
               <option value="Menunggu Verifikasi" {if: $penerimaan.status == 'Menunggu Verifikasi'}selected{/if}>2. Menunggu Verifikasi — barang sudah dicatat</option>
-              {if: $can_finalize}<option value="Selesai">3. Selesai — verifikasi dan masukkan stok</option>{/if}
+              {if: $can_finalize}<option value="Selesai">3. Selesai — verifikasi{if: $penerimaan.tipe_penerimaan == 'PO'} dan masukkan stok{/if}</option>{/if}
             </select>
             {/if}
           </div>
         </div>
         <div class="col-md-6 text-right" style="padding-top:25px">
-          {if: $penerimaan.status == 'Selesai'}<button type="button" class="btn btn-default btn-lg btn-block" disabled><i class="fa fa-lock"></i> PENERIMAAN SELESAI</button>{else}<button type="submit" class="btn btn-primary btn-lg btn-block"><i class="fa fa-save"></i> SIMPAN PENERIMAAN</button>{/if}
+          {if: $penerimaan.status == 'Selesai' && !$can_edit_selesai}<button type="button" class="btn btn-default btn-lg btn-block" disabled><i class="fa fa-lock"></i> PENERIMAAN SELESAI</button>{else}<button type="submit" class="btn btn-primary btn-lg btn-block"><i class="fa fa-save"></i> SIMPAN PERBAIKAN</button>{/if}
         </div>
       </div>
     </form>
@@ -159,7 +161,7 @@ $(document).ready(function(){
     if(!item||!item.kode_item||hasItem(item.kode_item))return;
     $('#gudang-empty-row').remove();
     var qty=isPo?(parseFloat(item.qty_sisa||item.qty_terima||0)) : 1;
-    var html='<tr class="item-row" data-kode="'+esc(item.kode_item)+'"><td><strong>'+esc(item.nama_barang||item.kode_item)+'</strong><br><small class="text-muted">'+esc(item.kode_item)+'</small><input type="hidden" name="kode_item[]" value="'+esc(item.kode_item)+'"><input type="hidden" name="nama_barang[]" value="'+esc(item.nama_barang||item.kode_item)+'"></td>';
+    var html='<tr class="item-row" data-kode="'+esc(item.kode_item)+'"><td><strong>'+esc(item.nama_barang||item.kode_item)+'</strong><br><small class="text-muted">'+esc(item.kode_item)+'</small><input type="hidden" name="kode_item[]" value="'+esc(item.kode_item)+'"><input type="hidden" name="nama_barang[]" value="'+esc(item.nama_barang||item.kode_item)+'"><input type="hidden" name="nama_barang_manual[]" value="'+esc(item.nama_barang_manual||'')+'"></td>';
     if(isPo)html+='<td><input type="number" name="qty_po[]" class="form-control" value="'+esc(item.qty_sisa||0)+'" readonly></td>';else html+='<input type="hidden" name="qty_po[]" value="0">';
     html+='<td><input type="number" name="qty_terima[]" class="form-control input-qty" value="'+esc(qty)+'" min="0.01" '+(isPo?'max="'+esc(item.qty_sisa||0)+'" ':'')+'step="any" required></td><td>'+selectSatuan(item.satuan_dasar,item.satuan_options,item.satuan_dasar)+'</td><td><button type="button" class="btn btn-danger btn-xs btn-remove-item"><i class="fa fa-times"></i></button></td><input type="hidden" name="qty_tolak[]" value="0"><input type="hidden" name="harga[]" value="'+esc(item.harga||item.harga_referensi||0)+'"><input type="hidden" name="keterangan_item[]" value=""><input type="hidden" name="batch_no[]" value="-"><input type="hidden" name="tgl_expired[]" value=""></tr>';
     $('#gudang-item-list').append(html);
@@ -167,7 +169,16 @@ $(document).ready(function(){
   function loadItemsFromPO(){if(!initialPo)return;$.ajax({url:'{?=url([ADMIN,"logistik_non_medis","loaditemsfrompo"])?}',type:'POST',dataType:'json',data:{no_po:initialPo},success:function(res){if(res.status!=='success'){bootbox.alert(res.message||'Gagal memuat PO.');return;}$('#gudang-item-list').empty();$.each(res.items||[],function(i,item){if(parseFloat(item.qty_sisa||0)>0)addRow(item,true);});if(!$('#gudang-item-list tr.item-row').length)$('#gudang-item-list').html('<tr id="gudang-empty-row"><td colspan="5" class="text-center text-muted">Semua barang pada PO sudah diterima.</td></tr>');}});}
   if(tipe==='PO'&&initialPo&&!$('#gudang-item-list tr.item-row').length)loadItemsFromPO();
   $('#btn-load-items').on('click',loadItemsFromPO);
-  if(tipe==='MANUAL'&&$('#manual-item-picker').length){var $picker=$('#manual-item-picker');try{if($picker.data('selectator'))$picker.selectator('destroy');}catch(e){}$picker.siblings('.selectator_element').remove();$picker.select2({width:'100%',placeholder:'Ketik kode atau nama barang...',minimumInputLength:0,ajax:{url:'{?=url(ADMIN."/logistik_non_medis/ajaxmasterbarang")?}',dataType:'json',delay:250,data:function(p){return{q:p.term||'',jenis_permintaan:'Rutin'};},processResults:function(data){return{results:$.map(data||[],function(x){return{id:x.kode_item,text:x.kode_item+' - '+x.nama_barang,kode_item:x.kode_item,nama_barang:x.nama_barang,satuan_dasar:x.satuan_dasar,satuan_options:x.satuan_options||[],harga_referensi:x.harga_referensi};})};}}});$('#btn-add-manual-item').on('click',function(){var data=$picker.select2('data');if(!data||!data.length){bootbox.alert('Pilih barang terlebih dahulu.');return;}addRow(data[0],false);$picker.val(null).trigger('change');});}
+  if(tipe==='MANUAL'){
+    var $picker=$('#manual-item-picker');
+    if($picker.length){
+      try{if($picker.data('selectator'))$picker.selectator('destroy');}catch(e){}
+      $picker.siblings('.selectator_element').remove();
+      $picker.select2({width:'100%',placeholder:'Ketik kode atau nama barang...',minimumInputLength:0,ajax:{url:'{?=url(ADMIN."/logistik_non_medis/ajaxmasterbarang")?}',dataType:'json',delay:250,data:function(p){return{q:p.term||'',jenis_permintaan:'Rutin'};},processResults:function(data){return{results:$.map(data||[],function(x){return{id:x.kode_item,text:x.kode_item+' - '+x.nama_barang,kode_item:x.kode_item,nama_barang:x.nama_barang,satuan_dasar:x.satuan_dasar,satuan_options:x.satuan_options||[],harga_referensi:x.harga_referensi};})};}}});
+      $('#btn-add-master-item').on('click',function(){var data=$picker.select2('data');if(!data||!data.length){bootbox.alert('Pilih barang dari master terlebih dahulu.');return;}addRow(data[0],false);$picker.val(null).trigger('change');});
+    }
+    $('#btn-add-manual-item').on('click',function(){var nama=$.trim($('#manual-item-name').val());if(!nama){bootbox.alert('Ketik nama barang terlebih dahulu.');return;}addRow({kode_item:'NONRUTIN-'+Date.now(),nama_barang:nama,nama_barang_manual:nama,satuan_dasar:'Unit',satuan_options:[{satuan:'Unit',faktor_ke_dasar:1}]},false);$('#manual-item-name').val('').focus();});
+  }
   // Sumber barang: bisa dipilih dari master vendor atau diketik bebas.
   var $sumber=$('#sumber-manual-picker');
   if($sumber.length){
@@ -180,6 +191,10 @@ $(document).ready(function(){
     syncVendor();
   }
   $(document).on('click','.btn-remove-item',function(){$(this).closest('tr').remove();if(!$('#gudang-item-list tr.item-row').length)$('#gudang-item-list').html('<tr id="gudang-empty-row"><td colspan="5" class="text-center text-muted">Belum ada barang.</td></tr>');});
-  $('#form-penerimaan-gudang').on('submit',function(e){e.preventDefault();if($sumber.length&&!$.trim($sumber.val()||'')){bootbox.alert('Sumber barang wajib diisi.');return;}if(!$('#gudang-item-list tr.item-row').length){bootbox.alert('Minimal satu barang harus dicatat.');return;}var form=this;function save(){var btn=$(form).find('button[type=submit]').prop('disabled',true);$.ajax({url:'{?=url([ADMIN,"logistik_non_medis","savepenerimaan"])?}',type:'POST',data:new FormData(form),contentType:false,processData:false,dataType:'json'}).done(function(res){if(res.status==='success'){bootbox.alert({title:'Berhasil',message:res.message||'Penerimaan berhasil disimpan.',callback:function(){loadGudangDashboard();}});}else bootbox.alert(res.message||'Gagal menyimpan penerimaan.');}).fail(function(xhr){bootbox.alert('Gagal menghubungi server. '+(xhr.responseText||''));}).always(function(){btn.prop('disabled',false);});}if($('#gudang-status').val()==='Selesai'){bootbox.confirm({title:'Verifikasi Penerimaan',message:'Pastikan barang dan jumlah fisik sudah benar. Setelah selesai, stok akan langsung masuk dan data tidak dapat diubah.',callback:function(ok){if(ok)save();}});}else save();});
+  $('#form-penerimaan-gudang').on('submit',function(e){e.preventDefault();if($sumber.length&&!$.trim($sumber.val()||'')){bootbox.alert('Sumber barang wajib diisi.');return;}if(!$('#gudang-item-list tr.item-row').length){bootbox.alert('Minimal satu barang harus dicatat.');return;}var form=this;
+    function mintaPenyesuaian(items){var html='<p>Stok dari penerimaan lama sudah sebagian dipakai. Masukkan stok fisik saat ini agar koreksi tetap tersimpan tanpa saldo negatif.</p><table class="table table-bordered"><thead><tr><th>Barang / batch</th><th>Stok sistem</th><th>Stok fisik</th></tr></thead><tbody>';$.each(items||[],function(i,x){html+='<tr><td>'+esc(x.nama_barang)+'<br><small>Batch: '+esc(x.batch_no||'-')+'</small></td><td>'+esc(x.stok_sistem)+'</td><td><input class="form-control stok-fisik" type="number" min="0" step="any" data-kunci="'+esc(x.kunci)+'" value="'+esc(x.stok_sistem)+'"></td></tr>';});html+='</tbody></table>';
+      bootbox.dialog({title:'Sesuaikan Stok Fisik',message:html,buttons:{batal:{label:'Batal',className:'btn-default'},simpan:{label:'Simpan Koreksi',className:'btn-primary',callback:function(){var data=[];var valid=true;$('.stok-fisik').each(function(){var v=$(this).val();if(v===''||parseFloat(v)<0)valid=false;data.push({kunci:$(this).data('kunci'),stok_fisik:v});});if(!valid){bootbox.alert('Stok fisik harus diisi dengan angka nol atau lebih.');return false;}$(form).find('input[name="penyesuaian_stok"]').remove();$('<input>',{type:'hidden',name:'penyesuaian_stok',value:JSON.stringify(data)}).appendTo(form);save();}}}});}
+    function save(){var btn=$(form).find('button[type=submit]').prop('disabled',true);$.ajax({url:'{?=url([ADMIN,"logistik_non_medis","savepenerimaan"])?}',type:'POST',data:new FormData(form),contentType:false,processData:false,dataType:'json'}).done(function(res){if(res.status==='success'){bootbox.alert({title:'Berhasil',message:res.message||'Penerimaan berhasil disimpan.',callback:function(){loadGudangDashboard();}});}else if(res.status==='need_stock_adjustment')mintaPenyesuaian(res.items);else bootbox.alert(res.message||'Gagal menyimpan penerimaan.');}).fail(function(xhr){bootbox.alert('Gagal menghubungi server. '+(xhr.responseText||''));}).always(function(){btn.prop('disabled',false);});}
+    if($('#gudang-status').val()==='Selesai'){bootbox.confirm({title:'Verifikasi Penerimaan',message:(tipe==='PO'?'Pastikan barang dan jumlah fisik sudah benar. Stok akan disesuaikan sesuai penerimaan.':'Pastikan dokumen dan jumlah sudah benar. Penerimaan non rutin tidak masuk stok gudang.'),callback:function(ok){if(ok)save();}});}else save();});
 });
 </script>

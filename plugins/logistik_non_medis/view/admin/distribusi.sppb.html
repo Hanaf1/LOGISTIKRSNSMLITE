@@ -161,9 +161,7 @@
                         </div>
                         {/if}
                         {if: !empty($can_create_sppb)}
-                            {if: $jenis_page != 'Rutin' || empty($is_unit_requester)}
                             <button class="btn btn-primary" id="btn-tambah"><i class="fa fa-plus"></i> Tambah Permintaan</button>
-                            {/if}
                         {/if}
                     </div>
                     {/if}
@@ -334,7 +332,7 @@
                     </div>
                     {/if}
                     {if: !empty($jenis_page)}
-                    {if: $role != 'kepala_unit' && $role != 'kepala_sie' && $role != 'kepala_bidang'}
+                    {if: $jenis_page == 'Rutin' || ($role != 'kepala_unit' && $role != 'kepala_sie' && $role != 'kepala_bidang')}
                     <ul class="nav nav-tabs sppb-main-tabs" id="sppbMainTabs">
                         <li class="active">
                             <a href="javascript:void(0)" class="sppb-main-tab-link" data-tab="active">
@@ -425,12 +423,16 @@
                             </div>
                             {/if}
                             <div class="col-md-3">
+                                {if: !empty($can_manage_distribusi_controls)}
                                 <select id="filter-unit" class="form-control" onchange="loadDisplay()">
                                     <option value="">-- Semua Unit --</option>
                                     {loop: $units}
                                     <option value="{$value.kode_unit}">{$value.kode_unit} - {$value.nama_unit}</option>
                                     {/loop}
                                 </select>
+                                {else}
+                                <input type="text" class="form-control" value="{if: !empty($nama_unit)}{$nama_unit}{else}Lingkup unit Anda{/if}" readonly title="Daftar otomatis dibatasi sesuai unit akun Anda">
+                                {/if}
                             </div>
                         </div>
                         <div class="row" style="margin-top: 10px;">
@@ -470,7 +472,7 @@
                     </div>
 
                     {if: !empty($jenis_page) && $jenis_page == 'Rutin' && !empty($is_unit_requester)}
-                    <div id="sppb-active-rutin">
+                    <div id="sppb-active-rutin" style="display:none">
                         {if: !empty($current_week_sppb)}
                             {if: $current_week_sppb.status == 'Selesai' || $current_week_sppb.status == 'Diterima'}
                             <div class="sppb-active-card">
@@ -703,13 +705,9 @@ var sppbToastStorageKey = 'logistik_sppb_toast';
 
 $(document).ready(function() {
     flushStoredSppbToast();
-
-    if (sppbRutinUnitMode && $('#sppb-active-form').length && $('#sppb-active-form').is(':visible')) {
-        loadSppbForm('Rutin', '#sppb-active-form');
-        $('#sppb-list').hide();
-    } else {
-        loadDisplay();
-    }
+    $('#sppb-active-rutin').hide();
+    $('#sppb-list').show();
+    loadDisplay();
 
     $(document).on('click', '.sppb-main-tab-link', function(e) {
         e.preventDefault();
@@ -727,17 +725,9 @@ $(document).ready(function() {
         $('#sppb-rekap-pane').hide();
         $('#sppb-list-pane').show();
 
-        if (sppbRutinUnitMode && sppbListTab === 'active') {
-            $('#sppb-active-rutin').show();
-            $('#sppb-list').hide();
-            if ($('#sppb-active-form').length && $('#sppb-active-form').is(':visible') && !$('#sppb-active-form form').length) {
-                loadSppbForm('Rutin', '#sppb-active-form');
-            }
-        } else {
-            $('#sppb-active-rutin').hide();
-            $('#sppb-list').show();
-            loadDisplay(1);
-        }
+        $('#sppb-active-rutin').hide();
+        $('#sppb-list').show();
+        loadDisplay(1);
     });
 
     $(document).on('click', '.approval-tab-link', function(e) {
@@ -973,9 +963,8 @@ function aturBarangTambahan(no_sppb) {
 function tutupEditorSPPB() {
     $('#form-container').hide().empty();
     $('#display').show();
-    if (sppbRutinUnitMode && sppbListTab === 'active') {
-        $('#sppb-active-rutin').show();
-    }
+    $('#sppb-active-rutin').hide();
+    $('#sppb-list').show();
     loadDisplay();
 }
 
